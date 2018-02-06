@@ -3,9 +3,12 @@ package droid64.gui;
 import java.awt.BorderLayout;
 import java.awt.Container;
 import java.awt.Dimension;
+import java.awt.Font;
 import java.awt.Toolkit;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.print.PrinterException;
+import java.awt.print.PrinterJob;
 import java.io.UnsupportedEncodingException;
 import java.util.Arrays;
 
@@ -16,6 +19,9 @@ import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTextArea;
+import javax.swing.JToggleButton;
+
+import droid64.d64.CbmException;
 
 /**<pre style='font-family:sans-serif;'>
  * Created on 2015-Oct-15
@@ -45,7 +51,11 @@ import javax.swing.JTextArea;
 public class TextViewFrame extends JDialog {
 
 	private static final long serialVersionUID = 1L;
+	private JTextArea textArea;
 
+	private Font normalFont;
+	private Font cbmFont;
+	
 	public TextViewFrame(String windowTitle, String title, byte[] data) {
 		setModal(false);
 		setModalityType(ModalityType.MODELESS);
@@ -84,11 +94,18 @@ public class TextViewFrame extends JDialog {
 		setup(title, message);
 	}
 	
-	private void setup(String title, String message) {
-		JTextArea textArea = new JTextArea(message);
+	
+	private void setup(final String title, final String message) {
+		textArea = new JTextArea(message);
 		textArea.setEditable(false);
 		
-		JPanel buttonPanel = new JPanel();
+		try {
+			cbmFont = Settings.getCommodoreFont();
+		} catch (CbmException e1) {
+			e1.printStackTrace();
+			cbmFont = normalFont;
+		}
+
 		final JButton okButton = new JButton("OK");
 		okButton.setMnemonic('o');
 		okButton.setToolTipText("Leave BAM view.");
@@ -98,7 +115,37 @@ public class TextViewFrame extends JDialog {
 					dispose();
 				}
 			}
+		});		
+		
+		final JToggleButton c64ModeButton = new JToggleButton("C64 mode");
+		c64ModeButton.setMnemonic('c');
+		c64ModeButton.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent event) {
+				if (event.getSource() == c64ModeButton) {
+					boolean c64Mode = c64ModeButton.isSelected();
+					if (c64Mode) {
+						textArea.setFont(cbmFont);
+					} else {
+						textArea.setFont(normalFont);
+					}
+				}
+			}
 		});
+		
+		final JButton printButton = new JButton("Print");
+		printButton.setMnemonic('p');
+		printButton.setToolTipText("Print");
+		printButton.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent event) {
+				if ( event.getSource() == printButton ) {
+					print(message, title, c64ModeButton.isSelected());
+				}
+			}
+		});
+		
+		JPanel buttonPanel = new JPanel();		
+		buttonPanel.add(printButton);
+		buttonPanel.add(c64ModeButton);
 		buttonPanel.add(okButton);
 		
 		Container cp = getContentPane();
@@ -115,6 +162,19 @@ public class TextViewFrame extends JDialog {
 		setSize(screenSize.width/6, screenSize.height/2);
 		setVisible(true);
 		this.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+	}
+	
+	private void print(final String text, final String title, boolean useCbmFont) {
+		PrinterJob job = PrinterJob.getPrinterJob();		
+		job.setPageable(new PrintPageable(text, title, useCbmFont, false));
+		boolean doPrint = job.printDialog();
+		if (doPrint) {
+		    try {
+		        job.print();
+		    } catch (PrinterException e) {
+		    	e.printStackTrace();
+		    }
+		}
 	}
 	
 }

@@ -203,7 +203,7 @@ public class D71 extends DiskImage {
 		int bamOffset2 = getSectorOffset(BAM_TRACK_2, BAM_SECT);
 		bam.setDiskName("");
 		bam.setDiskId("");
-		bam.setDiskDosType( (byte) getCbmDiskValue(bamOffset1 + 2 ));
+		bam.setDiskDosType(getCbmDiskValue(bamOffset1 + 2 ));
 		for (byte track = 1; track <= TRACKS.length; track++) {
 			if (track <= 35) {
 				bam.setFreeSectors(track, (byte) getCbmDiskValue(bamOffset1 + 0x04 + (track-1) * 4));
@@ -218,10 +218,10 @@ public class D71 extends DiskImage {
 			}
 		}
 		for (int i = 0; i < DISK_NAME_LENGTH; i++) {
-			bam.setDiskName(bam.getDiskName() + new Character((char)(PETSCII_TABLE[getCbmDiskValue(bamOffset1 + 0x90 + i)])));
+			bam.setDiskName(bam.getDiskName() + new Character((char)(getCbmDiskValue(bamOffset1 + 0x90 + i))));
 		}
 		for (int i = 0; i < DISK_ID_LENGTH; i++) {
-			bam.setDiskId(bam.getDiskId() + new Character((char)(PETSCII_TABLE[getCbmDiskValue(bamOffset1 + 0xa2 + i)])));
+			bam.setDiskId(bam.getDiskId() + new Character((char)(getCbmDiskValue(bamOffset1 + 0xa2 + i))));
 		}
 		checkImageFormat();
 	}
@@ -449,7 +449,7 @@ public class D71 extends DiskImage {
 	 * @param track trackNumber
 	 * @param sector sectorNumber
 	 */
-	private void markSectorUsed(int track, int sector) {
+	public void markSectorUsed(int track, int sector) {
 		//feedbackMessage.append("markBAMused( track=").append(trackNumber).append(" sector=").append(sectorNumber).append(")\n");
 		int trackPos;
 		int freePos;
@@ -470,7 +470,7 @@ public class D71 extends DiskImage {
 	 * @param track trackNumber
 	 * @param sector sectorNumber
 	 */
-	private void markSectorFree(int track, int sector) {
+	public void markSectorFree(int track, int sector) {
 		//feedbackMessage.append("markSectorFree: track=").append(trackNumber).append(" sector=").append(sectorNumber).append(")\n");
 		int trackPos;
 		int freePos;
@@ -492,7 +492,7 @@ public class D71 extends DiskImage {
 	 * @param Sector_number the sector number of sector to check
 	 * @return when True, the sector is free; otherwise used
 	 */
-	private boolean isSectorFree(int track, int sector) {
+	public boolean isSectorFree(int track, int sector) {
 		int trackPos;
 		if (track <= 35) {
 			trackPos = getSectorOffset(BAM_TRACK_1, BAM_SECT) + 4 * (track) + 1;

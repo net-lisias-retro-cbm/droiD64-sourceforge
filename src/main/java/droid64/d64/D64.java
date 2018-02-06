@@ -169,7 +169,10 @@ public class D64 extends DiskImage {
 			}
 		}
 		for (int i = 0; i < DISK_NAME_LENGTH; i++) {
-			bam.setDiskName(bam.getDiskName() + new Character((char)(PETSCII_TABLE[getCbmDiskValue(bamOffset + 144 + i)])));
+			
+			bam.setDiskName(bam.getDiskName() + new Character((char)( getCbmDiskValue(bamOffset + 144 + i))));
+			
+			//bam.setDiskName(bam.getDiskName() + new Character((char)(PETSCII_TABLE[getCbmDiskValue(bamOffset + 144 + i)])));
 		}
 		for (int i = 0; i < DISK_ID_LENGTH; i++) {
 			bam.setDiskId(bam.getDiskId() +	new Character((char)( PETSCII_TABLE[getCbmDiskValue(bamOffset + 162 + i)])));
@@ -598,7 +601,7 @@ public class D64 extends DiskImage {
 	 * @param track trackNumber
 	 * @param sector sectorNumber
 	 */
-	private void markSectorUsed(int track, int sector) {
+	public void markSectorUsed(int track, int sector) {
 		//feedbackMessage.append("markBAMused( track=").append(trackNumber).append(" sector=").append(sectorNumber).append(")\n");
 		int trackPos = TRACKS[BAM_TRACK].getOffset() + (BLOCK_SIZE * BAM_SECTOR) + (track * 4);
 		int pos = (sector / 8) + 1;
@@ -611,7 +614,7 @@ public class D64 extends DiskImage {
 	 * @param track trackNumber
 	 * @param sector sectorNumber
 	 */
-	private void markSectorFree(int track, int sector) {
+	public void markSectorFree(int track, int sector) {
 		//feedbackMessage.append("markSectorFree: track=").append(trackNumber).append(" sector=").append(sectorNumber).append(")\n");
 		int trackPos = TRACKS[BAM_TRACK].getOffset() + (BLOCK_SIZE * BAM_SECTOR) + (track * 4);
 		int pos = (sector / 8) + 1;
@@ -625,7 +628,7 @@ public class D64 extends DiskImage {
 	 * @param Sector_number the sector number of sector to check
 	 * @return when True, the sector is free; otherwise used
 	 */
-	private boolean isSectorFree(int track, int sector) {
+	public boolean isSectorFree(int track, int sector) {
 		int trackPos = TRACKS[BAM_TRACK].getOffset() + (BLOCK_SIZE * BAM_SECTOR) + (track * 4);
 		int pos = (sector / 8) + 1;
 		int value =  getCbmDiskValue(trackPos + pos) & BYTE_BIT_MASKS[sector & 0x07];

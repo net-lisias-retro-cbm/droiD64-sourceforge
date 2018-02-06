@@ -10,6 +10,8 @@ import java.awt.FontMetrics;
 import java.awt.Toolkit;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.print.PrinterException;
+import java.awt.print.PrinterJob;
 
 import javax.swing.JButton;
 import javax.swing.JDialog;
@@ -41,7 +43,7 @@ public class HexViewFrame extends JDialog {
 	 * @param data a byte array with the data to show
 	 * @param length the length of data to show
 	 */
-	public HexViewFrame (String topText, String fileName, byte[] data, int length) {
+	public HexViewFrame (String topText, final String fileName, final byte[] data, int length) {
 		setTitle(topText);
 		setModal(true);
 		Container cp = getContentPane();
@@ -64,7 +66,20 @@ public class HexViewFrame extends JDialog {
 				}
 			}
 		});
+		
+		final JButton printButton = new JButton("Print");
+		printButton.setMnemonic('p');
+		printButton.setToolTipText("Print");
+		printButton.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent event) {
+				if ( event.getSource() == printButton ) {
+					print(data, fileName);
+				}
+			}
+		});
+		
 		JPanel buttonPanel = new JPanel();
+		buttonPanel.add(printButton);
 		buttonPanel.add(okButton);
 		cp.add(buttonPanel, BorderLayout.SOUTH);
 		
@@ -105,11 +120,11 @@ public class HexViewFrame extends JDialog {
 		for (int i=0; i<table.getColumnCount(); i++) {
 			TableColumn column = table.getColumnModel().getColumn(i);
 			if (i == 0) {
-				column.setPreferredWidth(addrWdt);				
+				column.setPreferredWidth(addrWdt);
 			} else if (i == (model.getColumnCount() - 1)) {
-				column.setPreferredWidth(ascWdt);				
+				column.setPreferredWidth(ascWdt);
 			} else {
-				column.setPreferredWidth(colWdt);				
+				column.setPreferredWidth(colWdt);
 			}
 		}
 		int wdt = addrWdt + colWdt*(model.getColumnCount() - 2) + ascWdt;
@@ -122,6 +137,19 @@ public class HexViewFrame extends JDialog {
 		table.setPreferredScrollableViewportSize(new Dimension(wdt, hgt));
 		table.setSize(wdt, hgt);
 		return table;
+	}
+
+	private void print(final byte[] data, final String title) {
+		PrinterJob job = PrinterJob.getPrinterJob();
+		job.setPageable(new PrintPageable(data, title));
+		boolean doPrint = job.printDialog();
+		if (doPrint) {
+		    try {
+		        job.print();
+		    } catch (PrinterException e) {
+		    	e.printStackTrace();
+		    }
+		}
 	}
 
 	/** Class to handle colors of the table cells */
@@ -166,7 +194,7 @@ public class HexViewFrame extends JDialog {
 				} else {
 					Integer v = model.getByteAt(row, column);
 					if (v!=null && (v < 0x20 || v>0x7f) ) {
-						rendererComp.setForeground(HEX_NORMAL_HEX_FOREGROUND);						
+						rendererComp.setForeground(HEX_NORMAL_HEX_FOREGROUND);
 					} else {
 						rendererComp.setForeground(HEX_NORMAL_ASC_FOREGROUND);
 					}

@@ -198,4 +198,17 @@ public class T64 extends DiskImage {
 		feedbackMessage.append("validate: not supported for T64 images.\n");
 		return null;
 	}
+
+	@Override
+	public boolean isSectorFree(int track, int sector) {
+		return false;
+	}
+
+	@Override
+	public void markSectorFree(int track, int sector) {
+	}
+
+	@Override
+	public void markSectorUsed(int track, int sector) {
+	}
 }

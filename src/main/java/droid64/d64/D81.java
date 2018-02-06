@@ -111,7 +111,7 @@ public class D81 extends DiskImage {
 		int bamOffset2 = getSectorOffset(BAM_TRACK, BAM_SECT_2) + 0x10;		
 		bam.setDiskName("");
 		bam.setDiskId("");
-		bam.setDiskDosType( (byte) getCbmDiskValue(bamOffset1 + 2 ));
+		bam.setDiskDosType(getCbmDiskValue(headerOffset + 2 ));
 		for (int track = 1; track <= TRACK_COUNT; track ++) {
 			int bamOffset = ((track-1) < 40 ? bamOffset1 : bamOffset2 ) + ((track-1) % 40) * BYTES_PER_BAM_TRACK;			
 			bam.setFreeSectors(track, (byte) getCbmDiskValue(bamOffset));
@@ -121,11 +121,11 @@ public class D81 extends DiskImage {
 		}		
 		for (int cnt = 0; cnt < DISK_NAME_LENGTH; cnt ++) {
 			bam.setDiskName(bam.getDiskName() + 
-					new Character((char)(PETSCII_TABLE[getCbmDiskValue(headerOffset + 0x04 + cnt )] )));
+					new Character((char)(getCbmDiskValue(headerOffset + 0x04 + cnt ) )));
 		}
 		for (int cnt = 0; cnt < DISK_ID_LENGTH; cnt ++) {
 			bam.setDiskId(bam.getDiskId() +
-					new Character((char)( PETSCII_TABLE[getCbmDiskValue(headerOffset + 0x16 + cnt)] )));
+					new Character((char)(getCbmDiskValue(headerOffset + 0x16 + cnt) )));
 		}
 		checkImageFormat();
 	}
@@ -593,7 +593,7 @@ public class D81 extends DiskImage {
 	 * @param sector the sector number of sector to check
 	 * @return when True, the sector is free; otherwise used
 	 */
-	private boolean isSectorFree(int track, int sector) {		
+	public boolean isSectorFree(int track, int sector) {		
 		int trackPos;
 		if (track <= 40) {
 			trackPos = getSectorOffset(BAM_TRACK, BAM_SECT_1) + 0x10 + (track - 1) * BYTES_PER_BAM_TRACK + 1;
@@ -623,7 +623,7 @@ public class D81 extends DiskImage {
 	 * @param track trackNumber
 	 * @param sector sectorNumber
 	 */
-	private void markSectorUsed(int track, int sector) {
+	public void markSectorUsed(int track, int sector) {
 		//feedbackMessage.append("markBAMused( track=").append(trackNumber).append(" sector=").append(sectorNumber).append(")\n");
 		int trackPos;
 		if (track <= 40) {
@@ -641,7 +641,7 @@ public class D81 extends DiskImage {
 	 * @param track trackNumber
 	 * @param sector sectorNumber
 	 */
-	private void markSectorFree(int track, int sector) {
+	public void markSectorFree(int track, int sector) {
 		//feedbackMessage.append("markSectorFree: track=").append(trackNumber).append(" sector=").append(sectorNumber).append(")\n");
 		int trackPos;
 		if (track <= 40) {

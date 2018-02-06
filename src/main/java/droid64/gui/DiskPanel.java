@@ -9,6 +9,8 @@ import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.awt.print.PrinterException;
+import java.awt.print.PrinterJob;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
@@ -43,6 +45,7 @@ import javax.swing.table.TableModel;
 import droid64.DroiD64;
 import droid64.d64.CbmException;
 import droid64.d64.CbmFile;
+import droid64.d64.CpmFile;
 import droid64.d64.D64;
 import droid64.d64.D71;
 import droid64.d64.D81;
@@ -429,14 +432,11 @@ public class DiskPanel extends JPanel implements TableModelListener {
 			mainPanel.appendConsole("There are " + diskImage.getFilenumberMax() + " files in this image file.");
 			for (int fileNum = 0; fileNum <= diskImage.getFilenumberMax() - 1;	fileNum++) {
 				tableModel.updateDirEntry(new DirEntry(diskImage.getCbmFile(fileNum), fileNum + 1));
-			}
-			diskLabel.setText(
-					diskImage.getBam().getDiskDosType()
-					+ " \""	+ diskImage.getBam().getDiskName() + ","
-					+ diskImage.getBam().getDiskId()
-					+ "\" "+diskImage.getBlocksFree()
-					+ " BLOCKS FREE [" + diskImage.getFilenumberMax() + "]"
-					);
+			}			
+			String label = diskImage.getBam().getDiskDosType()
+					+ " \""	+ diskImage.getBam().getDiskName() + "," + diskImage.getBam().getDiskId()
+					+ "\" "+diskImage.getBlocksFree() + " BLOCKS FREE [" + diskImage.getFilenumberMax() + "]";
+			diskLabel.setText(label);
 			tableModel.setMode(diskImage.isCpmImage() ? EntryTableModel.MODE_CPM : EntryTableModel.MODE_CBM);
 			TableColumnModel tcm = table.getTableHeader().getColumnModel();
 			for (int i=0; i< tcm.getColumnCount(); i++) {
@@ -515,7 +515,7 @@ public class DiskPanel extends JPanel implements TableModelListener {
 				diskImage.getBam().getDiskDosType() + " \"" +
 				diskImage.getBam().getDiskName() + "," +
 				diskImage.getBam().getDiskId() + "\"";
-		new BAMFrame(DroiD64.PROGNAME+" v"+DroiD64.VERSION+" - BAM of this disk image", diskName, diskImage.getBamTable(), diskImage);
+		new BAMFrame(DroiD64.PROGNAME+" v"+DroiD64.VERSION+" - BAM of this disk image", diskName, diskImage.getBamTable(), diskImageFileName, diskImage);
 	}
 
 	private void updateD64File() {
@@ -966,7 +966,8 @@ public class DiskPanel extends JPanel implements TableModelListener {
 		new RenamePRGFrame(DroiD64.PROGNAME+" v"+DroiD64.VERSION+" - New file ", this, "", DiskImage.TYPE_DEL );
 		if (newPRGNameSuccess) {
 			CbmFile cbmFile = new CbmFile();
-			cbmFile.setName(DiskImage.cbmFileName(newPRGName));
+			//cbmFile.setName(DiskImage.cbmFileName(newPRGName));
+			cbmFile.setName(newPRGName);
 			cbmFile.setFileType(newPRGType);
 			mainPanel.appendConsole("newFile: " + cbmFile.getName());
 			diskImage.addDirectoryEntry(cbmFile, 0, 0, false, 0);
@@ -1051,6 +1052,7 @@ public class DiskPanel extends JPanel implements TableModelListener {
 				table.setRowHeight(Settings.getRowHeight());
 				try {
 					table.setFont(Settings.getCommodoreFont());
+					diskLabel.setFont(Settings.getCommodoreFont());
 				} catch (CbmException e) {
 					mainPanel.appendConsole("Failed to set font."+e.getMessage());
 				}
@@ -1066,6 +1068,7 @@ public class DiskPanel extends JPanel implements TableModelListener {
 				table.setRowHeight(Settings.getRowHeight());
 				try {
 					table.setFont(Settings.getCommodoreFont());
+					diskLabel.setFont(Settings.getCommodoreFont());
 				} catch (CbmException e) {
 					mainPanel.appendConsole("Failed to set font."+e.getMessage());
 				}
@@ -1082,6 +1085,8 @@ public class DiskPanel extends JPanel implements TableModelListener {
 				Font font = (new JTextArea("")).getFont();
 				Font font2 = new Font(font.getName(), font.getStyle(), Settings.getLocalFontSize());
 				table.setFont(font2);
+				diskLabel.setFont(font2);
+
 				break;
 			default:
 				System.out.println("DiskPanel.setTableColors: unknown mode "+mode);
@@ -1100,6 +1105,7 @@ public class DiskPanel extends JPanel implements TableModelListener {
 				table.setRowHeight(Settings.getRowHeight());
 				try {
 					table.setFont(Settings.getCommodoreFont());
+					diskLabel.setFont(Settings.getCommodoreFont());
 				} catch (CbmException e) {
 					mainPanel.appendConsole("Failed to set font."+e.getMessage());
 				}
@@ -1115,6 +1121,7 @@ public class DiskPanel extends JPanel implements TableModelListener {
 				table.setRowHeight(Settings.getRowHeight());
 				try {
 					table.setFont(Settings.getCommodoreFont());
+					diskLabel.setFont(Settings.getCommodoreFont());
 				} catch (CbmException e) {
 					mainPanel.appendConsole("Failed to set font."+e.getMessage());
 				}
@@ -1131,6 +1138,7 @@ public class DiskPanel extends JPanel implements TableModelListener {
 				Font font = (new JTextArea("")).getFont();
 				Font font2 = new Font(font.getName(), font.getStyle(), Settings.getLocalFontSize());
 				table.setFont(font2);
+				diskLabel.setFont(font2);
 				break;
 			default:
 				System.out.println("DiskPanel.setTableColors: unknown mode "+mode);
@@ -1266,9 +1274,65 @@ public class DiskPanel extends JPanel implements TableModelListener {
 				}
 			}
 		});	
+		menu.addSeparator();		
+		menuItem = new JMenuItem("Print directory", 'p');
+		menu.add (menuItem);
+		menuItem.addActionListener(new ActionListener(){
+			public void actionPerformed(ActionEvent event){
+				if ( event.getActionCommand()== "Print directory"){
+					printDir();
+
+				}
+			}
+		});	
 		return menu;
 	}
 
+	private void printDir() {		
+		PrinterJob job = PrinterJob.getPrinterJob();
+		String title;
+		List<String> lines = new ArrayList<String>();
+		boolean useCbmFont;
+	    if (imageLoaded) { 	
+	    	useCbmFont = true;
+	    	title = diskImageFileName;
+	    	String label = String.format("0 \"%-16s\" %-5s", diskImage.getBam().getDiskName(), diskImage.getBam().getDiskId());
+			mainPanel.appendConsole("Print image "+ diskImageFileName);
+			lines.add(label);
+			for (int i=0; i < diskImage.getFilenumberMax(); i++) {
+				CbmFile file = diskImage.getCbmFile(i);
+				if (file instanceof CpmFile) {
+					lines.add(((CpmFile)file).asDirString());
+				} else {
+					lines.add(file.asDirString());
+				}
+			}
+	    } else {
+	    	useCbmFont = false;
+	    	title = directory;
+			mainPanel.appendConsole("Print directory "+ directory);
+	    	int i = 0;
+	    	DirEntry entry;
+	    	do {
+	    		entry = tableModel.getDirEntry(i++);
+	    		if (entry != null) {
+	    			String row = String.format("%s\t %8d\t %s", entry.getFlags(), entry.getBlocks(), entry.getName());		
+		    		lines.add(row);
+	    		}
+	    	} while (entry != null);
+	    }
+		job.setPageable(new PrintPageable(lines.toArray(new String[lines.size()]), title, useCbmFont, true));
+		boolean doPrint = job.printDialog();
+		if (doPrint) {
+		    try {
+		        job.print();
+		    } catch (PrinterException e) {
+				mainPanel.appendConsole(e.getMessage());
+		    	e.printStackTrace();
+		    }
+		}
+	}
+	
 	/**
 	 * @param string
 	 */

@@ -160,6 +160,14 @@ class EntryTableModel extends AbstractTableModel {
 		fireTableRowsInserted(data.size()-1, data.size()-1);
 	}
 
+	public synchronized DirEntry getDirEntry(int index) {
+		if (data != null && index < data.size() ) {
+			return data.get(index);
+		} else {
+			return null;
+		}
+	}
+	
 	public synchronized void clear() {
 		int oldSize = data.size();
 		data.clear();

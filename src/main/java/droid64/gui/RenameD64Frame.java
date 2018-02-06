@@ -8,6 +8,7 @@ import java.awt.Toolkit;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 
+import javax.swing.BorderFactory;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
 import javax.swing.JComboBox;
@@ -17,7 +18,12 @@ import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JTextField;
+import javax.swing.event.DocumentEvent;
+import javax.swing.event.DocumentListener;
+import javax.swing.text.BadLocationException;
+import javax.swing.text.Document;
 
+import droid64.d64.CbmException;
 import droid64.d64.DiskImage;
 
 /*
@@ -156,6 +162,65 @@ public class RenameD64Frame extends JDialog {
 		cpmBox = new JCheckBox("CP/M formatted", false);
 		cpmBox.setToolTipText("Format for CP/M.");
 		
+
+		final JTextField nameTextField2 = new JTextField("", 16);
+		try {
+			nameTextField2.setFont(Settings.getCommodoreFont());
+			nameTextField2.setBackground(Settings.getDirColorBg());
+			nameTextField2.setForeground(Settings.getDirColorFg());
+			nameTextField2.setEditable(false);
+			nameTextField2.setText(diskName);
+			nameTextField2.setBorder(BorderFactory.createCompoundBorder(nameTextField2.getBorder(), BorderFactory.createEmptyBorder(4, 4, 4, 4)));
+			nameTextField.getDocument().addDocumentListener(new DocumentListener(){
+				public void insertUpdate(DocumentEvent e) {
+					update(e);
+				}
+				public void removeUpdate(DocumentEvent e) {
+					update(e);				
+				}
+				public void changedUpdate(DocumentEvent e) {
+					update(e);	
+				}
+				private void update(DocumentEvent e) {				
+					try {
+						Document originator = e.getDocument();
+						String text = e.getDocument().getText(0, originator.getLength());
+						nameTextField2.setText(text);
+					} catch (BadLocationException ex) { }
+				}
+			});
+		} catch (CbmException e) { };
+
+		final JTextField idTextField2 = new JTextField("", 5);
+		try {
+			idTextField2.setFont(Settings.getCommodoreFont());
+			idTextField2.setBackground(Settings.getDirColorBg());
+			idTextField2.setForeground(Settings.getDirColorFg());
+			idTextField2.setEditable(false);
+			idTextField2.setText(diskId);
+			idTextField2.setBorder(BorderFactory.createCompoundBorder(idTextField2.getBorder(), BorderFactory.createEmptyBorder(4, 4, 4, 4)));
+			idTextField.getDocument().addDocumentListener(new DocumentListener(){
+				public void insertUpdate(DocumentEvent e) {
+					update(e);
+				}
+				public void removeUpdate(DocumentEvent e) {
+					update(e);				
+				}
+				public void changedUpdate(DocumentEvent e) {
+					update(e);	
+				}
+				private void update(DocumentEvent e) {				
+					try {
+						Document originator = e.getDocument();
+						String text = e.getDocument().getText(0, originator.getLength());
+						idTextField2.setText(text);
+					} catch (BadLocationException ex) { }
+				}
+			});
+		} catch (CbmException e) { };
+		
+		
+
 		JPanel mainPanel = new JPanel();
 
 		GridBagConstraints gbc = new GridBagConstraints();
@@ -175,12 +240,12 @@ public class RenameD64Frame extends JDialog {
 		}
 		addToGridBag(0, row, 0.0, 0.0, gbc, mainPanel, new JLabel("Disk Name:"));
 		addToGridBag(1, row, 0.0, 0.0, gbc, mainPanel, nameTextField);
-		addToGridBag(2, row, 1.0, 0.0, gbc, mainPanel, new JPanel());
+		addToGridBag(2, row, 1.0, 0.0, gbc, mainPanel, idTextField);
 		row++;
-		addToGridBag(0, row, 0.0, 0.0, gbc, mainPanel, new JLabel("Disk ID:"));
-		addToGridBag(1, row, 0.0, 0.0, gbc, mainPanel, idTextField);
-		addToGridBag(2, row, 1.0, 0.0, gbc, mainPanel, new JPanel());
-		row++;		
+		addToGridBag(0, row, 0.0, 0.0, gbc, mainPanel, new JLabel(""));
+		addToGridBag(1, row, 0.0, 0.0, gbc, mainPanel, nameTextField2);
+		addToGridBag(2, row, 1.0, 0.0, gbc, mainPanel, idTextField2);
+		row++;
 		addToGridBag(0, row, 1.0, 1.0, gbc, mainPanel, new JPanel());
 		addToGridBag(1, row, 1.0, 1.0, gbc, mainPanel, new JPanel());
 		addToGridBag(2, row, 1.0, 1.0, gbc, mainPanel, new JPanel());

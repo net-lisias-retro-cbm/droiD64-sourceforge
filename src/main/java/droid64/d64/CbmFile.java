@@ -186,6 +186,13 @@ public class CbmFile implements Comparable<CbmFile>,Cloneable {
 		return builder.toString();
 	}
 	
+	public String asDirString() {
+		return String.format("%-5s%-18s %s%-3s%s", sizeInBlocks, "\""+name+"\"",
+				fileClosed ? " " : "*", 
+				(fileType < DiskImage.FILE_TYPES.length ? DiskImage.FILE_TYPES[fileType] : "???" ),
+				fileLocked ? "<" : " " );
+	}
+	
 	/** {@inheritDoc} */
 	protected void toString(StringBuilder builder) {
 		builder.append(" fileScratched=").append(fileScratched);

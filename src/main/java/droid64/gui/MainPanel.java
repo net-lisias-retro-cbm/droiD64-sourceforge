@@ -1033,6 +1033,7 @@ public class MainPanel extends JFrame {
 		UIManager.put("Button.font",            new FontUIResource(plainFont)); 
 		UIManager.put("CheckBox.font",          new FontUIResource(plainFont)); 
 		UIManager.put("ComboBox.font",          new FontUIResource(plainFont)); 
+		UIManager.put("RadioButton.font",       new FontUIResource(plainFont)); 
 		UIManager.put("FormattedTextField.font",new FontUIResource(plainFont)); 
 		UIManager.put("Label.font",             new FontUIResource(boldFont)); 
 		UIManager.put("List.font",              new FontUIResource(plainFont)); 
@@ -1256,7 +1257,12 @@ public class MainPanel extends JFrame {
 					"\n\t- D71 and D81 write support." +
 					"\n\t- PostgreSQL database support." +
 					"\n\t- Show SQL for setting up database." +
-					"\n\t- Many bug fixes."
+					"\n\t- Many bug fixes." +
+			"\nVersion 0.11b:" +
+					"\n\t- Edit BAM mode added." +
+					"\n\t- Show C64 font when (re-)naming files and disks." +
+					"\n\t- Printing added (file list, texts, hexdumps, images)." +
+					"\n\t- View texts using C64 font mode."
 					;
 	
 }

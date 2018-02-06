@@ -66,7 +66,10 @@ abstract public class DiskImage {
 	public static final int D81_CPM_IMAGE_TYPE      = 8;
 	
 	/** String array to convert imageType to String name */
-	public static final String[] IMAGE_TYPE_NAMES = { "Unknown", "D64", "D71", "D81", "T64", "CP/M D64 (C64)" , "CP/M D64 (C128)", "CP/M D71", "CP/M D81" };
+	public static final String[] IMAGE_TYPE_NAMES = {
+			"Unknown",
+			"D64", "D71", "D81", "T64",
+			"CP/M D64 (C64)" , "CP/M D64 (C128)", "CP/M D71", "CP/M D81" };
 	
 	public final static String GZIP_EXT = ".gz";
 	public final static String D64_EXT = ".d64";
@@ -325,8 +328,7 @@ abstract public class DiskImage {
 	 * @param cbmFile The file to be deleted
 	 * @throws CbmException
 	 */
-	abstract public void deleteFile(CbmFile cbmFile) throws CbmException;
-	
+	abstract public void deleteFile(CbmFile cbmFile) throws CbmException;	
 	/**
 	 * Validate image
 	 * @param repairList list of error codes which should be corrected if found.
@@ -334,6 +336,10 @@ abstract public class DiskImage {
 	 */
 	abstract public Integer validate(List<Integer> repairList);
 
+	abstract public boolean isSectorFree(int track, int sector);
+	abstract public  void markSectorFree(int track, int sector);
+	abstract public  void markSectorUsed(int track, int sector);
+	
 	
 	/** Constructor _*/
 	public DiskImage() {
@@ -650,7 +656,8 @@ abstract public class DiskImage {
 			feedbackMessage.append("Not yet implemented for CP/M format.\n");
 			return false;
 		}
-		setDiskName(cbmFileName(newDiskName), cbmFileName(newDiskID));
+		//setDiskName(cbmFileName(newDiskName), cbmFileName(newDiskID));
+		setDiskName(newDiskName, newDiskID);
 		return writeImage(filename);
 	}
 	
@@ -664,7 +671,8 @@ abstract public class DiskImage {
 	public void renamePRG(int cbmFileNumber, String newPRGName, int newPRGType) {
 		feedbackMessage.append("renamePRG: oldName '").append(cbmFile[cbmFileNumber].getName()).append(" newName '").append(newPRGName).append("'\n");
 		CbmFile newFile = new CbmFile(cbmFile[cbmFileNumber]);		
-		newFile.setName(cbmFileName(newPRGName));
+		//newFile.setName(cbmFileName(newPRGName));
+		newFile.setName(newPRGName);
 		newFile.setFileType(newPRGType);
 		writeDirectoryEntry(newFile, newFile.getDirPosition());
 	}
@@ -890,8 +898,10 @@ abstract public class DiskImage {
 	 * @return image format
 	 */
 	public int checkImageFormat() {
-		if (bam.getDiskName()!= null && (CPM_DISKNAME_1.equals(bam.getDiskName().trim()) || CPM_DISKNAME_2.equals(bam.getDiskName().trim()))) {
-			if (CPM_DISKID_GCR.equals(bam.getDiskId())) {
+		String diskName = bam.getDiskName()!=null ? bam.getDiskName().replaceAll("\\u00a0", "").trim() : null;
+		String diskId = bam.getDiskId() != null ? bam.getDiskId().replaceAll("\\u00a0", " ").trim() : null;
+		if (diskName!= null && (CPM_DISKNAME_1.equals(diskName) || CPM_DISKNAME_2.equals(diskName))) {
+			if (CPM_DISKID_GCR.equals(diskId)) {
 				if ("CBM".equals(getStringFromBlock(1, 0, 0, 3))) {
 					if (this instanceof D71 && (getCbmDiskValue(BLOCK_SIZE - 1) & 0xff) == 0xff) {
 						feedbackMessage.append("CP/M C128 double sided disk detected.\n");
@@ -907,7 +917,7 @@ abstract public class DiskImage {
 					imageFormat = D64_CPM_C64_IMAGE_TYPE;
 					return imageFormat;
 				}
-			} else if (this instanceof D81 && CPM_DISKID_1581.equals(bam.getDiskId())) {
+			} else if (this instanceof D81 && CPM_DISKID_1581.equals(diskId)) {
 				feedbackMessage.append("CP/M 3.5\" disk detected.\n");				
 				imageFormat = D81_CPM_IMAGE_TYPE;
 				return imageFormat;

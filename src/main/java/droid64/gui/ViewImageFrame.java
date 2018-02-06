@@ -13,6 +13,8 @@ import java.awt.event.ActionListener;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.awt.image.BufferedImage;
+import java.awt.print.PrinterException;
+import java.awt.print.PrinterJob;
 import java.io.File;
 import java.io.IOException;
 import java.util.List;
@@ -112,6 +114,17 @@ public class ViewImageFrame extends JFrame {
 			}
 		});
 
+		final JButton printButton = new JButton("Print");
+		printButton.setMnemonic('p');
+		printButton.setToolTipText("Print");
+		printButton.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent event) {
+				if ( event.getSource() == printButton ) {
+					print(image, picture.getName());
+				}
+			}
+		});	
+		
 		final JButton saveButton = new JButton("Save PNG");
 		saveButton.setMnemonic('s');
 		saveButton.setEnabled(image != null);
@@ -130,6 +143,7 @@ public class ViewImageFrame extends JFrame {
 		});
 		
 		JPanel buttonPanel = new JPanel();
+		buttonPanel.add(printButton);
 		buttonPanel.add(saveButton);
 		buttonPanel.add(okButton);
 		cp.add(buttonPanel, BorderLayout.SOUTH);		
@@ -179,6 +193,20 @@ public class ViewImageFrame extends JFrame {
 		parent.add(component, gbc);
 	}
 	
+	private void print(BufferedImage image, String title) {
+		System.out.println("ImageViewFrame.print:");
+		PrinterJob job = PrinterJob.getPrinterJob();		
+		job.setPageable(new PrintPageable(image, title));
+		boolean doPrint = job.printDialog();
+		if (doPrint) {
+		    try {
+		        job.print();
+		    } catch (PrinterException e) {
+		    	e.printStackTrace();
+		    }
+		}
+	}
+	
 	class ImagePanel extends JPanel {
 		private static final long serialVersionUID = 1L;
 		private Image image;
@@ -191,7 +219,7 @@ public class ViewImageFrame extends JFrame {
 			Dimension dim = new Dimension(image.getWidth(), image.getHeight());
 			setSize(dim);
 			setMinimumSize(dim);
-			setPreferredSize(dim);			
+			setPreferredSize(dim);
 		}
 		protected void paintComponent(Graphics g) {
 			super.paintComponent(g);

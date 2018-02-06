@@ -150,6 +150,12 @@ public class CpmFile extends CbmFile {
 		this.archived = archived;
 	}
 
+	public String asDirString() {
+		return String.format("%-5s %-8s %-3s %-3s",
+				recordCount, cpmName, cpmNameExt,
+				(readOnly ? "R" : "-") + (hidden ? "H" : "-") + (archived ? "A" : "-"));
+	}
+
 	public String toString() {
 		StringBuilder builder = new StringBuilder();
 		builder.append("CpmFile[");
