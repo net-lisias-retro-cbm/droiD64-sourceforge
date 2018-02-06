@@ -25,9 +25,12 @@
 /**
  * @author wolf
  */
+package GUI;
 import java.util.Vector;
 
 import javax.swing.table.AbstractTableModel;
+
+import D64.*;
 
 class EntryTableModel extends AbstractTableModel {
 	protected static int NUM_COLUMNS = 7;

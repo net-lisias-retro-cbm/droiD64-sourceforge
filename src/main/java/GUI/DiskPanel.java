@@ -1,3 +1,4 @@
+package GUI;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Dimension;
@@ -28,6 +29,10 @@ import javax.swing.filechooser.FileFilter;
 import javax.swing.table.DefaultTableColumnModel;
 import javax.swing.table.TableColumn;
 import javax.swing.table.TableModel;
+
+import D64.CbmFile;
+import D64.D64;
+import D64.DirEntry;
 
 /*
  * Created on 23.06.2004
@@ -63,6 +68,24 @@ import javax.swing.table.TableModel;
  */
 public class DiskPanel extends JPanel implements TableModelListener {
 	
+
+	private Font f;
+	private final String FONTNAME = "droiD64_cbm.ttf";
+	private final float FONTSIZE = 10;
+	/*
+	String fontFileName = "test.ttf";
+	float fontSize = 11;
+
+	String fontFileName = "CBM-64.TTF";
+	float fontSize = 11;
+
+			 String fontFileName = "Adore64.ttf";
+	 float fontSize = 8;
+		 
+	 String fontFileName = "Commodore64-v5.ttf";
+	 float fontSize = 8;
+	*/
+
 	private DiskPanel otherDiskPanel;
 	private RenamePRGFrame renamePRGFrame;
 	private String newPRGName;
@@ -97,32 +120,13 @@ public class DiskPanel extends JPanel implements TableModelListener {
 	private String feedBackMessage = "";
 
 	private JTextArea textArea = new JTextArea(10, 60);
+	
+	private int rowHeight = 10;
 
 
-
-	/**
-	 * 
-	 */
-	private Font f;
+	
 	public DiskPanel() {
-		try {
-			f = Font.createFont( 
-				Font.TRUETYPE_FONT,
-//			this.getClass().getResourceAsStream("ressources/Adore64.ttf")
-			this.getClass().getResourceAsStream("ressources/CBM-64.TTF")
-			);
-		} catch (FileNotFoundException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} catch (FontFormatException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-//		f = f.deriveFont( 8f );	// for Adore64.ttf
-		f = f.deriveFont( 11f );	// for CBM-64.TTF
+		makeFont();
 		
 		drawDirPanel();
 		drawWahlPanel();
@@ -135,6 +139,26 @@ public class DiskPanel extends JPanel implements TableModelListener {
 		add(feedBackPanel, BorderLayout.SOUTH);
 		setBorder(BorderFactory.createRaisedBevelBorder());
 		
+	}
+
+	private void makeFont(){
+		try {
+			f = Font.createFont( 
+				Font.TRUETYPE_FONT,
+				this.getClass().getResourceAsStream("ressources/"+FONTNAME)
+			);
+		}
+		catch (FileNotFoundException e) {
+			e.printStackTrace();
+		}
+		catch (FontFormatException e) {
+			e.printStackTrace();
+		}
+		catch (IOException e) {
+			e.printStackTrace();
+		}
+
+		f = f.deriveFont( FONTSIZE );
 	}
 
 	private EntryTableModel tm = new EntryTableModel();
@@ -161,10 +185,11 @@ public class DiskPanel extends JPanel implements TableModelListener {
 		table.setGridColor(new Color(230, 230, 255));
 		//table.setFont(new Font("Monospaced", Font.BOLD, 14));
 		table.setFont(f);
+		table.setRowHeight(rowHeight);
 		//table.addColumn();
 		//table.setShowVerticalLines(false);
 
-		diskLabel = new JLabel("no file");
+		diskLabel = new JLabel("NO FILE");
 		diskLabel.setToolTipText("the label of the disk");
 		//diskLabel.setFont(new Font("Monospaced", Font.BOLD, 12));
 		diskLabel.setFont(f);
@@ -217,7 +242,6 @@ public class DiskPanel extends JPanel implements TableModelListener {
 		// do something with the data
 		table.setModel(model);
 		table.revalidate();
-		
 	};
 
 	
@@ -512,7 +536,6 @@ public class DiskPanel extends JPanel implements TableModelListener {
 				flags = "< ";
 			if (d64.getCbmFile(filenumber).isFile_closed() == false)
 				flags = flags + "* ";
-//			feedBackMessage = feedBackMessage + flags;
 			//{Track / Sector}
 			this_entry =
 				this_entry
@@ -544,7 +567,7 @@ public class DiskPanel extends JPanel implements TableModelListener {
 				+ d64.getBam().getDisk_name()
 				+ ","
 				+ d64.getBam().getDisk_ID()
-				+ "\" "+blocks_free+" Blocks free ["
+				+ "\" "+blocks_free+" BLOCKS FREE ["
 				+ d64.getFilenumber_max() + "]"
 				);
 
@@ -1124,4 +1147,20 @@ public class DiskPanel extends JPanel implements TableModelListener {
 		newPRGType = i;
 	}
 	
+	/**
+	 * @return
+	 */
+	public int getRowHeight() {
+		return rowHeight;
+	}
+
+	/**
+	 * @param i
+	 */
+	public void setRowHeight(int i) {
+		rowHeight = i;
+		table.setRowHeight(rowHeight);
+		table.revalidate();
+	}
+
 }

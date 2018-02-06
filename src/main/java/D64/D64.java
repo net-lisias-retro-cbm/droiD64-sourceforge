@@ -1,3 +1,4 @@
+package D64;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -51,6 +52,72 @@ public class D64 {
 
 	
 
+	// d64 format ist restricted to a maximum of 144 directory entries
+	private static final int filenumber_limit = 144;
+
+	private static int[] myEncoding = {
+		//invisible
+		32, 32, 32, 32, 32, 32, 32, 32, 32, 32,
+		32, 32, 32, 32, 32, 32, 32, 32, 32, 32,
+		32, 32, 32, 32, 32, 32, 32, 32, 32, 32,
+		32,32,
+		
+		//visible
+		32,33,34,35,36,37,38,39,
+		40,41,42,43,44,45,46,47,48,49,
+		50,51,52,53,54,55,56,57,58,59,
+		60,61,62,63,64,65,66,67,68,69,
+		70,71,72,73,74,75,76,77,78,79,
+		80,81,82,83,84,85,86,87,88,89,
+		90,91,92,93,94,95,96,97,98,99,
+		100,101,102,103,104,105,106,107,108,109,
+		110,111,112,113,114,115,116,117,118,119,
+		120,121,122,123,124,125,126,127,
+		
+		//invisible
+		32, 32,
+		32, 32, 32, 32, 32, 32, 32, 32, 32, 32,
+		32, 32, 32, 32, 32, 32, 32, 32, 32, 32,
+		32, 32, 32, 32, 32, 32, 32, 32, 32, 32,
+		32,
+		
+		//visible
+		161,162,163,164,165,166,167,168,169,
+		170,171,172,173,174,175,176,177,178,179,
+		180,181,182,183,184,185,186,187,188,189,
+		190,191,
+		
+		/*
+		cbm font trickery: codes 192-223 are 96-127
+		192,193,194,195,196,197,198,199,
+		200,201,202,203,204,205,206,207,208,209,
+		210,211,212,213,214,215,216,217,218,219,
+		220,221,222,223,
+		*/
+		96,97,98,99,
+		100,101,102,103,104,105,106,107,108,109,
+		110,111,112,113,114,115,116,117,118,119,
+		120,121,122,123,124,125,126,127,
+
+		/*
+		cbm font trickery: codes 224-254 are 160-190
+		224,225,226,227,228,229,
+		230,231,232,233,234,235,236,237,238,239,
+		240,241,242,243,244,245,246,247,248,249,
+		250,251,252,253,254,
+		*/
+		
+		32,161,162,163,164,165,166,167,168,169,
+		170,171,172,173,174,175,176,177,178,179,
+		180,181,182,183,184,185,186,187,188,189,
+		190,191,
+		
+		/*
+		cbm font trickery: codes 255 is 126
+		255
+		*/
+		126
+	};
 
 
 	private void initTracks(){
@@ -101,7 +168,7 @@ public class D64 {
 	}
 	
 	private void initCbmFiles(){
-		for (int i = 0; i < 143; i++) {
+		for (int i = 0; i < filenumber_limit+1; i++) {
 			cbmFile[i] = new CbmFile();
 		}
 	}
@@ -119,7 +186,7 @@ public class D64 {
 	 * these are initialized in initCbmFiles() and filled with data in readDirectory()
 	 * their index is the directory-position they have in the D64 file (see readDirectory()) 
 	 */
-	private CbmFile[] cbmFile = new CbmFile[144]; 
+	private CbmFile[] cbmFile = new CbmFile[filenumber_limit+1]; 
 	private int filenumber_max;	// number of files in d64 image
 	private CbmFile bufferCbmFile = new CbmFile();	//used by insertPRG and CopyPRG
 	private CbmFile singleDirFile = new CbmFile();	//used by readSingleDirectory and others
@@ -405,14 +472,14 @@ public class D64 {
 	 for (cnt = 0; cnt <= 15; cnt ++)
 		bam.setDisk_name(
 			bam.getDisk_name() + 
-			new Character((char)(getCbmDiskValue(tracks[this_track].getOffset() + (256*this_sector) + 144 + cnt )))
+			new Character((char)(myEncoding[getCbmDiskValue(tracks[this_track].getOffset() + (256*this_sector) + 144 + cnt )]))
 		);
  
    bam.setDisk_ID("");
 	for (cnt = 0; cnt <= 4; cnt ++)
 		bam.setDisk_ID(
 			bam.getDisk_ID() +
-			new Character((char)( getCbmDiskValue(tracks[this_track].getOffset() + (256*this_sector) + 162 + cnt) ))
+			new Character((char)( myEncoding[getCbmDiskValue(tracks[this_track].getOffset() + (256*this_sector) + 162 + cnt)] ))
 		);
 	}
 
@@ -428,6 +495,7 @@ public class D64 {
 	*/
 	//public int zaehler = 0;
 	public void readDirectory(){
+		boolean filelimit_reached = false;
 		int this_track = 18;
 		int this_sector = 1;
 		int dirPosition = 0;
@@ -443,7 +511,10 @@ public class D64 {
 				copyCbmFile( singleDirFile, cbmFile[filenumber]);
 				if (cbmFile[filenumber].isFile_scratched() == false) {
 					cbmFile[filenumber].setDirPosition(dirPosition);
-					filenumber++;
+					if (filenumber < filenumber_limit) filenumber++;	// too many files in directory check
+					else {
+						filelimit_reached = true;
+					}
 				}
 				dirPosition ++;
 			}
@@ -451,6 +522,10 @@ public class D64 {
 			this_sector = getCbmDiskValue( dataPosition + 1);
 		}
 		while (this_track != 0);
+		
+		if (filelimit_reached) {
+			feedbackMessage = feedbackMessage + "Error: Too many fileentries in directory (more than "+filenumber_limit+")!\n";
+		}
 
 		filenumber_max = filenumber;
 	}
@@ -485,10 +560,9 @@ public class D64 {
 		while (this_track != 0);
 
 		//maybe not correct...
-		if (dirPosition < 144) return dirPosition;
+		if (dirPosition < filenumber_limit+2) return dirPosition;
 		else return -1;
 	}
-
 
 	/**
 	Reads a single directory entry of the d64 image, fills singleDirFile with entries<BR>
@@ -538,27 +612,27 @@ public class D64 {
 		singleDirFile.setSector(getCbmDiskValue(dataPosition+ 4));
 		
 		singleDirFile.setName("");
-					for (position = 0; position <= 15; position ++){
-						if (getCbmDiskValue(dataPosition + 5 + position) != 160){
-							singleDirFile.setName(
-								singleDirFile.getName()+
-								(char)( getCbmDiskValue( dataPosition + 5 + position) )
-							);
-						}
-					}
-					
-					singleDirFile.setRel_track(getCbmDiskValue(dataPosition + 21));
-					singleDirFile.setRel_sector(getCbmDiskValue(dataPosition + 22));
-					
-					for (position = 0; position <= 5; position ++){
-						singleDirFile.setGeos(position, getCbmDiskValue(dataPosition + 23 + position));
-					}
-	
-					singleDirFile.setSizeInBlocks((char)(
-						getCbmDiskValue(dataPosition + 30) +
-						getCbmDiskValue( dataPosition + 31) * 256
-					));
-					
+		for (position = 0; position <= 15; position ++){
+			if (getCbmDiskValue(dataPosition + 5 + position) != 160){
+				singleDirFile.setName(
+					singleDirFile.getName()+
+				(char)( myEncoding[getCbmDiskValue( dataPosition + 5 + position)])
+				);
+			}
+		}
+		
+		singleDirFile.setRel_track(getCbmDiskValue(dataPosition + 21));
+		singleDirFile.setRel_sector(getCbmDiskValue(dataPosition + 22));
+		
+		for (position = 0; position <= 5; position ++){
+			singleDirFile.setGeos(position, getCbmDiskValue(dataPosition + 23 + position));
+		}
+
+		singleDirFile.setSizeInBlocks((char)(
+			getCbmDiskValue(dataPosition + 30) +
+			getCbmDiskValue( dataPosition + 31) * 256
+		));
+		
 	}
 
 

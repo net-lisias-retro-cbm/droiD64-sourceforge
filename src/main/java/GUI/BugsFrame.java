@@ -1,3 +1,4 @@
+package GUI;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Container;
@@ -46,7 +47,7 @@ public class BugsFrame extends JFrame {
 	private Container cp;
 	private JButton okButton;
 	
-	final static private String myDate = "06.07.2004";
+	final static private String myDate = "15.07.2004";
 	
 	final static private String bugsMessage = 
 		"writing PRGs:\n"+
@@ -62,7 +63,7 @@ public class BugsFrame extends JFrame {
 		"DiskPanel:\n" +
 		"Implement \"Reload D64\" function.\n"+
 		"\n" +
-		"general: implement some C64 TrueType font which displays all CBM characters for displaying and editing files\n"+
+		"general: allow users to enter special characters when editing diskname and filenames.\n"+
 		"\n" +
 		"general: allow users to combine external transfer programs within\n"+
 		"\n" +
