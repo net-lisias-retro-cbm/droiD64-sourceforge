@@ -1,6 +1,7 @@
 package droid64.d64;
 
 import java.util.Arrays;
+import java.util.List;
 
 /**<pre style='font-family:sans-serif;'>
  * Created on 2015-Oct-15
@@ -84,6 +85,7 @@ public class T64 extends DiskImage {
 				bam.setDiskName(bam.getDiskName() + Character.toUpperCase(((char)(PETSCII_TABLE[c]))) );
 			}
 		}
+		checkImageFormat();
 	}
 
 	@Override
@@ -128,7 +130,7 @@ public class T64 extends DiskImage {
 	}
 
 	@Override
-	public byte[] writeSaveData(int number) throws CbmException {
+	public byte[] getFileData(int number) throws CbmException {
 		if (number < cbmFile.length) {
 			CbmFile cf = cbmFile[number];
 			return Arrays.copyOfRange(cbmDisk, cf.getOffSet(), cf.getOffSet() + cf.getSizeInBytes());
@@ -138,8 +140,9 @@ public class T64 extends DiskImage {
 	}
 
 	@Override
-	protected boolean saveFileData(byte[] saveData) {
-		return false;
+	protected TrackSector saveFileData(byte[] saveData) {
+		feedbackMessage.append("saveFileData: not supported for T64 images.\n");
+		return null;
 	}
 
 	@Override
@@ -155,7 +158,8 @@ public class T64 extends DiskImage {
 	}
 
 	@Override
-	protected void writeDirectoryEntry(int dirEntryNumber) {		
+	protected void writeDirectoryEntry(CbmFile cbmFile, int dirEntryNumber) {		
+		feedbackMessage.append("writeDirectoryEntry: not supported for T64 images.\n");
 	}
 
 	@Override
@@ -164,7 +168,8 @@ public class T64 extends DiskImage {
 	}
 
 	@Override
-	protected boolean addDirectoryEntry(String thisFilename, int thisFiletype, int destTrack, int destSector, boolean isCopyFile, int lengthInBytes) {
+	public boolean addDirectoryEntry(CbmFile cbmFile, int destTrack, int destSector, boolean isCopyFile, int lengthInBytes) {
+		feedbackMessage.append("addDirectoryEntry: not supported for T64 images.\n");
 		return false;
 	}
 
@@ -183,4 +188,14 @@ public class T64 extends DiskImage {
 		throw new CbmException("Delete not yet implemented for T64.");				
 	}
 
+	@Override
+	public void readPartition(int track, int sector, int numBlocks) throws CbmException {
+		throw new CbmException("T64 images does not support partitions.");
+	}
+
+	@Override
+	public Integer validate(List<Integer> repairList) {
+		feedbackMessage.append("validate: not supported for T64 images.\n");
+		return null;
+	}
 }

@@ -55,19 +55,21 @@ public class ViewImageFrame extends JFrame {
 
 	private static final long serialVersionUID = 1L;
 	private List<byte[]> dataList;
+	private List<String> nameList;
 	private int currentIndex = 0;
 
-	public ViewImageFrame(String title, List<byte[]> dataList) throws IOException {
+	public ViewImageFrame(String title, List<byte[]> dataList, List<String> nameList) throws IOException {
 		if (dataList == null || dataList.isEmpty()) {
 			dispose();
 		} else {
 			this.dataList = dataList;
+			this.nameList = nameList;
 			setTitle(title);
 			setup();
 		}
 	}
 	
-	private void setup() {
+	private void setup() throws IOException {
 		Container cp = getContentPane();
 		cp.setLayout(new BorderLayout());
 		JPanel panel = new JPanel();
@@ -75,16 +77,16 @@ public class ViewImageFrame extends JFrame {
 		gbc.fill = GridBagConstraints.VERTICAL;
 		int row = 0;
 		
-		final BufferedImage image = getNextImage();
-		
+		final CbmPicture picture = getNextImage();
+		final BufferedImage image = picture.getImage();
+		final ImagePanel imgPanel = new ImagePanel(picture);
 		if (image != null) {
-			final ImagePanel imgPanel = new ImagePanel(image, new Dimension(image.getWidth(), image.getHeight()));
 			imgPanel.setBorder(BorderFactory.createLineBorder(Color.BLACK));
 			imgPanel.addMouseListener(new MouseListener() {
 				@Override
 				public void mouseClicked(MouseEvent e) {
-					BufferedImage img = getNextImage();
-					imgPanel.setImage(img, new Dimension(img.getWidth(), img.getHeight()));
+					CbmPicture img = getNextImage();
+					imgPanel.setImage(img);
 				}
 				@Override
 				public void mousePressed(MouseEvent e) {}
@@ -117,7 +119,7 @@ public class ViewImageFrame extends JFrame {
 			public void actionPerformed(ActionEvent event) {
 				if ( event.getSource() == saveButton ) {
 					try {		
-						File save = saveImageDialog();
+						File save = saveImageDialog(imgPanel);
 						if (save != null) {
 							ImageIO.write(image, "png", save);
 						}
@@ -139,19 +141,30 @@ public class ViewImageFrame extends JFrame {
 		setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);		
 	}
 	
-	private BufferedImage getNextImage() {
+	private CbmPicture getNextImage() {
 		currentIndex = currentIndex % dataList.size();
 		try {
-			CbmPicture cbm = new CbmPicture(dataList.get(currentIndex++));
-			return cbm.getImage();
+			byte[] data = dataList.get(currentIndex);
+			String name = currentIndex < nameList.size() ? nameList.get(currentIndex) : null;
+			CbmPicture cbm = new CbmPicture(data, name);
+			currentIndex++;
+			return cbm;
 		} catch (IOException e) {}
 		return null;
 	}
 
 	
-	private File saveImageDialog() {
+	private File saveImageDialog(ImagePanel imgPanel) {
 		JFileChooser chooser = new JFileChooser();
+		chooser.setDialogTitle("Save image to PNG file");
 		chooser.setMultiSelectionEnabled(false);
+		String name = imgPanel.getName();
+		if (name != null) {
+			if (!name.toLowerCase().endsWith(".png")) {
+				name = name + ".png";
+			}
+			chooser.setSelectedFile(new File(name));
+		}
 		if (chooser.showSaveDialog(this) == JFileChooser.APPROVE_OPTION) {
 			return chooser.getSelectedFile();
 		}
@@ -169,23 +182,38 @@ public class ViewImageFrame extends JFrame {
 	class ImagePanel extends JPanel {
 		private static final long serialVersionUID = 1L;
 		private Image image;
-		public ImagePanel(Image image, Dimension dim) {
+		private String name;
+		
+		public ImagePanel(CbmPicture picture) throws IOException {
+			BufferedImage image = picture.getImage(); 
 			this.image = image;
+			this.name = picture.getName();
+			Dimension dim = new Dimension(image.getWidth(), image.getHeight());
 			setSize(dim);
 			setMinimumSize(dim);
-			setPreferredSize(dim);
+			setPreferredSize(dim);			
 		}
 		protected void paintComponent(Graphics g) {
 			super.paintComponent(g);
 			g.drawImage(image, 0, 0, this);
 		}
-		public void setImage(Image image, Dimension dim) {
+		public void setImage(CbmPicture picture) {
+			try {
+			BufferedImage image = picture.getImage(); 
 			this.image = image;
+			this.name = picture.getName();
+			Dimension dim = new Dimension(image.getWidth(), image.getHeight());
 			setSize(dim);
 			setMinimumSize(dim);
 			setPreferredSize(dim);
 			invalidate();
 			repaint();
+			} catch (IOException e) {
+				
+			}
+		}
+		public String getName() {
+			return name;
 		}
 	}
 }

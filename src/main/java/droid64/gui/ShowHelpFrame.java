@@ -54,7 +54,7 @@ public class ShowHelpFrame extends JFrame {
 		"Done from scratch by Wolfram Heyer.\n"+
 		"D64 structure and 1541 information taken from some fairlight docs at: " +
 		"http://www.fairlight.to/docs/text/formats.zip\n" + 
-		"Additions, corrections and a few bugs fixed by Henrik Wetterström in 2015." +
+		"Additions, corrections and a few bugs fixed by Henrik Wetterström in 2015/2016." +
 		"\n\n" +
 		//greetings
 		"Greetings:\n"+

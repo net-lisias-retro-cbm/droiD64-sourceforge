@@ -1,4 +1,7 @@
 package droid64.d64;
+
+import java.io.File;
+
 /**<pre style='font-family:sans-serif;'>
  * Created on 05.07.2004
  *
@@ -35,28 +38,47 @@ public class DirEntry {
 	private int track;
 	private int sector;
 
+	private boolean isFile = true;
+	private boolean isImageFile = false;
+	
 	public DirEntry() {
 	}
 
-	public DirEntry(CbmFile cbmFile, int fileNum) {
+	public DirEntry(CbmFile file, int fileNum) {
 		number = fileNum;
-		if (cbmFile instanceof CpmFile) {
-			CpmFile cpm = (CpmFile) cbmFile;
+		if (file instanceof CpmFile) {
+			CpmFile cpm = (CpmFile) file;
 			blocks = cpm.getRecordCount();
 			name = cpm.getCpmName();
 			type = cpm.getCpmNameExt();			
 			flags =  (cpm.isReadOnly() ? "R" : "-") + (cpm.isHidden() ? "H" : "-") + (cpm.isArchived() ? "A" : "-");
-			track = cbmFile.getTrack();
-			sector = cbmFile.getSector();
+			track = cpm.getTrack();
+			sector = cpm.getSector();
+		} else if (file instanceof CbmFile) {
+			CbmFile cbm = (CbmFile) file;
+			blocks = cbm.getSizeInBlocks();
+			type = DiskImage.getFileType(cbm.getFileType());
+			name= " \"" + cbm.getName() + "\"";
+			flags = (cbm.isFileLocked() ? "<" : "") + (cbm.isFileClosed() ? "" : "*");
+			track = cbm.getTrack();
+			sector = cbm.getSector();
 		} else {
-			blocks = cbmFile.getSizeInBlocks();
-			type = DiskImage.getFileType(cbmFile.getFileType());
-			name= " \"" + cbmFile.getName() + "\"";
-
-			flags = (cbmFile.isFileLocked() ? "<" : "") + (cbmFile.isFileClosed() ? "" : "*");
-			track = cbmFile.getTrack();
-			sector = cbmFile.getSector();
-		}		
+			name = file.getName();
+		}
+	}
+	
+	public DirEntry(File file, int fileNum) {
+		number = fileNum;		
+		name = file.getName();
+		blocks = (int) file.length();
+		isFile = !file.isDirectory();
+		type = file.isDirectory() ? "DIR" : "FILE";
+		flags =	(file.canRead() ? "r" : "-") + (file.canWrite() ? "w" : "-") + (file.canExecute() ? "x" : "-");
+		isImageFile = isFile && DiskImage.isImageFileName(file);
+	}
+	
+	public boolean isImageFile() {
+		return isImageFile;
 	}
 	
 	/** {@inheritDoc} */
@@ -134,12 +156,12 @@ public int getNumber() {
 		name = string;
 	}
 
-/**
- * @param i
- */
-public void setNumber(int i) {
-	number = i;
-}
+	/**
+	 * @param i
+	 */
+	public void setNumber(int i) {
+		number = i;
+	}
 
 	/**
 	 * @param i
@@ -162,4 +184,9 @@ public void setNumber(int i) {
 		type = string;
 	}
 
+	public boolean isFile() {
+		return isFile;
+		
+	}
+	
 }

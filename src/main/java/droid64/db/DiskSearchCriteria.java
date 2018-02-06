@@ -12,6 +12,7 @@ public class DiskSearchCriteria {
 	private Integer fileType;
 	private String diskPath;
 	private String diskFileName;
+	private Integer imageType;
 	
 	public String getFileName() {
 		return fileName;
@@ -59,6 +60,14 @@ public class DiskSearchCriteria {
 		return diskFileName;
 	}
 
+	public Integer getImageType() {
+		return imageType;
+	}
+	
+	public void setImageType(Integer imageType) {
+		this.imageType = imageType;
+	}
+	
 	/**
 	 * Has search criteria.
 	 * @return false if all values are null or empty.
@@ -68,6 +77,7 @@ public class DiskSearchCriteria {
 				  (diskLabel==null || diskLabel.trim().isEmpty()) && 
 				  (diskPath==null || diskPath.trim().isEmpty()) && 
 				  (diskFileName==null || diskFileName.trim().isEmpty()) && 
+				  (imageType==null) &&
 				  fileSizeMin==null && fileSizeMax==null && fileType == null);
 	}
 	
@@ -81,6 +91,7 @@ public class DiskSearchCriteria {
 		builder.append(" .fileName=").append(fileName);
 		builder.append(" .fileSizeMin=").append(fileSizeMin);
 		builder.append(" .fileSizeMax=").append(fileSizeMax);
+		builder.append(" .imageType=").append(imageType);
 		builder.append(" .fileType=").append(fileType).append("]");
 		return builder.toString();
 	}

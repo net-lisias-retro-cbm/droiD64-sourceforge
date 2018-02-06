@@ -26,7 +26,7 @@ import java.util.Arrays;
  *</pre>
  * @author wolf
  */
-public class CbmFile {
+public class CbmFile implements Comparable<CbmFile>,Cloneable {
 
 	private boolean fileScratched;
 	private int fileType;
@@ -88,7 +88,7 @@ public class CbmFile {
 
 	public CbmFile(
 			boolean fileScratched, int fileType, boolean fileLocked, boolean fileClosed, int track, int sector,
-			String name, int relTrack, int relSector,	int[] geos,	int sizeInBytes, int sizeInBlocks, int dirTrack,
+			String name, int relTrack, int relSector, int[] geos, int sizeInBytes, int sizeInBlocks, int dirTrack,
 			int dirSector, int dirPosition)
 	{
 		this.fileScratched = fileScratched;
@@ -143,29 +143,9 @@ public class CbmFile {
 		fileClosed = false;
 	}
 
-	/**
-	 * Copies all attributes from source CbmFile to this CbmFile.<BR>
-	 * @param source the source cbmFile
-	 */
-	public void copy(CbmFile source) {
-		this.fileScratched = source.fileScratched;
-		this.fileType = source.fileType;
-		this.fileLocked = source.fileLocked;
-		this.fileClosed = source.fileClosed;
-		this.track = source.track;
-		this.sector = source.sector;
-		this.name = source.name;
-		this.relTrack = source.relTrack;
-		this.relSector = source.relSector;
-		for (int i=0; i<this.geos.length && i<source.geos.length; i++) {
-			this.geos[i] = source.geos[i];
-			
-		}
-		this.sizeInBytes = source.sizeInBytes;
-		this.sizeInBlocks = source.sizeInBlocks;
-		this.dirTrack = source.dirTrack;
-		this.dirSector = source.dirSector;
-		this.dirPosition = source.dirPosition;
+	@Override
+	public CbmFile clone() {
+		return new CbmFile(this);
 	}
 	
 	/**
@@ -441,6 +421,17 @@ public class CbmFile {
 
 	public void setOffSet(int offSet) {
 		this.offSet = offSet;
+	}
+
+	@Override
+	public int compareTo(CbmFile that) {
+		if (this.name == null && that.name == null) {
+			return 0;
+		} else if (this.name == null || that.name == null) {
+			return this.name == null ? -1 : 1;
+		} else {
+			return name.compareTo(that.name);
+		}
 	}
 	
 

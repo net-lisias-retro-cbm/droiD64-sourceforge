@@ -32,6 +32,7 @@ import javax.swing.table.DefaultTableColumnModel;
 import javax.swing.table.TableColumn;
 
 import droid64.d64.D64;
+import droid64.d64.DiskImage;
 import droid64.db.DaoFactory;
 import droid64.db.DatabaseException;
 import droid64.db.Disk;
@@ -61,7 +62,7 @@ public class SearchFrame extends JDialog {
 		this.mainPanel = mainPanel;
 		Container cp = getContentPane();
 		cp.setLayout(new BorderLayout());
-		cp.add(drawSearchPanel());
+		cp.add(drawSearchPanel(), BorderLayout.CENTER);
 		Dimension dim = Toolkit.getDefaultToolkit().getScreenSize();
 		setLocation( (int)((dim.width - getSize().getWidth()) / 3),	(int)((dim.height - getSize().getHeight()) / 3)	);
 		pack();
@@ -113,6 +114,14 @@ public class SearchFrame extends JDialog {
 		fileTypePanel.setLayout(new FlowLayout(FlowLayout.LEFT));
 		fileTypePanel.add(fileTypeBox);
 		
+		final String[] imageTypes = DiskImage.IMAGE_TYPE_NAMES.clone();
+		final JComboBox<String> imageTypeBox = new JComboBox<String>(imageTypes);
+		imageTypes[0] = "<Any>";
+		imageTypeBox.setSelectedIndex(0);
+		JPanel imageTypePanel = new JPanel();
+		imageTypePanel.setLayout(new FlowLayout(FlowLayout.LEFT));
+		imageTypePanel.add(imageTypeBox);
+		
 		// Search result table
 		DefaultTableColumnModel columnModel = new DefaultTableColumnModel();
 		for (int i=0; i<tableModel.getColumnCount(); i++) {
@@ -159,6 +168,10 @@ public class SearchFrame extends JDialog {
 						case 5:  criteria.setFileType(new Integer(D64.TYPE_USR)); break;
 						default: criteria.setFileType(null); break;
 					}
+
+					int imageType = imageTypeBox.getSelectedIndex();
+					criteria.setImageType(imageType > 0 && imageType < DiskImage.IMAGE_TYPE_NAMES.length ? new Integer(imageType) : null);
+					
 					runSearch(criteria);
 				}
 			}
@@ -212,7 +225,6 @@ public class SearchFrame extends JDialog {
 		});
 				
         JScrollPane tableScrollPane = new JScrollPane( table);
-        table.setFillsViewportHeight(true);
         table.setAutoResizeMode(JTable.AUTO_RESIZE_ALL_COLUMNS);
         table.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
 
@@ -223,7 +235,7 @@ public class SearchFrame extends JDialog {
         // Put widgets onto panel
 		GridBagConstraints gbc = new GridBagConstraints();		
         int row=0;        
-		gbc.fill = GridBagConstraints.HORIZONTAL;
+		gbc.fill = GridBagConstraints.BOTH;
         gbc.gridwidth = 2;
         gbc.gridx = 0;
         gbc.gridy = row++;
@@ -244,6 +256,9 @@ public class SearchFrame extends JDialog {
 		addToGridBag(0, (row++/2), 0.0, 0.0, gbc, panel, new JLabel("File type:"));
 		addToGridBag(1, (row++/2), 0.5, 0.0, gbc, panel, fileTypePanel);		
 
+		addToGridBag(0, (row++/2), 0.0, 0.0, gbc, panel, new JLabel("Image type:"));
+		addToGridBag(1, (row++/2), 0.5, 0.0, gbc, panel, imageTypePanel);
+		
         addToGridBag(0, (row++/2), 0.0, 0.0, gbc, panel, new JLabel("Disk label:"));
 		addToGridBag(1, (row++/2), 0.5, 0.0, gbc, panel, diskLabelText);
 
@@ -253,11 +268,8 @@ public class SearchFrame extends JDialog {
         addToGridBag(0, (row++/2), 0.0, 0.0, gbc, panel, new JLabel("Disk file name:"));
 		addToGridBag(1, (row++/2), 0.5, 0.0, gbc, panel, diskFileNameText);
 		
-		addToGridBag(0, (row++/2), 0.0, 0.0, gbc, panel, new JLabel(""));
-		addToGridBag(1, (row++/2), 0.5, 0.0, gbc, panel, tableScrollPane);	
-
-		addToGridBag(0, (row++/2), 0.0, 0.9, gbc, panel, new JPanel());
-		addToGridBag(1, (row++/2), 0.0, 0.9, gbc, panel, new JPanel());
+		addToGridBag(0, (row++/2), 0.0, 1.0, gbc, panel, new JLabel(""));
+		addToGridBag(1, (row++/2), 0.5, 1.0, gbc, panel, tableScrollPane);	
 		
 		addToGridBag(0, (row++/2), 0.0, 0.0, gbc, panel, new JLabel(""));
 		addToGridBag(1, (row++/2), 0.5, 0.0, gbc, panel, buttonPanel);	
@@ -303,7 +315,7 @@ public class SearchFrame extends JDialog {
 				tableModel.updateDirEntry(row);
 			}			
 		} catch (DatabaseException e) {
-			mainPanel.setStatusBar(e.getMessage());
+			mainPanel.appendConsole(e.getMessage());
 		}
 	}
 	

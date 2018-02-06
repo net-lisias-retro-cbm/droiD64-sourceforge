@@ -7,9 +7,12 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.UnsupportedEncodingException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
 
@@ -43,19 +46,33 @@ import droid64.db.DiskFile;
  */
 abstract public class DiskImage {
 
+	/** Unknown or undefined image type */
+	public static final int UNKNOWN_IMAGE_TYPE = 0;
+	/** Normal D64 (C1541 5.25") image */
 	public static final int D64_IMAGE_TYPE = 1;
-	public static final int D81_IMAGE_TYPE = 2;
-	public static final int D71_IMAGE_TYPE = 3;
+	/** Normal D71 (C1571 5.25") image */
+	public static final int D71_IMAGE_TYPE = 2;
+	/** Normal D81 (C1581 3.5") image */
+	public static final int D81_IMAGE_TYPE = 3;
+	/** Normal T64 image (tape) */
 	public static final int T64_IMAGE_TYPE = 4;
+	/** CP/M for C64 on a D64 image */
+	public static final int D64_CPM_C64_IMAGE_TYPE  = 5;
+	/** CP/M for C128 on a D64 image */
+	public static final int D64_CPM_C128_IMAGE_TYPE = 6;
+	/** CP/M on a D71 image */
+	public static final int D71_CPM_IMAGE_TYPE      = 7;
+	/** CP/M on a D81 image */
+	public static final int D81_CPM_IMAGE_TYPE      = 8;
 	
-	/** Size of a disk block */
-	protected static final int BLOCK_SIZE = 256;
+	/** String array to convert imageType to String name */
+	public static final String[] IMAGE_TYPE_NAMES = { "Unknown", "D64", "D71", "D81", "T64", "CP/M D64 (C64)" , "CP/M D64 (C128)", "CP/M D71", "CP/M D81" };
 	
-	private final static String GZIP_EXT = ".gz";
-	private final static String D64_EXT = ".d64";
-	private final static String D71_EXT = ".d71";
-	private final static String D81_EXT = ".d81";
-	private final static String T64_EXT = ".t64";
+	public final static String GZIP_EXT = ".gz";
+	public final static String D64_EXT = ".d64";
+	public final static String D71_EXT = ".d71";
+	public final static String D81_EXT = ".d81";
+	public final static String T64_EXT = ".t64";
 	
 	public final static String[] VALID_IMAGE_FILE_EXTENSTIONS = {
 			D64_EXT, D64_EXT + GZIP_EXT, 
@@ -65,22 +82,24 @@ abstract public class DiskImage {
 			};
 		
 	/** Type of C64 file (DEL, SEQ, PRG, USR, REL) */
-	public static final String[] FILE_TYPES = { "DEL", "SEQ", "PRG", "USR", "REL" };
+	public static final String[] FILE_TYPES = { "DEL", "SEQ", "PRG", "USR", "REL", "CBM" };
 
 	public static final int TYPE_DEL = 0;
 	public static final int TYPE_SEQ = 1;
 	public static final int TYPE_PRG = 2;
 	public static final int TYPE_USR = 3;
 	public static final int TYPE_REL = 4;
+	public static final int TYPE_CBM = 5;	// C1581 partition
+	
+	/** Size of a disk block */
+	protected static final int BLOCK_SIZE = 256;
 	
 	/** PETSCII padding white space character */
 	public final static byte BLANK = (byte) 0xa0;
 	/** CP/M used byte marker. Single density disks are filled with this value from factory. CP/M use this to detect empty disks are blank. */
 	public final static byte UNUSED = (byte) 0xe5;
-	
 	/** Max size of a PRG file */
 	protected static final int MAX_PRG = 65536;
-	
 	/** Eight masks used to mask a bit out of a byte. Starting with LSB. */
 	public final static int[] BYTE_BIT_MASKS = { 0x01, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40, 0x80 };
 	/** Eight masks used to mask a bit out of a byte. Starting with MSB. */
@@ -92,55 +111,71 @@ abstract public class DiskImage {
 	protected final static String CPM_DISKNAME_2 = "CP/M DISK";
 	protected final static String CPM_DISKID_GCR = "65 2A";
 	protected final static String CPM_DISKID_1581 = "80 3D";
+	/** The GEOS label found in BAM sector on GEOS formatted images */
+	protected final static String DOS_LABEL_GEOS = "GEOS format";
 	
-	/** PETSCII-ASCII mappings */
+	/** PETSCII-ASCII mappings (ASCII to PETSCII mapping. Using 0x20 for invisible characters in PETSCII charset) */
 	protected static final int[] PETSCII_TABLE = {
-		//Invisible
-		0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 
-		0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20,
-		//Visible
-		0x20, 0x21, 0x22, 0x23, 0x24, 0x25, 0x26, 0x27, 0x28, 0x29, 0x2a, 0x2b, 0x2c, 0x2d, 0x2e, 0x2f,
-		0x30, 0x31, 0x32, 0x33,	0x34, 0x35, 0x36, 0x37, 0x38, 0x39, 0x3a, 0x3b, 0x3c, 0x3d, 0x3e, 0x3f, 
-		0x40, 0x41, 0x42, 0x43, 0x44, 0x45, 0x46, 0x47,	0x48, 0x49, 0x4a, 0x4b, 0x4c, 0x4d, 0x4e, 0x4f, 
-		0x50, 0x51, 0x52, 0x53, 0x54, 0x55, 0x56, 0x57, 0x58, 0x59, 0x5a, 0x5b,	0x5c, 0x5d, 0x5e, 0x5f, 
-		0x60, 0x61, 0x62, 0x63, 0x64, 0x65, 0x66, 0x67, 0x68, 0x69, 0x6a, 0x6b, 0x6c, 0x6d, 0x6e, 0x6f,
-		0x70, 0x71, 0x72, 0x73, 0x74, 0x75, 0x76, 0x77, 0x78, 0x79, 0x7a, 0x7b, 0x7c, 0x7d, 0x7e, 0x7f,
-		//Invisible
-		0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20,
-		0x20, 0x20, 0x20, 0x20,	0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20,
-		0x20,
-		//Visible
-		      0xa1, 0xa2, 0xa3, 0xa4, 0xa5, 0xa6, 0xa7, 0xa8, 0xa9, 0xaa, 0xab, 0xac, 0xad, 0xae, 0xaf, 
-		0xb0, 0xb1, 0xb2, 0xb3, 0xb4, 0xb5, 0xb6, 0xb7, 0xb8, 0xb9, 0xba, 0xbb, 0xbc, 0xbd, 0xbe, 0xbf,
-		// CBM font trickery: codes 0xc0 - 0xdf are 0x60 - 0x7f
-		// 0xc0, 0xc1, 0xc2, 0xc3, 0xc4, 0xc5, 0xc6, 0xc7, 0xc8, 0xc9, 0xca, 0xcb, 0xcc, 0xcd, 0xce, 0xcf,
-		// 0xd0, 0xd1, 0xd2, 0xd3, 0xd4, 0xd5, 0xd6, 0xd7, 0xd8, 0xd9, 0xda, 0xdb, 0xdc, 0xdd, 0xde, 0xdf,
-		0x60, 0x61, 0x62, 0x63, 0x64, 0x65, 0x66, 0x67, 0x68, 0x69, 0x6a, 0x6b, 0x6c, 0x6d, 0x6e, 0x6f, 
-		0x70, 0x71, 0x72, 0x73,	0x74, 0x75, 0x76, 0x77, 0x78, 0x79, 0x7a, 0x7b, 0x7c, 0x7d, 0x7e, 0x7f,
-		// CBM font trickery: codes 0xe0 - 0xfe are 0xa0 - 0xbe
-		// 0xe0, 0xe1, 0xe2, 0xe3, 0xe4, 0xe5, 0xe6, 0xe7, 0xe8, 0xe9, 0xea, 0xeb, 0xec, 0xed, 0xee, 0xef,
-		// 0xf0, 0xf1, 0xf2, 0xf3, 0xf4, 0xf5, 0xf6, 0xf7, 0xf8, 0xf9, 0xfa, 0xfb, 0xfc, 0xfd, 0xfe,
-		0x20, 0xa1, 0xa2, 0xa3, 0xa4, 0xa5, 0xa6, 0xa7, 0xa8, 0xa9, 0xaa, 0xab, 0xac, 0xad, 0xae, 0xaf,
-		0xb0, 0xb1, 0xb2, 0xb3,	0xb4, 0xb5, 0xb6, 0xb7, 0xb8, 0xb9, 0xba, 0xbb, 0xbc, 0xbd, 0xbe, 0xbf,
-		// CBM font trickery: codes 0xff is 0x7e
+		0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, // 00-0f
+		0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20,	// 10-1f
+		0x20, 0x21, 0x22, 0x23, 0x24, 0x25, 0x26, 0x27, 0x28, 0x29, 0x2a, 0x2b, 0x2c, 0x2d, 0x2e, 0x2f,	// 20-2f
+		0x30, 0x31, 0x32, 0x33,	0x34, 0x35, 0x36, 0x37, 0x38, 0x39, 0x3a, 0x3b, 0x3c, 0x3d, 0x3e, 0x3f, // 30-3f
+		0x40, 0x41, 0x42, 0x43, 0x44, 0x45, 0x46, 0x47,	0x48, 0x49, 0x4a, 0x4b, 0x4c, 0x4d, 0x4e, 0x4f, // 40-4f
+		0x50, 0x51, 0x52, 0x53, 0x54, 0x55, 0x56, 0x57, 0x58, 0x59, 0x5a, 0x5b,	0x5c, 0x5d, 0x5e, 0xa4, // 50-5f
+		0x60, 0x61, 0x62, 0x63, 0x64, 0x65, 0x66, 0x67, 0x68, 0x69, 0x6a, 0x6b, 0x6c, 0x6d, 0x6e, 0x6f,	// 60-6f
+		0x70, 0x71, 0x72, 0x73, 0x74, 0x75, 0x76, 0x77, 0x78, 0x79, 0x7a, 0x7b, 0x7c, 0x7d, 0x7e, 0x7f,	// 70-7f
+		0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20,	// 80-8f
+		0x20, 0x20, 0x20, 0x20,	0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20,	// 90-9f
+		0x20, 0xa1, 0xa2, 0xa3, 0xa4, 0xa5, 0xa6, 0xa7, 0xa8, 0xa9, 0xaa, 0xab, 0xac, 0xad, 0xae, 0xaf, // a0-af
+		0xb0, 0xb1, 0xb2, 0xb3, 0xb4, 0xb5, 0xb6, 0xb7, 0xb8, 0xb9, 0xba, 0xbb, 0xbc, 0xbd, 0xbe, 0xbf,	// b0-bf
+		0x60, 0x61, 0x62, 0x63, 0x64, 0x65, 0x66, 0x67, 0x68, 0x69, 0x6a, 0x6b, 0x6c, 0x6d, 0x6e, 0x6f, // c0-cf
+		0x70, 0x71, 0x72, 0x73,	0x74, 0x75, 0x76, 0x77, 0x78, 0x79, 0x7a, 0x7b, 0x7c, 0x7d, 0x7e, 0x7f,	// d0-df
+		0x20, 0xa1, 0xa2, 0xa3, 0xa4, 0xa5, 0xa6, 0xa7, 0xa8, 0xa9, 0xaa, 0xab, 0xac, 0xad, 0xae, 0xaf,	// e0-ef
+		0xb0, 0xb1, 0xb2, 0xb3,	0xb4, 0xb5, 0xb6, 0xb7, 0xb8, 0xb9, 0xba, 0xbb, 0xbc, 0xbd, 0xbe, 0xbf,	// f0-ff
 		0x7e
 	};
-	
-	public static final int C1541_INTERLEAVE = 10;
-	public static final int C1571_INTERLEAVE = 6;
-	public static final int C1581_INTERLEAVE = 1;
-	
-	/** Not a CP/M image */
-	public final static int CPM_TYPE_UNKNOWN  = 0;	
-	/** CP/M for C64 on a D64 image */
-	public final static int CPM_TYPE_D64_C64  = 1;
-	/** CP/M for C128 on a D64 image */
-	public final static int CPM_TYPE_D64_C128 = 2;
-	/** CP/M on a D71 image */
-	public final static int CPM_TYPE_D71      = 3;
-	/** CP/M on a D81 image */
-	public final static int CPM_TYPE_D81      = 4;
-	
+	/** The BASIC V7 tokens 0x80  to 0xFF */
+	private final static String[] BASIC_V7_TOKENS = { 
+			// 0x80 - 0xff
+			"END",     "FOR",    "NEXT",   "DATA",    "INPUT#",  "INPUT",  "DIM",       "READ",
+			"LET",     "GOTO",   "RUN",    "IF",      "RESTORE", "GOSUB",  "RETURN",    "REM",
+			"STOP",    "ON",     "WAIT",   "LOAD",    "SAVE",    "VERIFY", "DEF",       "POKE",
+			"PRINT#",  "PRINT",  "CONT",   "LIST",    "CLR",     "CMD",    "SYS",       "OPEN",
+			"CLOSE",   "GET",    "NEW",    "TAB(",    "TO",      "FN",     "SPC(",      "THEN",
+			"NOT",     "STEP",   "+",      "-",	      "*",       "/",      "^",         "AND",
+			"OR",      ">",      "=",      "<",	      "SGN",     "INT",    "ABS",       "USR",
+			"FRE",     "POS",    "SQR",    "RND",     "LOG",     "EXP",    "COS",       "SIN",
+			"TAN",     "ATN",    "PEEK",   "LEN",     "STR$",    "VAL",    "ASC",       "CHR$",
+			"LEFT$",   "RIGHT$", "MID$",   "GO",   /* End of BASIC V2 */
+			                               "RGR",     "RCLR",   "POT??",     "JOY",
+			"RDOT",    "DEC",    "HEX",    "ERR$",    "INSTR",   "ELSE",   "RESUME",    "TRAP",
+			"TRON",    "TROFF",  "SOUND",  "VOL",     "AUTO",    "PUDEF",  "GRAPHIC",   "PAINT",
+			"CHAR",    "BOX",    "CIRCLE", "GSHAPE",  "SSHAPE",  "DRAW",   "LOCATE",    "COLOR",
+			"SCNCLR",  "SCALE",  "HELP",   "DO",      "LOOP",    "EXIT",   "DIRECTORY", "DSAVE",
+			"DLOAD",   "HEADER", "SCRATCH","COLLECT", "COPY",    "RENAME", "BACKUP",    "DELETE",
+			"RENUMBER","KEY",    "MONITOR","USING",   "UNTIL",   "WHILE",  "BANK??",    "PI"
+	};	
+	/** The second BASIC V7 tokens starting with 0xCE */
+	private static final String[]  BASIC_V7_CE_TOKENS = {
+			// 0x00 - 0x0A (invalid: 0x00, 0x01)
+			null,   null,       "POT",     "BUMP",  "PEN",  "RSPPOS",  "RSPRITE",  "RSPCOLOR",
+			"XOR",  "RWINDOW",  "POINTER"			
+	};
+	/** The second BASIC V7 tokens starting with 0xFE */
+	private static final String[]  BASIC_V7_FE_TOKENS = {
+		// 0x00 - 0x26 (invalid: 0x00, 0x01, 0x20, 0x022)
+		null,       null,    "BANK",     "FILTER", "PLAY",    "TEMPO",  "MOVSPR", "SPRITE",
+		"SPRCOLOR", "RREG",  "ENVELOPE", "SLEEP",  "CATALOG", "DOPEN",  "APPEND", "DCLOSE",
+		"BSAVE",    "BLOAD", "RECORD",   "CONCAT", "DVERIFY", "DCLEAR", "SPRSAV", "COLLISION",
+		"BEGIN",    "BEND",  "WINDOW",   "BOOT",   "WIDTH",   "SPRDEF", "QUIT",   "STASH",
+		null,       "FETCH", null,       "SWAP",   "OFF",     "FAST",   "SLOW"
+	};
+	/** C1541 sector interleave. The gap between two blocks when saving a file */
+	protected static final int C1541_INTERLEAVE = 10;
+	/** C1571 sector interleave. The gap between two blocks when saving a file */
+	protected static final int C1571_INTERLEAVE = 6;
+	/** C1581 sector interleave. The gap between two blocks when saving a file */
+	protected static final int C1581_INTERLEAVE = 1;
 	/** Size of each directory entry on DIR_TRACK. */
 	protected static final int DIR_ENTRY_SIZE = 32;
 	/** Number of directory entries per directory sector */
@@ -149,10 +184,16 @@ abstract public class DiskImage {
 	protected static final int DISK_NAME_LENGTH = 16;
 	/** Maximum length of disk ID */
 	protected static final int DISK_ID_LENGTH = 5;
+	/** Size of buffer reading compressed data */
+	private final static int INPUT_BUFFER_SIZE = 65536;
+	/** Size of buffer writing uncompressed data to byte[] */
+	private final static int OUTPUT_BUFFER_SIZE = 1048576;
+	/** Size of a CP/M records (128 bytes) */
+	protected final static int CPM_RECORD_SIZE = 128;
+	/** Type of image (D64, D71, D81, CP/M ... ) */
+	protected int imageFormat = UNKNOWN_IMAGE_TYPE;
 	/** When True, this is a GEOS-formatted disk, therefore files must be saved the GEOS way. */
 	protected boolean geosFormat = false;
-	/** When true, this is a CP/M formatted disk. */
-	protected int cpmFormat = CPM_TYPE_UNKNOWN;
 	/** True if image is compressed */
 	protected boolean compressed;
 	/** Error messages are appended here, and get presented in GUI */
@@ -162,26 +203,17 @@ abstract public class DiskImage {
 	/** Number of files in image */
 	protected int fileNumberMax;
 	/**
-	 * A cbmFile holds all additional attributes (like fileName, fileType etc) for a PRG-file the image.
-	 * These attributes are used in the directory.
-	 * these are initialized in initCbmFiles() and filled with data in readDirectory()
-	 * their index is the directory-position they have in the image file (see readDirectory()) 
+	 * A cbmFile holds all additional attributes (like fileName, fileType etc) for a file on the image.<br/>
+	 * These attributes are used in the directory and are initialized in initCbmFiles() and filled with data in readDirectory().<br/>
+	 * Their index is the directory-position they have in the image file (see readDirectory()). 
 	 */
 	protected CbmFile[] cbmFile = null;	//new CbmFile[FILE_NUMBER_LIMIT + 1]; 
 	/** All attributes which are stored in the BAM of a image file - gets filled with data in readBAM() */
 	protected CbmBam bam;
-	/** Used by insertPRG and CopyPRG */
-	protected CbmFile bufferCbmFile = new CbmFile();
-	/** Destination Track  */
-	protected int destTrack;
-	/** Destination Sector */
-	protected int destSector;
-	
-	private final static int INPUT_BUFFER_SIZE = 65536;
-	private final static int OUTPUT_BUFFER_SIZE = 1048576;
-	
-	/** Size of a CP/M records (128 bytes) */
-	protected final static int CPM_RECORD_SIZE = 128;
+	/** The number of validation errors, or null is no validation has been done. */
+	protected Integer errors = null;
+	protected Integer warnings = null;
+	protected List<ValidationError> validationErrorList = new ArrayList<ValidationError>();
 	
 	/**
 	 * Get number of sectors on specified track
@@ -226,18 +258,26 @@ abstract public class DiskImage {
 	 * Reads the directory of the image, fills cbmFile[] with entries.
 	 */
 	abstract public void readDirectory();
+	
 	/**
-	 * Fills saveData with data of a single PRG file.<BR>
+	 * Reads the directory of the partition
+	 * @throws CbmException if partition is not supported on the image.
+	 */
+	abstract public void readPartition(int track, int sector, int numBlocks) throws CbmException;
+	
+	/**
+	 * Get data of a single PRG file.<BR>
 	 * @param number the file number in the image
+	 * @return byte array file file contents
 	 * @throws CbmException
 	 */
-	abstract public byte[] writeSaveData(int number) throws CbmException;
+	abstract public byte[] getFileData(int number) throws CbmException;
 	/**
 	 * Write the data of a single PRG file to image.
 	 * @param saveData byte[]
-	 * @return true if writing was successful.
+	 * @return the first track/sector of the file (for use in directory entry).
 	 */
-	abstract protected boolean saveFileData(byte[] saveData);
+	abstract protected TrackSector saveFileData(byte[] saveData);
 	/**
 	 * Set a disk name and disk-id in BAM.
 	 * @param newDiskName the new name of the disk
@@ -246,9 +286,10 @@ abstract public class DiskImage {
 	abstract protected void setDiskName(String newDiskName, String newDiskID);
 	/**
 	 * Copy attributes of bufferCbmFile to a directoryEntry in cbmDisk.
+	 * @param cbmFile
 	 * @param dirEntryNumber position where to put this entry in the directory
 	 */
-	abstract protected void writeDirectoryEntry(int dirEntryNumber);
+	abstract protected void writeDirectoryEntry(CbmFile cbmFile, int dirEntryNumber);
 	/**
 	 * 
 	 * @param filename
@@ -258,16 +299,15 @@ abstract public class DiskImage {
 	 */
 	abstract public boolean saveNewImage(String filename, String newDiskName, String newDiskID);
 	/**
-	 * Add a directory entry of a single PRG file to the image.<BR>
-	 * @param thisFilename the filename
-	 * @param thisFiletype the type of the file
+	 * Add a directory entry of a single file to the image.<BR>
+	 * @param cbmFile the CbmFile
 	 * @param destTrack track where file starts
 	 * @param destSector sector where file starts
 	 * @param isCopyFile indicates whether a file is copied or whether a file gets inserted into the directory
 	 * @param lengthInBytes
 	 * @return returns true is adding the entry to the directory was successful
 	 */
-	abstract protected boolean addDirectoryEntry(String thisFilename, int thisFiletype, int destTrack, int destSector, boolean isCopyFile, int lengthInBytes);
+	public abstract boolean addDirectoryEntry(CbmFile cbmFile, int destTrack, int destSector, boolean isCopyFile, int lengthInBytes);
 	/**
 	 * Parse BAM track bits and store allocated/free blocks as strings.
 	 * @return String[track][sector]
@@ -287,6 +327,14 @@ abstract public class DiskImage {
 	 */
 	abstract public void deleteFile(CbmFile cbmFile) throws CbmException;
 	
+	/**
+	 * Validate image
+	 * @param repairList list of error codes which should be corrected if found.
+	 * @return number or validation errors
+	 */
+	abstract public Integer validate(List<Integer> repairList);
+
+	
 	/** Constructor _*/
 	public DiskImage() {
 	}
@@ -302,27 +350,11 @@ abstract public class DiskImage {
 		}
 	}
 	
-	/**
-	 * Used when creating a new disk image. CP/M format is normally assigned when image is loaded from disk.
-	 * @param cpmFormat
-	 * @see #getCpmFormat()
-	 */
-	public void setCpmFormat(int cpmFormat) {
-		this.cpmFormat = cpmFormat;
-	}
-
-	/**
-	 * Get CP/M format
-	 * @return CP/M format
-	 * @see #CPM_TYPE_UNKNOWN
-	 * @see #CPM_TYPE_D64_C64
-	 * @see #CPM_TYPE_D64_C128
-	 * @see #CPM_TYPE_D71
-	 * @see #CPM_TYPE_D81
-	 * 
-	 */
-	public int getCpmFormat() {
-		return cpmFormat;
+	public boolean isCpmImage() {
+		return 	imageFormat == D64_CPM_C64_IMAGE_TYPE ||
+				imageFormat == D64_CPM_C128_IMAGE_TYPE ||
+				imageFormat == D71_CPM_IMAGE_TYPE ||
+				imageFormat == D81_CPM_IMAGE_TYPE;
 	}
 	
 	/** 
@@ -490,36 +522,7 @@ abstract public class DiskImage {
 		}
 		output.write(byteStream.toByteArray());
 	}
-	
-	/**
-	 * Converts a CBM filename to a PC filename.
-	 * @param fileName the CBM file name
-	 * @param fileType the CBM file type
-	 * @return the PC filename
-	 */
-	private String pcFilename(String fileName, String fileType) {
-		String permitted_chars = ( "abcdefghijklmnopqrstuvwxyz0123456789" );
-		for (int position = 0; position < fileName.length(); position++) {
-			fileName = fileName.toLowerCase();	//filename[position] := chr( ord(filename[position]) or 32);
-			boolean char_permitted = false;
-			for (int cnt = 0; cnt < permitted_chars.length(); cnt++) {
-				if ( fileName.charAt(position) == permitted_chars.charAt(cnt) ) {
-					char_permitted = true;
-				}
-			}
-			if ( char_permitted == false) {
-				fileName = fileName.substring(0,position) + "_" + fileName.substring(position+1, fileName.length()); 
-			}
-		}
-		fileName = fileName + "." + fileType.toLowerCase();
-		/*		for (position = 1; position <= fileType.length(); position++) {
-			fileName = fileName + (char)
-		  filename := filename + chr( ord(FileType[cbmFile[number].file_type][position]) or 32); //pascal code
-		}
-		 */
-		return fileName;
-	}
-	
+		
 	/**
 	 * Reads a PRG file from hard disk<BR>
 	 * globals written: feedbackMessage<BR>
@@ -571,13 +574,8 @@ abstract public class DiskImage {
 	 */
 	public void exportPRG(int number, String directory) throws CbmException {
 		feedbackMessage = new StringBuffer();
-		byte[] saveData = writeSaveData(number);
-		String filename;
-		if (cpmFormat != CPM_TYPE_UNKNOWN && cbmFile[number] instanceof CpmFile) {
-			filename = ((CpmFile)cbmFile[number]).getCpmNameAndExt();
-		} else {
-			filename = pcFilename( cbmFile[number].getName(), FILE_TYPES[ cbmFile[number].getFileType() ]);
-		}
+		byte[] saveData = getFileData(number);
+		String filename = pcFilename(cbmFile[number]);
 		feedbackMessage.append("Saving ").append(directory).append(filename).append(" (").append(saveData.length).append(" bytes).\n");
 		FileOutputStream output;
 		try {
@@ -603,34 +601,39 @@ abstract public class DiskImage {
 	
 	
 	/**
-	 * Write the data and the directory entry of a single PRG file to D64-image.<BR>
-	 * globals needed: dest_track, dest_sector<BR>
-	 * calls: cbmFileName, saveFileData, addDirectoryEntry<BR>
-	 * @param thisFileName the file name to write
-	 * @param thisFileType the file type to write
+	 * Write the data and the directory entry of a single PRG file to disk image.
+	 * @param cbmFile
 	 * @param isCopyFile indicates whether a file is copied or whether a file gets inserted into the directory
-	 * @return true if writing was successful (if there was enough space in d64-image etc)
+	 * @param saveData the data to write to the file
+	 * @return true if writing was successful (if there was enough space on disk image etc)
 	 */
-	public boolean saveFile(String thisFileName, int thisFileType, boolean isCopyFile, byte[] saveData) {
+	public boolean saveFile(CbmFile cbmFile, boolean isCopyFile, byte[] saveData) {
 		feedbackMessage = new StringBuffer();
-		if (cpmFormat != CPM_TYPE_UNKNOWN) {
+		if (isCpmImage()) {
 			feedbackMessage.append("saveFile: Not yet implemented for CP/M format.\n");
 			return false;
 		}
 		if (isCopyFile == false) {
-			if (thisFileName.toLowerCase().endsWith(".prg")) {
-				thisFileName = thisFileName.substring(0, thisFileName.length()-4);				
+			if (cbmFile.getName().toLowerCase().endsWith(".prg")) {
+				cbmFile.setName(cbmFile.getName().substring(0, cbmFile.getName().length()-4));				
 			}
-			thisFileName = cbmFileName(thisFileName);
 		}
-		feedbackMessage.append("saveFile: '").append(thisFileName).append("'  ("+saveData.length+")\n");
-		boolean success = saveFileData(saveData);
-		if (success) {
-			success = addDirectoryEntry(thisFileName, thisFileType, destTrack, destSector, isCopyFile, saveData.length);
+		TrackSector firstBlock;		
+		if (cbmFile.getFileType() == DiskImage.TYPE_DEL && saveData.length == 0) {
+			feedbackMessage.append("saveFile: '").append(cbmFile.getName()).append("'  (empty DEL file)\n");
+			firstBlock = new TrackSector(0, 0);
 		} else {
-			feedbackMessage.append("\nsaveFile: Error occurred.\n");
+			feedbackMessage.append("saveFile: '").append(cbmFile.getName()).append("'  ("+saveData.length+" bytes)\n");
+			firstBlock = saveFileData(saveData);
 		}
-		return success;
+		if (firstBlock != null) {
+			if (addDirectoryEntry(cbmFile, firstBlock.track, firstBlock.sector, isCopyFile, saveData.length)) {
+				return true;
+			}
+		} else {
+			feedbackMessage.append("saveFile: Error occurred.\n");
+		}
+		return false;
 	}
 	
 	/**
@@ -643,7 +646,7 @@ abstract public class DiskImage {
 	 */
 	public boolean renameImage(String filename, String newDiskName, String newDiskID){
 		feedbackMessage = new StringBuffer("renameD64(): ").append(newDiskName).append(", ").append(newDiskID);
-		if (cpmFormat != CPM_TYPE_UNKNOWN) {
+		if (isCpmImage()) {
 			feedbackMessage.append("Not yet implemented for CP/M format.\n");
 			return false;
 		}
@@ -659,11 +662,11 @@ abstract public class DiskImage {
 	 * @param newPRGType the new type of the PRG-file
 	 */
 	public void renamePRG(int cbmFileNumber, String newPRGName, int newPRGType) {
-		feedbackMessage.append("renamePRG: oldName '").append(bufferCbmFile.getName()).append(" newName '").append(newPRGName).append("'\n");
-		bufferCbmFile.copy(cbmFile[cbmFileNumber]);		
-		bufferCbmFile.setName(cbmFileName(newPRGName));
-		bufferCbmFile.setFileType(newPRGType);
-		writeDirectoryEntry(bufferCbmFile.getDirPosition());
+		feedbackMessage.append("renamePRG: oldName '").append(cbmFile[cbmFileNumber].getName()).append(" newName '").append(newPRGName).append("'\n");
+		CbmFile newFile = new CbmFile(cbmFile[cbmFileNumber]);		
+		newFile.setName(cbmFileName(newPRGName));
+		newFile.setFileType(newPRGType);
+		writeDirectoryEntry(newFile, newFile.getDirPosition());
 	}
 	
 	/**
@@ -699,11 +702,13 @@ abstract public class DiskImage {
 			if (previousFile == null || !(previousFile.getCpmName().equals(name) && previousFile.getCpmNameExt().equals(nameExt)) ) {
 				newFile = new CpmFile();
 				newFile.setName(name + "." + nameExt);
+				newFile.setFileType(TYPE_PRG);
 				newFile.setCpmName(name);
 				newFile.setCpmNameExt(nameExt);
 				newFile.setReadOnly(readOnly);
 				newFile.setArchived(archive);
 				newFile.setHidden(hidden);
+				newFile.setFileScratched(false);
 				newFile.setSizeInBlocks(rc);
 				newFile.setSizeInBytes(rc * CPM_RECORD_SIZE);
 				tempFile = newFile;
@@ -757,40 +762,6 @@ abstract public class DiskImage {
 		return newFile;
 	}
 	
-//	/**
-//	 * Get a single directory entry of the disk image.
-//	 * globals needed: cbmDisk<BR>
-//	 * @param dataPosition
-//	 * @return CbmFile
-//	 */
-//	protected CbmFile getDirectoryEntry(int dataPosition) {
-//		CbmFile entry = new CbmFile();
-//		entry.setDirTrack(getCbmDiskValue(dataPosition      + 0x00));
-//		entry.setDirSector(getCbmDiskValue(dataPosition     + 0x01));
-//		entry.setFileScratched(getCbmDiskValue(dataPosition + 0x02) == 0 ? true : false);
-//		entry.setFileType((getCbmDiskValue(dataPosition     + 0x02) & 0x07));
-//		entry.setFileLocked((getCbmDiskValue(dataPosition   + 0x02) & 0x40) == 0 ? false : true);
-//		entry.setFileClosed((getCbmDiskValue(dataPosition   + 0x02) & 0x80) == 0 ? false : true);
-//		entry.setTrack(getCbmDiskValue(dataPosition         + 0x03));
-//		entry.setSector(getCbmDiskValue(dataPosition        + 0x04));
-//		entry.setName("");
-//		for (int i = 0; i < 16; i++){
-//			if (getCbmDiskValue(dataPosition + 0x05 + i) != BLANK) {
-//				entry.setName(entry.getName()+ (char)(PETSCII_TABLE[getCbmDiskValue(dataPosition + 0x05 + i)]));
-//			}
-//		}
-//		entry.setRelTrack(getCbmDiskValue(dataPosition + 0x15));
-//		entry.setRelSector(getCbmDiskValue(dataPosition + 0x16));
-//
-//		for (int i = 0; i < 7; i++) {
-//			entry.setGeos(i, getCbmDiskValue(dataPosition + 0x17 + i));
-//		}
-//		entry.setSizeInBlocks((char)(
-//				getCbmDiskValue(dataPosition + 0x1e) +
-//				getCbmDiskValue(dataPosition + 0x1f) * BLOCK_SIZE ));
-//		return entry;
-//	}
-	
 	/**
 	 * Set up variables in a new cbmFile which will be appended to the directory.
 	 * These variables will inserted into the directory later.<BR>
@@ -802,7 +773,6 @@ abstract public class DiskImage {
 	 * @param lengthInBytes file length in bytes
 	 */
 	protected void setNewDirEntry(CbmFile cbmFile, String thisFilename, int thisFileType, int destTrack, int destSector, int lengthInBytes) {
-		feedbackMessage.append("setNewDirEntry()\n");
 		cbmFile.setFileScratched(false);
 		cbmFile.setFileType(thisFileType);
 		cbmFile.setFileLocked(false);
@@ -823,23 +793,41 @@ abstract public class DiskImage {
 	}
 	
 	/**
+	 * Get PC filename from a CbmFile.
+	 * @param cbmFile the CBM file
+	 * @return the PC filename
+	 */	
+	public static String pcFilename(CbmFile cbmFile) {
+		final String VALID_CHARS = "abcdefghijklmnopqrstuvwxyz0123456789 !#$%&()-@_{}.";
+		if (cbmFile instanceof CpmFile) {
+			return ((CpmFile)cbmFile).getCpmNameAndExt();
+		} else {		
+			String fileName = cbmFile.getName().toLowerCase();
+			for (int i = 0; i < fileName.length(); i++) {
+				if (VALID_CHARS.indexOf(fileName.charAt(i)) == -1) {				
+					fileName = fileName.substring(0, i) + "_" + fileName.substring(i + 1, fileName.length()); 
+				}
+			}
+			return fileName + "." + FILE_TYPES[cbmFile.getFileType()].toLowerCase();
+		}
+	}
+	
+	/**
 	 * Convert a PC filename to a proper CBM filename.<BR>
 	 * @param orgName orgName
 	 * @return the CBM filename
 	 */
-	protected String cbmFileName(String orgName) {
-		final String validChars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 []()/;:<>";
+	public static String cbmFileName(String orgName) {
+		final String VALID_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 []()/;:<>.-_+&%$@#!";
 		char[] fileName = new char[DISK_NAME_LENGTH];
 		int out = 0;
 		for (int i=0; i<DISK_NAME_LENGTH && i<orgName.length(); i++) {
 			char c = Character.toUpperCase(orgName.charAt(i));
-			if (validChars.indexOf(c) >= 0) {
+			if (VALID_CHARS.indexOf(c) >= 0) {
 				fileName[out++] = c;
 			}
 		}
-		String newName = new String(Arrays.copyOfRange(fileName, 0, out));
-		feedbackMessage.append("Name was '").append(orgName).append("', commodore name is '").append(newName).append("'\n");		
-		return newName;
+		return new String(Arrays.copyOfRange(fileName, 0, out));
 	}
 	
 	/**
@@ -849,6 +837,9 @@ abstract public class DiskImage {
 	public Disk getDisk() {
 		Disk disk = new Disk();
 		disk.setLabel(getBam().getDiskName());
+		disk.setImageType(imageFormat);
+		disk.setErrors(errors);
+		disk.setWarnings(warnings);
 		for (int filenumber = 0; filenumber <= getFilenumberMax() - 1;	filenumber++) {
 			boolean isLocked = getCbmFile(filenumber).isFileLocked();
 			boolean isClosed = getCbmFile(filenumber).isFileClosed();
@@ -862,7 +853,6 @@ abstract public class DiskImage {
 		}
 		return disk;
 	}
-	
 
 	/**
 	 * Return a string from a specified position on a block and having the specified length.
@@ -881,31 +871,68 @@ abstract public class DiskImage {
 		}
 	}
 	
+	protected String getTrimmedString(int pos, int length) {
+		byte[] tmp = new byte[length];
+		for (int i=0; i< length; i++) {
+			byte b = cbmDisk[pos+i];
+			tmp[i] = b==0xa0 ? 0x20 : b;
+		}
+		try {
+			return new String(tmp, "ISO-8859-1").trim();
+		} catch (UnsupportedEncodingException e) {
+			e.printStackTrace();
+			return null;
+		}		
+	}
+	
 	/**
-	 * Checks if D64 image is CP/M formatted.
-	 * @return CPM_DISK_TYPE.
+	 * Checks, sets and return image format.
+	 * @return image format
 	 */
-	protected int getCpmDiskFormat() {
+	public int checkImageFormat() {
 		if (bam.getDiskName()!= null && (CPM_DISKNAME_1.equals(bam.getDiskName().trim()) || CPM_DISKNAME_2.equals(bam.getDiskName().trim()))) {
 			if (CPM_DISKID_GCR.equals(bam.getDiskId())) {
 				if ("CBM".equals(getStringFromBlock(1, 0, 0, 3))) {
-					if ((getCbmDiskValue(BLOCK_SIZE - 1) & 0xff) == 0xff) {
+					if (this instanceof D71 && (getCbmDiskValue(BLOCK_SIZE - 1) & 0xff) == 0xff) {
 						feedbackMessage.append("CP/M C128 double sided disk detected.\n");
-						return CPM_TYPE_D71;
-					} else {
+						imageFormat = D71_CPM_IMAGE_TYPE;
+						return imageFormat;
+					} else if (this instanceof D64) {
 						feedbackMessage.append("CP/M C128 single sided disk detected.\n");
-						return CPM_TYPE_D64_C128;
+						imageFormat = D64_CPM_C128_IMAGE_TYPE;
+						return imageFormat;
 					}
-				} else {
+				} else if (this instanceof D64 ) {
 					feedbackMessage.append("CP/M C64 single sided disk detected.\n");					
-					return CPM_TYPE_D64_C64;
+					imageFormat = D64_CPM_C64_IMAGE_TYPE;
+					return imageFormat;
 				}
-			} else if (CPM_DISKID_1581.equals(bam.getDiskId())) {
+			} else if (this instanceof D81 && CPM_DISKID_1581.equals(bam.getDiskId())) {
 				feedbackMessage.append("CP/M 3.5\" disk detected.\n");				
-				return CPM_TYPE_D81;
+				imageFormat = D81_CPM_IMAGE_TYPE;
+				return imageFormat;
 			}
-		}		
-		return CPM_TYPE_UNKNOWN;
+		}
+		if (this instanceof D64) {
+			imageFormat = D64_IMAGE_TYPE;			
+			geosFormat = DOS_LABEL_GEOS.equals(getStringFromBlock(D64.BAM_TRACK, D64.BAM_SECTOR, 0xad, DOS_LABEL_GEOS.length()));
+		} else if (this instanceof D71) {
+			imageFormat = D71_IMAGE_TYPE;
+			geosFormat = DOS_LABEL_GEOS.equals(getStringFromBlock(D71.BAM_TRACK_1, D71.BAM_SECT, 0xad, DOS_LABEL_GEOS.length()));
+		} else if (this instanceof D81) {
+			imageFormat = D81_IMAGE_TYPE;
+			geosFormat = DOS_LABEL_GEOS.equals(getStringFromBlock(D81.HEADER_TRACK, D81.HEADER_SECT, 0xad, DOS_LABEL_GEOS.length()));
+		} else if (this instanceof T64) {
+			imageFormat = T64_IMAGE_TYPE;
+			geosFormat = false;
+		} else {
+			imageFormat = UNKNOWN_IMAGE_TYPE;
+			geosFormat = false;
+		}
+		if (geosFormat) {
+			feedbackMessage.append("GEOS formatted image detected.\n");			
+		}
+		return imageFormat;
 	}
 	
 	/**
@@ -950,27 +977,32 @@ abstract public class DiskImage {
 		return success;
 	}
 	
-	private final static String[] BASIC_V2_TOKENS = { 
-			// 0x80 - 0xCB
-			"END",     "FOR",    "NEXT",   "DATA",	"INPUT#",  "INPUT",  "DIM",    "READ",
-			"LET",     "GOTO",   "RUN",    "IF",	"RESTORE", "GOSUB",  "RETURN", "REM",
-			"STOP",    "ON",     "WAIT",   "LOAD",	"SAVE",    "VERIFY", "DEF",    "POKE",
-			"PRINT#",  "PRINT",  "CONT",   "LIST",	"CLR",     "CMD",    "SYS",    "OPEN",
-			"CLOSE",   "GET",    "NEW",    "TAB(",	"TO",      "FN",     "SPC(",   "THEN",
-			"NOT",     "STEP",   "+",      "-",		"*",       "/",      "^",      "AND",
-			"OR",      ">",      "=",      "<",		"SGN",     "INT",    "ABS",    "USR",
-			"FRE",     "POS",    "SQR",    "RND",	"LOG",     "EXP",    "COS",    "SIN",
-			"TAN",     "ATN",    "PEEK",   "LEN",	"STR$",    "VAL",    "ASC",    "CHR$",
-			"LEFT$",   "RIGHT$", "MID$",   "GO"
-		};
+	/**
+	 * Switch directory locations of two files to move one of them upwards and the other downwards in the listing.
+	 * @param cbmFile1
+	 * @param cbmFile2
+	 */
+	public void switchFileLocations(CbmFile cbmFile1, CbmFile cbmFile2) {
+		if (!isCpmImage()) {
+			feedbackMessage.append("DiskImage.switchFileLocations: '"+cbmFile1.getName() + "'  '"+cbmFile2.getName()+"'\n");
+			int tmpDirTrack = cbmFile2.getDirTrack();
+			int tmpDirSector = cbmFile2.getDirSector();
+			cbmFile2.setDirTrack(cbmFile1.getDirTrack());		
+			cbmFile2.setDirSector(cbmFile1.getDirSector());
+			cbmFile1.setDirTrack(tmpDirTrack);
+			cbmFile1.setDirSector(tmpDirSector);
+			writeDirectoryEntry(cbmFile1, cbmFile2.getDirPosition());
+			writeDirectoryEntry(cbmFile2, cbmFile1.getDirPosition());
+		}
+	}
 	
-	public String parseCbmBasicPrg(byte[] prg) {
+	public static String parseCbmBasicPrg(byte[] prg) {
 		if (prg == null || prg.length < 4) {
 			return null;
 		}
 		StringBuffer buf = new StringBuffer();
 		int loadAddr = (prg[0] & 0xff) | ((prg[1] & 0xff) << 8);
-		feedbackMessage.append("parseCbmBasicPrg: loadAddr=0x"+Integer.toHexString(loadAddr));
+		//feedbackMessage.append("parseCbmBasicPrg: loadAddr=0x"+Integer.toHexString(loadAddr));
 		int pos = 2;
 		int nextLine;
 		do {
@@ -981,8 +1013,28 @@ abstract public class DiskImage {
 				int quoteCount = 0;
 				for (int i = pos + 4; i<prg.length && (prg[i] & 0xff) != 0x00; i++) {
 					int op = prg[i] & 0xff;
-					if ((quoteCount & 1) == 0 && op >= 0x80 && op <= 0xcb) {
-						buf.append(BASIC_V2_TOKENS[op - 0x80]);
+					
+					
+					if ((quoteCount & 1) == 0 && op >= 0x80 && op <= 0xff) {
+						if (op == 0xce) {
+							int op2 = prg[++i] & 0xff;
+							if (op2 >=0 && op2 < BASIC_V7_CE_TOKENS.length && BASIC_V7_CE_TOKENS[op2] != null) {
+								buf.append(BASIC_V7_CE_TOKENS[op2]);
+							} else {
+								buf.append("0xCE").append(Integer.toHexString(op2)).append(")");
+							}
+						} else if (op == 0xfe) {
+							int op2 = prg[++i] & 0xff;
+							if (op2 >=0 && op2 < BASIC_V7_FE_TOKENS.length && BASIC_V7_FE_TOKENS[op2] != null) {
+								buf.append(BASIC_V7_FE_TOKENS[op2]);
+							} else {
+								buf.append("0xFE").append(Integer.toHexString(op2)).append(")");
+							}						
+						} else {
+							buf.append(BASIC_V7_TOKENS[op - 0x80]);
+						}
+					//if ((quoteCount & 1) == 0 && op >= 0x80 && op <= 0xcb) {
+					//	buf.append(BASIC_V2_TOKENS[op - 0x80]);
 					} else if((quoteCount & 1) == 0 && op == 0xff) {
 						buf.append("PI");
 					} else {
@@ -1052,11 +1104,6 @@ abstract public class DiskImage {
 		feedbackMessage = new StringBuffer(string);
 	}
 	
-	/** @return True if loaded D64 image is CP/M formatted. */
-	public boolean isCpmFormat() {
-		return cpmFormat != CPM_TYPE_UNKNOWN;
-	}
-	
 	/**
 	 * @return
 	 */
@@ -1068,7 +1115,11 @@ abstract public class DiskImage {
 	 * @return
 	 */
 	public CbmFile getCbmFile(int number) {
-		return cbmFile[number];
+		if (number<cbmFile.length && number >= 0) {
+			return cbmFile[number];
+		} else {
+			return null;
+		}
 	}
 
 	/**
@@ -1093,51 +1144,64 @@ abstract public class DiskImage {
 		return  type < FILE_TYPES.length ? FILE_TYPES[type] : null;
 	}
 	
-	
-	/**
-	 * @return
-	 */
-	public CbmFile getBufferCbmFile() {
-		return bufferCbmFile;
-	}
-
-	/**
-	 * @param file
-	 */
-	public void setBufferCbmFile(CbmFile file) {
-		bufferCbmFile = file;
-	}
-	
 	public void setCompressed(boolean compressed) {
 		this.compressed  = compressed;
 	}
+
+	public int getImageFormat() {
+		return imageFormat;
+	}
 	
-	/**
-	 * Container for track and sector
-	 */
-	class TrackSector {
-		int track;
-		int sector;
-		public TrackSector(int track, int sector) {
-			this.track = track;
-			this.sector = sector;
-		}
-		public int getTrack() {
-			return track;
-		}
-		public void setTrack(int track) {
-			this.track = track;
-		}
-		public int getSector() {
-			return sector;
-		}
-		public void setSector(int sector) {
-			this.sector = sector;
-		}
-		public String toString() {
-			return "[" + track + ":" + sector + "]";
+	public void setImageFormat(int imageFormat) {
+		this.imageFormat  = imageFormat;
+	}
+	
+	public static boolean isImageFileName(File f) {
+		if (f.isDirectory()) {
+			return false;
+		} else {
+			for (int i=0; i<DiskImage.VALID_IMAGE_FILE_EXTENSTIONS.length; i++) {
+				if (f.getName().toLowerCase().endsWith(DiskImage.VALID_IMAGE_FILE_EXTENSTIONS[i])) {
+					return true;
+				}
+			}
+			return false;
 		}
 	}
 	
+	/** checks if fileName ends with .del, .seq, .prg, .usr or .rel and returns the corresponding file type.
+	 * If there is no matching file extension, TYPE_PRG is return
+	 * @param fileName
+	 * @return file type
+	 */
+	public static int getFileTypeFromFileExtension(String fileName) {
+		String name = fileName != null ? fileName.toLowerCase() : "";
+		if (name.endsWith(".del")) {
+			return TYPE_DEL;
+		} else if (name.endsWith(".seq")) {
+			return TYPE_SEQ;
+		} else if (name.endsWith(".usr")) {
+			return TYPE_USR;
+		} else if (name.endsWith(".rel")) {
+			return TYPE_REL;
+		} else {
+			return TYPE_PRG;
+		}
+	}
+	
+	/**
+	 * @return the number of validation errors, or null if validation has not been performed.
+	 */
+	public Integer getErrors() {
+		return this.errors;
+	}
+
+	public Integer getWarnings() {
+		return warnings;
+	}
+	
+	public List<ValidationError> getValidationErrorList() {
+		return validationErrorList;
+	}
 	
 }

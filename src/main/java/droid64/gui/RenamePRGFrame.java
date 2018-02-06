@@ -44,20 +44,21 @@ import javax.swing.JTextField;
 public class RenamePRGFrame extends JDialog {
 
 	private static final long serialVersionUID = 1L;
-	private DiskPanel diskPanel;
 
 	private static final String[] FILE_TYPE = { 
 		"DEL", "SEQ", "PRG", "USR",	"REL"
 	};
 	
-	public RenamePRGFrame (String topText, DiskPanel diskPanel_, String oldFileName, int oldFileType) {
-		//super(topText, true);
-		
+	/** 
+	 * Constructor for getting new name for a file on a disk image.
+	 * @param topText
+	 * @param diskPanel
+	 * @param oldFileName
+	 * @param oldFileType 
+	 * */
+	public RenamePRGFrame (String topText, final DiskPanel diskPanel, String oldFileName, int oldFileType) {
 		setTitle(topText);
-		
-		diskPanel = diskPanel_;
 		diskPanel.setNewPRGType(oldFileType);
-		
 		setModal(true);
 
 		Container cp = getContentPane();
@@ -131,11 +132,93 @@ public class RenamePRGFrame extends JDialog {
 			(int)((dim.width - getSize().getWidth()) / 3),
 			(int)((dim.height - getSize().getHeight()) / 3)
 		);
-//		setLocation(300,200);
 		pack();
 		setVisible(true);
 
 		setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
 	}
 
+	/**
+	 * Constructor for getting new name for a file on local file system. 
+	 * @param topText
+	 * @param diskPanel
+	 * @param oldFileName
+	 */
+	public RenamePRGFrame (String topText, final DiskPanel diskPanel, String oldFileName) {
+		setTitle(topText);		
+		setModal(true);
+
+		Container cp = getContentPane();
+		cp.setLayout( new BorderLayout());
+				
+		final JTextField nameTextField = new JTextField(oldFileName);
+		nameTextField.setToolTipText("Enter the new filename here.");
+		
+		final JButton okButton = new JButton("OK");
+		okButton.setMnemonic('o');
+		okButton.setToolTipText("Proceed.");
+		okButton.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent event) {
+				if ( event.getSource() == okButton ) {
+					diskPanel.setNewPRGNameSuccess(true);
+					String diskName = nameTextField.getText();
+					if (diskName.isEmpty()) {
+						return;
+					}
+					diskPanel.setNewPRGName(diskName);
+					dispose();
+				}
+			}
+		});
+		
+		final JButton exitButton = new JButton("Cancel");
+		exitButton.setMnemonic('c');
+		exitButton.setToolTipText("Cancel and return.");
+		exitButton.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent event) {
+				if (event.getSource() == exitButton ) {
+					diskPanel.setNewDiskNameSuccess(false);
+					dispose();
+				}
+			}
+		});
+		
+		final JTextField oldNameTextField = new JTextField(oldFileName);
+		oldNameTextField.setEditable(false);
+		
+		JPanel oldNamePanel = new JPanel();
+		oldNamePanel.setLayout(new BorderLayout());
+		oldNamePanel.add(new JLabel("Old filename:"), BorderLayout.WEST);
+		oldNamePanel.add(oldNameTextField, BorderLayout.CENTER);
+
+		
+		JPanel newNamePanel = new JPanel();
+		newNamePanel.setLayout(new BorderLayout());
+		newNamePanel.add(new JLabel("New filename:"), BorderLayout.WEST);
+		newNamePanel.add(nameTextField, BorderLayout.CENTER);
+				
+		JPanel namePanel = new JPanel();
+		namePanel.setLayout(new BorderLayout());
+		namePanel.add(oldNamePanel, BorderLayout.NORTH);
+		namePanel.add(newNamePanel, BorderLayout.SOUTH);
+		
+		JPanel buttonPanel = new JPanel();
+		buttonPanel.add(exitButton);
+		buttonPanel.add(okButton);
+
+		cp.add(namePanel, BorderLayout.NORTH);		
+		cp.add(new JPanel(), BorderLayout.CENTER);	
+		cp.add(buttonPanel, BorderLayout.SOUTH);	
+		
+		Dimension dim = Toolkit.getDefaultToolkit().getScreenSize();
+		setLocation(
+			(int)((dim.width - getSize().getWidth()) / 3),
+			(int)((dim.height - getSize().getHeight()) / 3)
+		);
+		pack();
+		setVisible(true);
+
+		setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);	
+	}	
+	
 }

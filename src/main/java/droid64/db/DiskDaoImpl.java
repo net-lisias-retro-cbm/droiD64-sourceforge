@@ -83,6 +83,9 @@ public class DiskDaoImpl implements DiskDao {
 			stmt.setString(2, disk.getFilePath());
 			stmt.setString(3, disk.getFileName());
 			stmt.setLong(4, disk.getDiskId());
+			stmt.setInt(5, disk.getImageType());
+			setInteger(stmt, 6, disk.getErrors());
+			setInteger(stmt, 7, disk.getWarnings());
 			if (1 != stmt.executeUpdate()) {
 				throw new NotFoundException("DiskId "+disk.getDiskId()+" could not be updated.");
 			}
@@ -120,25 +123,25 @@ public class DiskDaoImpl implements DiskDao {
 	public List<Disk> search(DiskSearchCriteria criteria) throws DatabaseException {
 		List<Disk> result = new ArrayList<Disk>();
 		StringBuilder sqlBuf = new StringBuilder();
-		sqlBuf.append("SELECT d.diskid, d.filepath, d.filename, d.label, df.fileid, df.name, df.filetype, df.size, df.fileNum, df.flags, d.updated FROM diskfile df ");
+		sqlBuf.append("SELECT d.diskid, d.filepath, d.filename, d.label, df.fileid, df.name, df.filetype, df.size, df.fileNum, df.flags, d.updated, d.imagetype, d.errors, d.warnings FROM diskfile df ");
 		sqlBuf.append("JOIN disk d ON df.diskid = d.diskid ");
 		if (criteria.hasCriteria()) {
 			String and = "";
 			sqlBuf.append("WHERE ");
 			if (!isStringNullOrEmpty(criteria.getFileName())) {
-				sqlBuf.append("UCASE(df.name) LIKE ? ");
+				sqlBuf.append("UPPER(df.name) LIKE ? ");
 				and = "AND ";
 			}
 			if (!isStringNullOrEmpty(criteria.getDiskLabel())) {
-				sqlBuf.append(and).append("UCASE(d.label) LIKE ? ");
+				sqlBuf.append(and).append("UPPER(d.label) LIKE ? ");
 				and = "AND ";
 			}
 			if (!isStringNullOrEmpty(criteria.getDiskPath())) {
-				sqlBuf.append(and).append("UCASE(d.filepath) LIKE ? ");
+				sqlBuf.append(and).append("UPPER(d.filepath) LIKE ? ");
 				and = "AND ";				
 			}
 			if (!isStringNullOrEmpty(criteria.getDiskFileName())) {
-				sqlBuf.append(and).append("UCASE(d.filename) LIKE ? ");
+				sqlBuf.append(and).append("UPPER(d.filename) LIKE ? ");
 				and = "AND ";				
 			}
 			if (criteria.getFileSizeMin()!=null) {
@@ -153,7 +156,10 @@ public class DiskDaoImpl implements DiskDao {
 				sqlBuf.append(and).append("df.filetype = ? ");
 				and = "AND ";				
 			}	
-
+			if (criteria.getImageType()!=null) {
+				sqlBuf.append(and).append("d.imagetype = ? ");
+				and = "AND ";				
+			}	
 		}
 		sqlBuf.append("ORDER BY d.filepath, d.filename, df.fileNum ");
 		sqlBuf.append("LIMIT ?");
@@ -184,6 +190,9 @@ public class DiskDaoImpl implements DiskDao {
 				if (criteria.getFileType()!=null) {
 					stmt.setInt(idx++, criteria.getFileType());
 				}
+				if (criteria.getImageType()!=null) {
+					stmt.setInt(idx++, criteria.getImageType());
+				}
 			}
 			
 			stmt.setLong(idx++, DaoFactoryImpl.getMaxRows());			
@@ -204,6 +213,9 @@ public class DiskDaoImpl implements DiskDao {
 				file.setFlags(rs.getInt(10));
 				Timestamp updated = rs.getTimestamp(11);
 				disk.setUpdated(updated!=null ? new Date(updated.getTime()) : null);
+				disk.setImageType(rs.getInt(12));
+				disk.setErrors(getInteger(rs, 13));
+				disk.setWarnings(getInteger(rs, 14));
 				result.add(disk);
 			}
 			return result;
@@ -217,8 +229,8 @@ public class DiskDaoImpl implements DiskDao {
 		if (disk == null) { return; }
 		try {
 			StringBuilder sqlBuf = new StringBuilder();
-			sqlBuf.append("SELECT d.diskid, d.filepath, d.filename, d.label, df.fileid, df.name, df.filetype, df.size, df.fileNum, df.flags FROM diskfile df ");
-			sqlBuf.append("JOIN disk d ON df.diskid = d.diskid ");
+			sqlBuf.append("SELECT d.diskid, d.filepath, d.filename, d.label, df.fileid, df.name, df.filetype, df.size, df.fileNum, df.flags, d.imagetype, d.errors, d.warnings FROM disk d ");
+			sqlBuf.append("LEFT JOIN diskfile df ON df.diskid = d.diskid ");
 			sqlBuf.append("WHERE d.filePath = ? AND d.filename = ? ");
 			sqlBuf.append("ORDER BY d.filepath, d.filename, df.fileNum;\n ");
 			PreparedStatement stmt = DaoFactoryImpl.prepareStatement(sqlBuf.toString());
@@ -235,17 +247,23 @@ public class DiskDaoImpl implements DiskDao {
 					oldDisk.setFilePath(rs.getString(2));
 					oldDisk.setFileName(rs.getString(3));
 					oldDisk.setLabel(rs.getString(4));
-				} 
-				DiskFile oldFile = new DiskFile();
-				oldFile.setClean();
-				oldFile.setFileId(rs.getLong(5));
-				oldFile.setDiskId(rs.getLong(1));
-				oldFile.setName(rs.getString(6));
-				oldFile.setFileType(rs.getInt(7));
-				oldFile.setSize(rs.getInt(8));
-				oldFile.setFileNum(rs.getInt(9));
-				oldFile.setFlags(rs.getInt(10));
-				oldDisk.getFileList().add(oldFile);
+					oldDisk.setImageType(rs.getInt(11));
+					oldDisk.setErrors(getInteger(rs, 12));
+					oldDisk.setWarnings(getInteger(rs, 13));
+				}
+				long fileId = rs.getLong(5);
+				if (fileId != 0L) {
+					DiskFile oldFile = new DiskFile();
+					oldFile.setClean();
+					oldFile.setFileId(fileId);
+					oldFile.setDiskId(rs.getLong(1));
+					oldFile.setName(rs.getString(6));
+					oldFile.setFileType(rs.getInt(7));
+					oldFile.setSize(rs.getInt(8));
+					oldFile.setFileNum(rs.getInt(9));
+					oldFile.setFlags(rs.getInt(10));
+					oldDisk.getFileList().add(oldFile);
+				}
 			}		
 			if (oldDisk != null) {
 				disk.setDiskId(oldDisk.getDiskId());
@@ -296,12 +314,15 @@ public class DiskDaoImpl implements DiskDao {
 		}
 		if (disk.isInsert()) {
 			try {
-				String sqlDisk = "INSERT INTO disk(label, filepath, filename, updated) VALUES(?,?,?,?)";
+				String sqlDisk = "INSERT INTO disk(label, filepath, filename, updated, imagetype, errors, warnings) VALUES(?,?,?,?,?,?,?)";
 				PreparedStatement stmt = conn.prepareStatement(sqlDisk, Statement.RETURN_GENERATED_KEYS);				
 				stmt.setString(1, disk.getLabel());
 				stmt.setString(2, disk.getFilePath());
 				stmt.setString(3, disk.getFileName());
 				stmt.setTimestamp(4, new Timestamp(new Date().getTime()));
+				stmt.setInt(5, disk.getImageType());
+				setInteger(stmt, 6, disk.getErrors());
+				setInteger(stmt, 7, disk.getWarnings());
 				int rows = stmt.executeUpdate();
 				if (rows == 0) {
 					conn.rollback();
@@ -327,13 +348,16 @@ public class DiskDaoImpl implements DiskDao {
 			}
 		} else if (disk.isUpdate()) {
 			try {
-				String sqlDisk = "UPDATE disk SET label=?,filepath=?,filename=?,updated=? WHERE diskid=?";
+				String sqlDisk = "UPDATE disk SET label=?,filepath=?,filename=?,updated=?,imageType=?,errors=?,warnings=? WHERE diskid=?";
 				PreparedStatement stmt = conn.prepareStatement(sqlDisk);				
 				stmt.setString(1, disk.getLabel());
 				stmt.setString(2, disk.getFilePath());
 				stmt.setString(3, disk.getFileName());
 				stmt.setTimestamp(4, new Timestamp(new Date().getTime()));
-				stmt.setLong(5, disk.getDiskId());
+				stmt.setInt(5, disk.getImageType());
+				setInteger(stmt, 6, disk.getErrors());
+				setInteger(stmt, 7, disk.getWarnings());
+				stmt.setLong(8, disk.getDiskId());
 				int rows = stmt.executeUpdate();
 				if (rows == 0) {
 					conn.rollback();
@@ -427,11 +451,11 @@ public class DiskDaoImpl implements DiskDao {
 	}
 	
 	private String getColumnNames() {
-		return "diskId, label, filePath, fileName, updated";
+		return "diskId, label, filePath, fileName, updated, imagetype, errors, warnings";
 	}
 	
 	private String getUpdateColumnNames() {
-		return "label=?, filePath=?, fileName=?, updated=?";
+		return "label=?, filePath=?, fileName=?, updated=?, imagetype=?, errors=?, warnings=?";
 	}
 	
 	/**
@@ -460,6 +484,9 @@ public class DiskDaoImpl implements DiskDao {
 		vo.setLabel(rs.getString(2));
 		vo.setFilePath(rs.getString(3));
 		vo.setFileName(rs.getString(4));
+		vo.setImageType(rs.getInt(5));
+		vo.setErrors(getInteger(rs, 6));
+		vo.setWarnings(getInteger(rs, 7));
 		return vo;
 	}
 	
@@ -471,4 +498,18 @@ public class DiskDaoImpl implements DiskDao {
 	private boolean isStringNullOrEmpty(String str) {
 		return str==null || str.trim().isEmpty();
 	}
+	
+	private Integer getInteger(ResultSet rs, int col) throws SQLException {
+        int value = rs.getInt(col);
+        return rs.wasNull() ? null : value;
+    }
+	
+	private void setInteger(PreparedStatement stmt, int col, Integer value) throws SQLException {
+		if (value == null) {
+			stmt.setNull(col, java.sql.Types.INTEGER); 
+		} else {
+			stmt.setInt(col,  value.intValue());
+		}
+	}
+	
 }

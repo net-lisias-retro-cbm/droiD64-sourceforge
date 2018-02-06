@@ -43,11 +43,30 @@ public class CpmFile extends CbmFile {
 	
 	public CpmFile() {
 	}
-
+	
 	public CpmFile(boolean fileScratched, int fileType, boolean fileLocked, boolean fileClosed, int track, int sector, String name, int relTrack, int relSector, int[] geos, int sizeInBytes, int sizeInBlocks, int dirTrack, int dirSector, int dirPosition) {
 		super(fileScratched, fileType, fileLocked, fileClosed, track, sector, name, relTrack, relSector, geos, sizeInBytes, sizeInBlocks, dirTrack, dirSector, dirPosition);
 	}
 
+	public CpmFile(CpmFile that) {
+		super(that);
+		this.recordCount = that.recordCount;
+		this.hidden = that.hidden;
+		this.readOnly = that.readOnly;
+		this.archived = that.archived;
+		this.lastExtNum = that.lastExtNum;
+		this.cpmName = that.cpmName;
+		this.cpmNameExt = that.cpmNameExt;
+		if (that.allocList != null) {
+			this.allocList = new ArrayList<Integer>(that.allocList);
+		}
+	}
+	
+	@Override
+	public CpmFile clone() {
+		return new CpmFile(this);
+	}
+	
 	public void addAllocUnit(int unit) {
 		if (allocList == null) {
 			allocList = new ArrayList<Integer>();

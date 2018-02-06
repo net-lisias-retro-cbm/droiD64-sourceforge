@@ -10,6 +10,7 @@ import java.io.UnsupportedEncodingException;
 import java.util.Arrays;
 
 import javax.swing.JButton;
+import javax.swing.JDialog;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
@@ -41,11 +42,14 @@ import javax.swing.JTextArea;
  * @author Henrik
  * </pre>
  */
-public class TextViewFrame extends JFrame {
+public class TextViewFrame extends JDialog {
 
 	private static final long serialVersionUID = 1L;
 
-	public TextViewFrame(String title, byte[] data) {
+	public TextViewFrame(String windowTitle, String title, byte[] data) {
+		setModal(false);
+		setModalityType(ModalityType.MODELESS);
+		setTitle(windowTitle);
 		try {
 			if (data == null || data.length == 0) {
 				dispose();
@@ -65,10 +69,21 @@ public class TextViewFrame extends JFrame {
 		}
 	}
 
-	public TextViewFrame(String title, String message) {
+	
+	public TextViewFrame(JDialog parent, String windowTitle, String title, String message, boolean isModal) {
+		super(parent, windowTitle);
+		setModal(isModal);
+		setTitle(windowTitle);
 		setup(title, message);
 	}
 
+	public TextViewFrame(JFrame parent, String windowTitle, String title, String message) {
+		super(parent, windowTitle);
+		setModal(true);
+		setTitle(windowTitle);
+		setup(title, message);
+	}
+	
 	private void setup(String title, String message) {
 		JTextArea textArea = new JTextArea(message);
 		textArea.setEditable(false);

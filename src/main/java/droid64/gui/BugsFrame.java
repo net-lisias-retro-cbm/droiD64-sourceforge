@@ -42,75 +42,48 @@ import javax.swing.JTextArea;
 public class BugsFrame extends JFrame {
 
 	private static final long serialVersionUID = 1L;	
-	private static final String myDate = "2.08.2004";
-	private static final String bugsMessage = "None known. Do intensive testing, find some and mail them to me please.\n\n";
+	private static final String MY_DATE = "28.01.2016";
+	private static final String BUGS_MESSAGE = "None known. Do intensive testing, find some and mail them to me please.\n\n";
 	
-	private static final String todoMessage = 
-		"general: do intensive testing\n"+
-		"\n" +
-		"DiskPanel:\n" +
-		"Implement \"Reload D64\" function.\n"+
-		"\n" +
-		"delPRG: implement method\n"+
-		"\n" +
-		"general: allow users to enter special characters when editing diskname and filenames.\n"+
-		"\n" +
-		"general: implement drag and drop\n"+
-		"\n" +
-		"DiskPanel:\n" +
-		"Warn users if file will get overwritten. Include nice .D64 and .PRG extensions automatically.\n"+
-		"\n" +
-		"renameDisk and renamePRG:\n" +
-		"Allow user to enter only limited string in the textfields.\n"+
-		"\n" +
-		"renamePRG: add some more parameters\n"+
-		"\n" +
- 		"insertPRG: this always sets new FileType = PRG\n"+
-		"\n" +
- 		"d64.writeDirectoryEntry: what to do if filename exists?\n" +
-		"\n" +
-		"d64.setNewDirectoryEntry: relative files\n" +
-		"\n" +
-		"d64.setNewDirectoryEntry: GEOS files\n" +
-		"\n";
+	private static final String TODO_MESSAGE = 
+		"General:   Do intensive testing\n\n" +
+		"General:   Allow users to enter special characters when editing diskname and filenames.\n\n" +
+		"General:   Implement drag and drop\n\n" +
+		"General:   CP/M write support\n\n" +
+		"DiskPanel: Warn users if file will get overwritten.\n\n" +
+		"Rename:    Allow user to enter only limited string in the textfields.\n\n" +
+ 		"WriteDirectoryEntry: what to do if filename exists?\n\n" +
+		"SetNewDirectoryEntry: relative files\n\n" +
+		"SetNewDirectoryEntry: GEOS files\n\n";
 	
-	
-	public BugsFrame (String topText) {
- 
-		setTitle(topText + " - "+myDate);
-		
-		//setModal(true);
+	public BugsFrame (String topText) { 
+		setTitle(topText + " - "+MY_DATE);
 
-		Container cp = getContentPane();
-		cp.setLayout( new BorderLayout());
-
-		JPanel bugsPanel = new JPanel();
-		bugsPanel.setLayout( new BorderLayout());
-		JLabel bugsLabel = new JLabel("Bugs:");
-		JTextArea bugsTextArea = new JTextArea(10,60);
-
+		JTextArea bugsTextArea = new JTextArea(5,60);
 		bugsTextArea.setEditable(false);
-		bugsTextArea.setText(bugsMessage);
+		bugsTextArea.setText(BUGS_MESSAGE);
 		bugsTextArea.setWrapStyleWord(true);
 		bugsTextArea.setLineWrap(true);
 		bugsTextArea.setCaretPosition(0);
-		bugsPanel.add(bugsLabel, BorderLayout.NORTH);
+
+		JPanel bugsPanel = new JPanel();
+		bugsPanel.setLayout( new BorderLayout());
+		bugsPanel.add(new JLabel("Bugs:"), BorderLayout.NORTH);
 		bugsPanel.add(new JScrollPane(bugsTextArea), BorderLayout.SOUTH);
 		
-		JPanel todoPanel = new JPanel();
-		todoPanel.setLayout( new BorderLayout());
-		JLabel todoLabel = new JLabel("To do:");
 		JTextArea todoTextArea = new JTextArea(10,60);
 		todoTextArea.setBackground(new Color(230,230,255));
 		todoTextArea.setEditable(false);
-		todoTextArea.setText(todoMessage);
+		todoTextArea.setText(TODO_MESSAGE);
 		todoTextArea.setWrapStyleWord(true);
 		todoTextArea.setLineWrap(true);
 		todoTextArea.setCaretPosition(0);
-		todoPanel.add(todoLabel, BorderLayout.NORTH);
-		todoPanel.add(new JScrollPane(todoTextArea), BorderLayout.SOUTH);
 
-		JPanel buttonPanel = new JPanel();
+		JPanel todoPanel = new JPanel();
+		todoPanel.setLayout( new BorderLayout());
+		todoPanel.add(new JLabel("To do:"), BorderLayout.NORTH);
+		todoPanel.add(new JScrollPane(todoTextArea), BorderLayout.CENTER);
+
 		final JButton okButton = new JButton("OK");
 		okButton.setMnemonic('o');
 		okButton.setToolTipText("Leave \"Bugs and ToDo\".");
@@ -121,8 +94,12 @@ public class BugsFrame extends JFrame {
 				}
 			}
 		});
+
+		JPanel buttonPanel = new JPanel();
 		buttonPanel.add(okButton);
 
+		Container cp = getContentPane();
+		cp.setLayout( new BorderLayout());
 		cp.add(bugsPanel, BorderLayout.NORTH);		
 		cp.add(todoPanel, BorderLayout.CENTER);		
 		cp.add(buttonPanel, BorderLayout.SOUTH);		
@@ -132,8 +109,7 @@ public class BugsFrame extends JFrame {
 			(int)((dim.width - getSize().getWidth()) / 3),
 			(int)((dim.height - getSize().getHeight()) / 3)
 		);
-//		setLocation(300,200);
-//		setSize(400,400);
+
 		pack();
 		setVisible(true);
 

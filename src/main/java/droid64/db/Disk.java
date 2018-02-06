@@ -8,6 +8,10 @@ import java.util.List;
  * Persistent value class for representing one disk image.
  * @author Henrik
  */
+/**
+ * @author henke
+ *
+ */
 public class Disk extends Value {
 	
 	private long diskId;
@@ -16,6 +20,9 @@ public class Disk extends Value {
 	private String fileName;
 	private List<DiskFile> fileList = new ArrayList<DiskFile>();
 	private Date updated;
+	private int imageType;
+	private Integer errors;
+	private Integer warnings;
 	
 	public void setDiskId(long id) {
 		this.diskId = id;
@@ -65,6 +72,31 @@ public class Disk extends Value {
 		this.updated = updated;
 	}
 
+	public int getImageType() {
+		return imageType;
+	}
+
+	public void setImageType(int imageType) {
+		this.imageType = imageType;
+	}
+
+	
+	public Integer getErrors() {
+		return errors;
+	}
+
+	public void setErrors(Integer errors) {
+		this.errors = errors;
+	}
+
+	public Integer getWarnings() {
+		return warnings;
+	}
+
+	public void setWarnings(Integer warnings) {
+		this.warnings = warnings;
+	}
+
 	/** {@inheritDoc} */
 	public String toString() {
 		StringBuilder builder = new StringBuilder();
@@ -74,6 +106,9 @@ public class Disk extends Value {
 		builder.append(" .filePath=").append(filePath);
 		builder.append(" .fileName=").append(fileName);
 		builder.append(" .updated=").append(updated);
+		builder.append(" .imageType=").append(imageType);
+		builder.append(" .errors=").append(errors);
+		builder.append(" .warnings=").append(warnings);
 		builder.append(" .fileList=").append(fileList);
 		builder.append(" .state=").append(getState());
 		builder.append("]");

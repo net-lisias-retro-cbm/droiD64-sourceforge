@@ -1,5 +1,8 @@
 package droid64.d64;
+import java.io.ByteArrayOutputStream;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 
 /**<pre style='font-family:sans-serif;'>
  * Created on 21.06.2004
@@ -32,12 +35,10 @@ public class D64 extends DiskImage {
 
 	/** D64 format is restricted to a maximum of 144 directory entries (18 sectors with 8 entries each). Track 18 has 19 sectors, of which the first is the BAM. */
 	private static final int FILE_NUMBER_LIMIT = 144;
-
 	/** Number of tracks */
 	private static final int TRACK_COUNT = 35;
 	/** Maximum number of sectors on any track */
 	private static final int MAX_SECTORS = 21;
-	
 	/** Offsets of tracks */
 	private final static CbmTrack[] TRACKS = {
 			new CbmTrack(21,	  0,	      0	),	// $00000}   0 dummy
@@ -91,8 +92,8 @@ public class D64 extends DiskImage {
 	/** Track number of secondary directory track (for 1571 disks); 255 (a non-existent track), if not available */
 	protected static final int DIR_TRACK2 = 255;
 
-	private static final int BAM_TRACK = 18;
-	private static final int BAM_SECTOR = 0;
+	protected static final int BAM_TRACK = 18;
+	protected static final int BAM_SECTOR = 0;
 	
 	/** CP/M sector skew (distance between two sectors within one allocation unit) */
 	private static final int CPM_SECTOR_SKEW = 5;
@@ -109,15 +110,10 @@ public class D64 extends DiskImage {
 
 	/** Blocks per CP/M allocation unit (4 * 256 = 1024). */
 	private static final int BLOCKS_PER_ALLOC_UNIT = 4;
-
 	/** Track number of first track (may be above one for sub directories on 1581 disks) */
-	private int firstTrack = 1;
+	private static final int FIRST_TRACK = 1;
 	/** Track number of last track plus one (may be below the physical end of disk for sub directories on 1581 disks) */
-	private int lastTrack = 35;
-	/** Track number of current block of file */
-	private int track;
-	/** Sector number of current block of file  */
-	private int sector;
+	private static final int LAST_TRACK = 35;
 
 	/**
 	 * Constructor
@@ -178,7 +174,7 @@ public class D64 extends DiskImage {
 		for (int i = 0; i < DISK_ID_LENGTH; i++) {
 			bam.setDiskId(bam.getDiskId() +	new Character((char)( PETSCII_TABLE[getCbmDiskValue(bamOffset + 162 + i)])));
 		}
-		cpmFormat = getCpmDiskFormat();
+		checkImageFormat();
 	}
 	
 	/**
@@ -192,7 +188,7 @@ public class D64 extends DiskImage {
 		if (num >= CPM_BLOCK_COUNT) {
 			return null;
 		}
-		if (cpmFormat == CPM_TYPE_D64_C64) {
+		if (imageFormat == D64_CPM_C64_IMAGE_TYPE) {
 			if (num >= 544) {
 				return null;
 			}
@@ -202,7 +198,7 @@ public class D64 extends DiskImage {
 			}
 			sec = num % 17;
 			return new TrackSector(trk, sec);
-		} else if (cpmFormat == CPM_TYPE_D64_C128) {		
+		} else if (imageFormat == D64_CPM_C128_IMAGE_TYPE) {		
 			for (int i=0; i<4; i++) {
 				num += CPM_ZONES[i][3]; 
 				if (num < CPM_ZONES[i][2]) {
@@ -220,10 +216,10 @@ public class D64 extends DiskImage {
 	
 	// TODO FIXME:
 	private void readCpmDirectory() {
-		if (cpmFormat == CPM_TYPE_UNKNOWN) {
+		if (!isCpmImage()) {
 			return;
 		}
-		if (cpmFormat == CPM_TYPE_D64_C128) {		
+		if (imageFormat == D64_CPM_C128_IMAGE_TYPE) {		
 			final int C128_SS_DIR_TRACK = 1;
 			final int[] C128_SS_DIR_SECTORS = { 10, 15, 20, 4, 9, 14, 19, 3 };
 			int filenumber = 0;
@@ -239,7 +235,7 @@ public class D64 extends DiskImage {
 				}
 			}
 			fileNumberMax = filenumber;
-		} else if (cpmFormat == CPM_TYPE_D64_C64) {
+		} else if (imageFormat == D64_CPM_C64_IMAGE_TYPE) {
 			final int C64_SS_DIR_TRACK = 3;
 			final int[] C64_SS_DIR_SECTORS = { 1, 2, 3, 4, 5, 6 ,7 };
 			int filenumber = 0;
@@ -267,43 +263,48 @@ public class D64 extends DiskImage {
 	/** {@inheritDoc} */
 	public void readDirectory() {
 
-		if (cpmFormat != CPM_TYPE_UNKNOWN) {
+		if (isCpmImage()) {
 			readCpmDirectory();
 			return;
 		}
-
-		boolean fileLimitReached = false;
 		int track = DIR_TRACK;
 		int sector = 1;
-		int dirPosition = 0;
-		int filenumber = 0;
-		do {
-			if (track >= TRACKS.length) {
-				feedbackMessage.append("Error: Track ").append(track).append(" is not within image.\n");
-				break;
-			}
-			int dataPosition = getSectorOffset(track, sector);
-			for (int i = 0; i < DIR_ENTRIES_PER_SECTOR; i ++) {
-				cbmFile[filenumber] = new CbmFile(cbmDisk, dataPosition + (i * DIR_ENTRY_SIZE));
-				//System.out.println("'"+cbmFile[filenumber]+"'");
-				if (cbmFile[filenumber].isFileScratched() == false) {
-					cbmFile[filenumber].setDirPosition(dirPosition);
-					if (filenumber < FILE_NUMBER_LIMIT)  {
-						filenumber++;	
-					} else {
-						// Too many files in directory check
-						fileLimitReached = true;
-					}
+		try {
+			boolean fileLimitReached = false;
+
+			int dirPosition = 0;
+			int filenumber = 0;
+			do {
+				if (track >= TRACKS.length || sector >= TRACKS[track].getSectors()) {
+					feedbackMessage.append("Error: Sector ").append(track).append("/").append(sector).append(" is not within image.\n");
+					break;
 				}
-				dirPosition++;
+				int dataPosition = getSectorOffset(track, sector);
+				for (int i = 0; i < DIR_ENTRIES_PER_SECTOR; i ++) {
+					cbmFile[filenumber] = new CbmFile(cbmDisk, dataPosition + (i * DIR_ENTRY_SIZE));
+					//System.out.println("'"+cbmFile[filenumber]+"'");
+					if (cbmFile[filenumber].isFileScratched() == false) {
+						cbmFile[filenumber].setDirPosition(dirPosition);
+						if (filenumber < FILE_NUMBER_LIMIT)  {
+							filenumber++;	
+						} else {
+							// Too many files in directory check
+							fileLimitReached = true;
+						}
+					}
+					dirPosition++;
+				}
+				track = getCbmDiskValue(dataPosition + 0);
+				sector = getCbmDiskValue(dataPosition + 1);
+			} while (track != 0 && !fileLimitReached);
+			if (fileLimitReached) {
+				feedbackMessage.append("Error: Too many entries in directory (more than ").append(FILE_NUMBER_LIMIT).append(")!\n");
 			}
-			track = getCbmDiskValue(dataPosition + 0);
-			sector = getCbmDiskValue(dataPosition + 1);
-		} while (track != 0 && !fileLimitReached);
-		if (fileLimitReached) {
-			feedbackMessage.append("Error: Too many entries in directory (more than ").append(FILE_NUMBER_LIMIT).append(")!\n");
+			fileNumberMax = filenumber;
+		} catch (ArrayIndexOutOfBoundsException e) {
+			feedbackMessage.append("Error: Sector ").append(track).append("/").append(sector).append(" is outside of image.\n");
 		}
-		fileNumberMax = filenumber;
+		validate(null);
 	}
 
 	/**
@@ -339,13 +340,13 @@ public class D64 extends DiskImage {
 	}
 
 	/** {@inheritDoc} */
-	public byte[] writeSaveData(int number) throws CbmException {
+	public byte[] getFileData(int number) throws CbmException {
 		if (cbmDisk == null) {
-			throw new CbmException("writeSaveData: No disk data exist.");
+			throw new CbmException("getFileData: No disk data exist.");
 		} else if (number >= cbmFile.length) {
-			throw new CbmException("writeSaveData: File number " + number + " does not exist.");
-		} else if (cpmFormat != CPM_TYPE_UNKNOWN) { 
-			feedbackMessage.append("writeSaveData: CP/M mode.\n");
+			throw new CbmException("getFileData: File number " + number + " does not exist.");
+		} else if (isCpmImage()) { 
+			feedbackMessage.append("getFileData: CP/M mode.\n");
 			if (cbmFile[number] instanceof CpmFile) {
 				CpmFile cpm = (CpmFile)cbmFile[number];
 				byte[] data = new byte[ cpm.getRecordCount() * CPM_RECORD_SIZE ];
@@ -368,15 +369,13 @@ public class D64 extends DiskImage {
 				throw new CbmException("CP/M format but not a CP/M file.\n");
 			}
 		} else if (cbmFile[number].isFileScratched()) {
-			throw new CbmException("writeSaveData: File number " + number + " is deleted.");			
+			throw new CbmException("getFileData: File number " + number + " is deleted.");			
 		}
-		feedbackMessage.append("writeSaveData: ").append(number).append(" '").append(cbmFile[number].getName()).append("'\n");
+		feedbackMessage.append("getFileData: ").append(number).append(" '").append(cbmFile[number].getName()).append("'\n");
 		feedbackMessage.append("Tracks / Sectors: ");
-				
 		int thisTrack = cbmFile[number].getTrack();
 		int thisSector = cbmFile[number].getSector();
-		int counter = 0;
-		byte[] saveData = new byte[MAX_PRG];
+		ByteArrayOutputStream out = new ByteArrayOutputStream();
 		do {
 			if (thisTrack >= TRACKS.length) {
 				throw new CbmException("Track " + thisTrack + " outside of image.");
@@ -386,19 +385,19 @@ public class D64 extends DiskImage {
 			feedbackMessage.append(thisTrack).append("/").append(thisSector).append(" ");
 			if (nextTrack > 0) {
 				for (int position = 2; position < BLOCK_SIZE; position++) {
-					saveData[counter++] = cbmDisk[ TRACKS[thisTrack].getOffset() + (BLOCK_SIZE * thisSector) + position];
+					out.write(cbmDisk[ TRACKS[thisTrack].getOffset() + (BLOCK_SIZE * thisSector) + position]);
 				}
 			} else {
 				feedbackMessage.append("\nRemaining bytes: ").append(nextSector).append("\n");
 				for (int position = 2; position <= nextSector; position++) {
-					saveData[counter++] = cbmDisk[ TRACKS[thisTrack].getOffset() + (BLOCK_SIZE * thisSector) + position];
+					out.write(cbmDisk[ TRACKS[thisTrack].getOffset() + (BLOCK_SIZE * thisSector) + position]);
 				}
 			}
 			thisTrack = nextTrack;
 			thisSector = nextSector;
 		} while (thisTrack != 0);
 		feedbackMessage.append("OK.\n");
-		return Arrays.copyOfRange(saveData, 0, counter);
+		return out.toByteArray();
 	}
 
 	/**
@@ -412,67 +411,67 @@ public class D64 extends DiskImage {
 	}
 
 	/**
-	 * Find a sector for the first block of the file, using variables Track and Sector<BR>
-	 * globals needed: GEOSFormat, CopyToDirTrack<BR>
-	 * globals written: track_, sector<BR>
-	 * @return when True, a sector was found; otherwise no more sectors left
+	 * Find a sector for the first block of the file,
+	 * @return track/sector or null if none is available.
 	 */
-	private boolean findFirstCopyBlock() {
-		int maxSector;
-		int distance;
-		boolean found = false;	//We found no free sector yet
-
+	private TrackSector findFirstCopyBlock() {
+		TrackSector block = new TrackSector(0, 0);
 		if (geosFormat) {
-			// If this is a GEOS-formatted disk then use the other routine, from track one upwards.
-			track = 1;
-			sector = 0;
-			found = findNextCopyBlock();
-			//TrackSector trackSector = new TrackSector(track, sector);
-
+			// GEOS formatted disk, so use the other routine, from track one upwards.
+			block.track = 1;
+			block.sector = 0;
+			block = findNextCopyBlock(block);
 		} else {
-			distance = 1;	// If it's a normal disk then we start off with tracks just besides the directory track.
-			while ((found == false) && (distance < 128)) {
-				// Search until we find a free block or moved too far from the directory track.
-				track =  (DIR_TRACK - distance);	//Check the track below the directory track first.
-				if ((track >= firstTrack) && (track <= lastTrack)) {
-					found = isTrackFree(track);		// If the track is inside the valid range then check if there's a free sector on it.
+			boolean found = false;	// No free sector found yet
+			int distance = 1;		// On a normal disk, start looking checking the tracks just besides the directory track.
+			while (!found && distance < 128) {
+				// Search until we find a track with free blocks or move too far from the directory track.
+				block.track = DIR_TRACK - distance;
+				if (block.track >= FIRST_TRACK && block.track <= LAST_TRACK) {
+					// Track within disk limits
+					found = isTrackFree(block.track);
 				}
-				if ( found == false){
-					track = (DIR_TRACK + distance);	// If no luck then check the track above the directory track.
-					if (track <= lastTrack) {
-						found = isTrackFree(track);	// If the track is inside the valid range then check if there's a free sector on it.
+				if (!found){
+					// Check the track above the directory track
+					block.track = DIR_TRACK + distance;
+					if (block.track <= LAST_TRACK) {
+						// Track within disk limits
+						found = isTrackFree(block.track);
 					}
 				}
-				if ( found == false) {
-					distance++;	// If no luck either then move one track away from the directory track and try again.
+				if (!found) {
+					// Move one track further away from the directory track and try again.
+					distance++;
 				}
 			}
 
 			//// If the whole disk is full and we're allowed to use the directory track for file data then try there too.
-			//if ( (found == false) && (CopyToDirTrack)) {
-			//  track_ = dirTrack;
-			//  found = isTrackFree(track_);
+			//if (!found && CopyToDirTrack) {
+			//  block.track = DIR_TRACK;
+			//  found = isTrackFree(block.track);
 			//}
 
 			if (found) {
-				// If we finally found a track with, at least, one free sector then search for a free sector in it.
-				maxSector = getMaximumSectors(track);		// Determine how many sectors there are on that track.
-				sector = 0;									// Start off with sector zero.
+				// Found a track with, at least one free sector, so search for a free sector in it.
+				int maxSector = getMaximumSectors(block.track);		// Determine how many sectors there are on that track.
+				block.sector = 0;									// Start off with sector zero.
 				do {
-					found = isSectorFree(track, sector);	// Check if the current sector is free.
-					if (found == false) {
-						// If it isn't then go on to the next sector.
-						sector++;
+					found = isSectorFree(block.track, block.sector);
+					if (!found) {
+						block.sector++;	// Try the next sector.
 					}
-				} while ((found == false) || (sector >= maxSector));	// Repeat the check until we find a free sector or run off the track.
+				} while (!found && block.sector <= maxSector);	// Repeat until there is a free sector or run off the track.
+			} else {
+				// Disk full. No tracks with any free blocks.
+				block = null;
 			}
-
 		}
-
-		//TrackSector trackSector = new TrackSector(track, sector);
-
-		feedbackMessage.append("firstCopyBlock(): The first block will be at Track ").append(track).append(" Sector ").append(sector).append(".\n");
-		return found;
+		if (block != null) {
+			feedbackMessage.append("firstCopyBlock: The first block will be ").append(block.track).append("/").append(block.sector).append(".\n");
+		} else {
+			feedbackMessage.append("firstCopyBlock: Error: Disk is full!\n");
+		}
+		return block;
 	}
 
 	/**
@@ -481,53 +480,64 @@ public class D64 extends DiskImage {
 	 * globals written: track_, sector<BR>
 	 * @return when True, a sector was found; otherwise no more sectors left
 	 */
-	private boolean findNextCopyBlock() {
+	private TrackSector findNextCopyBlock(TrackSector block) {
 		boolean found = false;
-		int curSector;
-		int curTrack;
-		if ((track == 0) || (track > lastTrack)) {
+		int curSector=0;
+		int curTrack=0;
+		if ((block.track == 0) || (block.track > LAST_TRACK)) {
 			// If we somehow already ran off the disk then there are no more free sectors left.
 			found = false;
 		} else {
 			int tries = 3;			// Set the number of tries to three.
-			found = false;		// We found no free sector yet.
-			curTrack = track;	// Remember the current track number.
-			while ( (!found) && (tries > 0)) {
+			found = false;			// We found no free sector yet.
+			curTrack = block.track;		// Remember the current track number.
+			while (!found && tries > 0) {
 				// Keep trying until we find a free sector or run out of tries.
-				if (isTrackFree(track)) {
+				if (isTrackFree(block.track)) {
+					
 					// If there's, at least, one free sector on the track then get searching.
-					if (track == curTrack || !geosFormat) {
+					if (block.track == curTrack || !geosFormat) {
 						// If this is a non-GEOS disk or we're still on the same track of a GEOS-formatted disk then...
-						sector = sector + C1541_INTERLEAVE;	// Move away an "interleave" number of sectors.
-						if (geosFormat && track >= 25) {
+						block.sector = block.sector + C1541_INTERLEAVE;	// Move away an "interleave" number of sectors.
+						if (geosFormat && block.track >= 25) {
 							// Empirical GEOS optimization, get one sector backwards if over track 25.
-							sector--;
+							block.sector--;
 						}
 					} else {
 						// For a different track of a GEOS-formatted disk, use sector skew.
-						sector = ((track - curTrack) << 1 + 4 + C1541_INTERLEAVE);
+						block.sector = ((block.track - curTrack) << 1 + 4 + C1541_INTERLEAVE);
 					}
-					int maxSector = getMaximumSectors(track);	// Get the number of sectors on the current track.
-					while (sector >= maxSector) {
+					int maxSector = getMaximumSectors(block.track);	// Get the number of sectors on the current track.					
+					while (block.sector >= maxSector) {
 						// If we ran off the track then correct the result.
-						sector = (sector - maxSector)+1;	// Subtract the number of sectors on the track.
-						if (sector > 0 && !geosFormat) {
+						block.sector = (block.sector - maxSector) + 1;	// Subtract the number of sectors on the track.
+						if (block.sector > 0 && !geosFormat) {
 							// Empirical optimization, get one sector backwards if beyond sector zero.
-							sector--;
+							block.sector--;
 						}
 					}
-					curSector = sector;	//Remember the sector we finally arrived at.
+					curSector = block.sector;	// Remember the first sector to be checked.
 					do {
-						found = isSectorFree(track, sector);	//Check if the current sector is free}
+						found = isSectorFree(block.track, block.sector);
 						if (!found) {
-							// If it isn't then go to the next sector.
-							sector++; 
+							block.sector++;	// Try next sector
 						}
-						if (sector >= maxSector) {
-							// If we ran off the track then wrap around to sector zero.
-							sector = 0; 
+						if (block.sector >= maxSector) {
+							block.sector = 0;	// Went off track, wrap around to sector 0.
 						}
-					} while (!found && sector != curSector);	//Keep searching until we find a free sector or arrive back at the original sector.
+					} while (!found && block.sector != curSector);	// Continue until finding a free sector, or we are back on the curSector again.
+					if (!found) {
+						// According to the free sector counter in BAM, this track should have free sectors, but it didn't.
+						// Try a different track. Obviously, this disk needs to be validated.
+						feedbackMessage.append("Warning: Track ").append(block.track).append(" should have at least one free sector, but didn't.");
+						if (block.track > FIRST_TRACK && block.track <= DIR_TRACK) {
+							block.track = block.track - 1 ;
+						} else if (block.track < LAST_TRACK && block.track > DIR_TRACK) {
+							block.track = block.track + 1 ;							
+						} else {
+							tries--;
+						}					
+					}
 				} else {
 					// if IsTrackFree(track) = FALSE then
 					//if GEOSFormat then {	//If the current track is used up completely then...
@@ -535,30 +545,30 @@ public class D64 extends DiskImage {
 					//	if (track = DirTrack) or (track = DirTrack2) then Inc(track_);	//Skip the directory tracks on the way.
 					//	if track = LastTrack then Tries = 0;	//If we ran off the disk then there are no more tries.
 					//} else {
-					if (track == DIR_TRACK) {
+					if (block.track == DIR_TRACK) {
 						// If we already tried the directory track then there are no more tries.
 						tries = 0;
 					} else {
-						if (track < DIR_TRACK) {
-							track --;	//If we're below the directory track then move one track downwards.
-							if (track < firstTrack) {
-								track = (DIR_TRACK + 1); //If we ran off the disk then step back to the track just above the directory track and zero the sector number.
-								sector = 0;
+						if (block.track < DIR_TRACK) {
+							block.track --;	//If we're below the directory track then move one track downwards.
+							if (block.track < FIRST_TRACK) {
+								block.track = (DIR_TRACK + 1); //If we ran off the disk then step back to the track just above the directory track and zero the sector number.
+								block.sector = 0;
 								//If there are no tracks available above the directory track then there are no tries left; otherwise just decrease the number of tries.
-								if (track <= lastTrack) {
+								if (block.track <= LAST_TRACK) {
 									tries--; 
 								} else { 
 									tries = 0; 
 								}
 							}
 						} else {	//if track >= DirTrack then.
-							track++;	//If we're above the directory track then move one track upwards.
+							block.track++;	//If we're above the directory track then move one track upwards.
 							// if (track_ = dirTrack2) track_++;	//Skip the secondary directory track on the way.
-							if (track > lastTrack) {
-								track = (DIR_TRACK - 1);	//If we ran off the disk then step back to the track just below the directory track and zero the sector number.
-								sector = 0;
+							if (block.track > LAST_TRACK) {
+								block.track = (DIR_TRACK - 1);	//If we ran off the disk then step back to the track just below the directory track and zero the sector number.
+								block.sector = 0;
 								//If there are no tracks available below the directory track then there are no tries left; otherwise just decrease the number of tries.
-								if (track >= firstTrack) {
+								if (block.track >= FIRST_TRACK) {
 									tries--;
 								} else {
 									tries = 0;
@@ -579,33 +589,33 @@ public class D64 extends DiskImage {
 				 */
 			} //while not Found and (Tries > 0) do {}
 		} //if not (track_ = 0) or (track_ >= MaxTrack) then {}
-		feedbackMessage.append("findNextCopyBlock(): next block at track ").append(track).append(" sector ").append(sector).append(".\n");
-		return found;
+		//feedbackMessage.append("findNextCopyBlock: next block ").append(track).append("/").append(sector).append(".\n");
+		return found ? block : null;
 	}
 	
 	/**
 	 * Mark a sector in BAM as used.
-	 * @param trackNumber trackNumber
-	 * @param sectorNumber sectorNumber
+	 * @param track trackNumber
+	 * @param sector sectorNumber
 	 */
-	private void markSectorUsed(int trackNumber, int sectorNumber) {
+	private void markSectorUsed(int track, int sector) {
 		//feedbackMessage.append("markBAMused( track=").append(trackNumber).append(" sector=").append(sectorNumber).append(")\n");
-		int trackPos = TRACKS[BAM_TRACK].getOffset() + (BLOCK_SIZE * BAM_SECTOR) + (trackNumber * 4);
-		int pos = (sectorNumber / 8) + 1;
-		setCbmDiskValue(trackPos + pos, getCbmDiskValue(trackPos + pos) & INVERTED_BYTE_BIT_MASKS[sectorNumber & 0x07] );
+		int trackPos = TRACKS[BAM_TRACK].getOffset() + (BLOCK_SIZE * BAM_SECTOR) + (track * 4);
+		int pos = (sector / 8) + 1;
+		setCbmDiskValue(trackPos + pos, getCbmDiskValue(trackPos + pos) & INVERTED_BYTE_BIT_MASKS[sector & 0x07] );
 		setCbmDiskValue(trackPos, getCbmDiskValue(trackPos) - 1);
 	}
 	
 	/**
 	 * Mark a sector in BAM as free.
-	 * @param trackNumber trackNumber
-	 * @param sectorNumber sectorNumber
+	 * @param track trackNumber
+	 * @param sector sectorNumber
 	 */
-	private void markSectorFree(int trackNumber, int sectorNumber) {
+	private void markSectorFree(int track, int sector) {
 		//feedbackMessage.append("markSectorFree: track=").append(trackNumber).append(" sector=").append(sectorNumber).append(")\n");
-		int trackPos = TRACKS[BAM_TRACK].getOffset() + (BLOCK_SIZE * BAM_SECTOR) + (trackNumber * 4);
-		int pos = (sectorNumber / 8) + 1;
-		setCbmDiskValue(trackPos + pos, getCbmDiskValue(trackPos + pos) | BYTE_BIT_MASKS[sectorNumber & 0x07] );
+		int trackPos = TRACKS[BAM_TRACK].getOffset() + (BLOCK_SIZE * BAM_SECTOR) + (track * 4);
+		int pos = (sector / 8) + 1;
+		setCbmDiskValue(trackPos + pos, getCbmDiskValue(trackPos + pos) | BYTE_BIT_MASKS[sector & 0x07] );
 		setCbmDiskValue(trackPos, getCbmDiskValue(trackPos) + 1);
 	}
 	
@@ -642,55 +652,55 @@ public class D64 extends DiskImage {
 	}
 
 	/**
-	 * Fill sector in D64 with data. Pad with zeroes if saveData is smaller than BLOCK_SIZE - 2.
-	 * @param trackNumber track number
-	 * @param sectorNumber sector number
-	 * @param dataPosition data position
+	 * Fill sector in image with data. Pad with zeroes if saveData is smaller than BLOCK_SIZE - 2.
+	 * @param track track number
+	 * @param sector sector number
+	 * @param dataPosition start filling sector at this position in saveData
 	 * @param nextTrack next track
 	 * @param nextSector next sector
 	 * @param saveData data to fill sector with
 	 */
-	private void fillSector(int trackNumber, int sectorNumber, int dataPosition, int nextTrack, int nextSector, byte[] saveData) {
-		feedbackMessage.append("fillSector: track=").append(trackNumber).append(" sector=").append(sectorNumber).append(" position=")
-		.append(dataPosition).append(" nextTrack=").append(nextTrack).append(" nextSector=").append(nextSector).append("\n");
-		setCbmDiskValue( TRACKS[trackNumber].getOffset() + (BLOCK_SIZE * sectorNumber) + 0, nextTrack);
-		setCbmDiskValue( TRACKS[trackNumber].getOffset() + (BLOCK_SIZE * sectorNumber) + 1, nextSector);
+	private void fillSector(int track, int sector, int dataPosition, int nextTrack, int nextSector, byte[] saveData) {
+		//feedbackMessage.append("fillSector: block ").append(track).append("/").append(sector).append(" position=0x")
+		//	.append(Integer.toHexString(dataPosition)).append(" next block ").append(nextTrack).append("/").append(nextSector).append("\n");
+		setCbmDiskValue( TRACKS[track].getOffset() + (BLOCK_SIZE * sector) + 0, nextTrack);
+		setCbmDiskValue( TRACKS[track].getOffset() + (BLOCK_SIZE * sector) + 1, nextSector);
 		for (int position = 0; position < (BLOCK_SIZE - 2); position++) {
 			int value = saveData.length > dataPosition + position ? saveData[dataPosition + position] & 0xff : 0;
-			setCbmDiskValue( TRACKS[trackNumber].getOffset() + (BLOCK_SIZE * sectorNumber) + 2 + position, value);
+			setCbmDiskValue( TRACKS[track].getOffset() + (BLOCK_SIZE * sector) + 2 + position, value);
 		}
 	}
 
 	/** {@inheritDoc} */
-	protected boolean saveFileData(byte[] saveData) {
-		if (cpmFormat != CPM_TYPE_UNKNOWN) {
+	protected TrackSector saveFileData(byte[] saveData) {
+		if (isCpmImage()) {
 			feedbackMessage.append("Not yet implemented for CP/M format.\n");
-			return false;
+			return null;
 		}
 		int usedBlocks = 0;
 		int dataRemain = saveData.length;
 		feedbackMessage.append("SaveFileData: ").append(dataRemain).append(" bytes of data.\n");
-		boolean success = findFirstCopyBlock();
-		if (success) {
+		TrackSector firstBlock = findFirstCopyBlock();
+		if (firstBlock != null) {
+			TrackSector block = new TrackSector(firstBlock.track, firstBlock.sector);
 			int thisTrack;
 			int thisSector;
 			int dataPos = 0;
-			destTrack = track;
-			destSector = sector;
-			while (dataRemain >= 0 && success) {
+			while (dataRemain >= 0 && block != null) {
 				//feedbackMessage.append(dataRemain).append(" bytes remain: Track ").append(track).append(", Sector ").append(sector).append("\n");
-				thisTrack = track;
-				thisSector = sector;
+				thisTrack = block.track;
+				thisSector = block.sector;
 				markSectorUsed(thisTrack, thisSector);
 				if (dataRemain >= (BLOCK_SIZE - 2)) {
-					success = findNextCopyBlock();
-					if (success) {
-						fillSector(thisTrack, thisSector, dataPos, track, sector, saveData);
+					block = findNextCopyBlock(block);
+					if (block != null) {
+						fillSector(thisTrack, thisSector, dataPos, block.track, block.sector, saveData);
 						usedBlocks++;
 						dataRemain = dataRemain - (BLOCK_SIZE - 2);
 						dataPos = dataPos + (BLOCK_SIZE - 2);
 					} else {
-						feedbackMessage.append("\nsaveFileData: Error: Not enough free sectors on disk. Disk is full.\n");					
+						feedbackMessage.append("\nsaveFileData: Error: Not enough free sectors on disk. Disk is full.\n");
+						firstBlock = null;
 					}
 				} else {
 					fillSector(thisTrack, thisSector, dataPos, 0, (dataRemain + 1), saveData);
@@ -698,13 +708,14 @@ public class D64 extends DiskImage {
 					dataRemain = -1;
 				}
 			}
-			if (success) {
+			if (dataRemain <= 0) {
 				feedbackMessage.append("All data written ("+usedBlocks+" blocks).\n");
 			}
 		} else {
 			feedbackMessage.append("\nsaveFileData: Error: No free sectors on disk. Disk is full.\n");
+			return null;
 		}
-		return success;
+		return firstBlock;
 	}
 
 	/**
@@ -714,14 +725,14 @@ public class D64 extends DiskImage {
 	 * @param dirEntryNumber position where to put this entry in the directory
 	 * @return returns true if a free directory block was found
 	 */
-	private boolean setNewDirLocation(int dirEntryNumber){
+	private boolean setNewDirLocation(CbmFile cbmFile, int dirEntryNumber){
 		if (dirEntryNumber < 0 || dirEntryNumber >= FILE_NUMBER_LIMIT) {
 			feedbackMessage.append( "Error: Invalid directory entry number ").append(dirEntryNumber).append(" at setNewDirectoryLocation.\n");
 			return false;
 		} else if ( (dirEntryNumber & 0x07) != 0) {	
 			// If this is not the eighth entry we are lucky and do not need to do anything...
-			bufferCbmFile.setDirTrack(0);
-			bufferCbmFile.setDirSector(0);
+			cbmFile.setDirTrack(0);
+			cbmFile.setDirSector(0);
 			return true;
 		} else {
 			//find the correct entry where to write new values for dirTrack and dirSector
@@ -789,23 +800,22 @@ public class D64 extends DiskImage {
 	
 	
 	/** {@inheritDoc} */
-	protected void writeDirectoryEntry(int dirEntryNumber){
-		int this_track = DIR_TRACK;
-		int this_sector = 1;
+	protected void writeDirectoryEntry(CbmFile cbmFile, int dirEntryNumber) {
+		int thisTrack = DIR_TRACK;
+		int thisSector = 1;
 		feedbackMessage.append("writeDirectoryEntry: bufferCbmFile to dirEntryNumber ").append(dirEntryNumber).append(".\n");
 		if (dirEntryNumber > 7) {
 			while (dirEntryNumber > 7) {
-				this_track  = getCbmDiskValue( TRACKS[this_track].getOffset() + (BLOCK_SIZE*this_sector) + 0 );
-				this_sector = getCbmDiskValue( TRACKS[this_track].getOffset() + (BLOCK_SIZE*this_sector) + 1 );
-
-				feedbackMessage.append("LongDirectory: "+dirEntryNumber+" dirEntrys remain, next: Track "+this_track+", Sector "+this_sector+"\n");
+				thisTrack  = getCbmDiskValue( TRACKS[thisTrack].getOffset() + (BLOCK_SIZE * thisSector) + 0 );
+				thisSector = getCbmDiskValue( TRACKS[thisTrack].getOffset() + (BLOCK_SIZE * thisSector) + 1 );
+				feedbackMessage.append("LongDirectory: "+dirEntryNumber+" dirEntrys remain, next: Track "+thisTrack+", Sector "+thisSector+"\n");
 				dirEntryNumber = dirEntryNumber - 8;
 			}
 		}
-		int where = TRACKS[this_track].getOffset() + (BLOCK_SIZE*this_sector) + (dirEntryNumber * 32);
-		setCbmDiskValue(where + 0, bufferCbmFile.getDirTrack());
-		setCbmDiskValue(where + 1, bufferCbmFile.getDirSector());
-		writeSingleDirectoryEntry(where);	 
+		int pos = TRACKS[thisTrack].getOffset() + (BLOCK_SIZE * thisSector) + (dirEntryNumber * 32);
+		setCbmDiskValue(pos + 0, cbmFile.getDirTrack());
+		setCbmDiskValue(pos + 1, cbmFile.getDirSector());
+		writeSingleDirectoryEntry(cbmFile, pos);	 
 	}
 
 	/**
@@ -814,66 +824,66 @@ public class D64 extends DiskImage {
 	 * globals written: cbmDisk<BR>
 	 * @param where data position where to write to cbmDisk
 	 */
-	private void writeSingleDirectoryEntry(int where){
-		feedbackMessage.append("writeSingleDirectoryEntry\n");
-		if (cpmFormat != CPM_TYPE_UNKNOWN) {
+	private void writeSingleDirectoryEntry(CbmFile cbmFile, int where){
+		if (isCpmImage()) {
 			feedbackMessage.append("Not yet implemented for CP/M format.\n");
 			return ;
 		}
+		feedbackMessage.append("writeSingleDirectoryEntry: dirpos="+cbmFile.getDirPosition()+"\n");
 		// file attributes
 		setCbmDiskValue(where + 2, 0);
-		if (bufferCbmFile.isFileScratched() == false){
-			setCbmDiskValue(where + 2, bufferCbmFile.getFileType());
+		if (cbmFile.isFileScratched() == false){
+			setCbmDiskValue(where + 2, cbmFile.getFileType());
 
-			if (bufferCbmFile.isFileLocked()){
+			if (cbmFile.isFileLocked()){
 				setCbmDiskValue(where + 2, (getCbmDiskValue(where + 2) | 64));
 			}
-			if (bufferCbmFile.isFileClosed()){
+			if (cbmFile.isFileClosed()){
 				setCbmDiskValue(where + 2, (getCbmDiskValue(where + 2) | 128));
 			}
 		}
 		//file track / sector (where to start reading)
-		setCbmDiskValue(where + 3, bufferCbmFile.getTrack());
-		setCbmDiskValue(where + 4, bufferCbmFile.getSector());
+		setCbmDiskValue(where + 3, cbmFile.getTrack());
+		setCbmDiskValue(where + 4, cbmFile.getSector());
 		// FileName		
 		for (int position = 0; position <= 15; position++) {
 			setCbmDiskValue(where + 5 + position, BLANK);
 		}
-		for (int position = 0; position <= bufferCbmFile.getName().length()-1; position++) {
-			setCbmDiskValue(where + 5 + position, bufferCbmFile.getName().charAt(position));
+		for (int position = 0; position <= cbmFile.getName().length()-1; position++) {
+			setCbmDiskValue(where + 5 + position, cbmFile.getName().charAt(position));
 		}
 		// relative Track/Sector
-		setCbmDiskValue(where + 21, bufferCbmFile.getRelTrack());
-		setCbmDiskValue(where + 22, bufferCbmFile.getRelSector());
+		setCbmDiskValue(where + 21, cbmFile.getRelTrack());
+		setCbmDiskValue(where + 22, cbmFile.getRelSector());
 		// GEOS
 		for (int position = 0; position <= 5; position++) {
-			setCbmDiskValue(where + 23 + position, bufferCbmFile.getGeos(position) );
+			setCbmDiskValue(where + 23 + position, cbmFile.getGeos(position) );
 		}
 		// Size
-		setCbmDiskValue(where + 30, bufferCbmFile.getSizeInBlocks() );
-		setCbmDiskValue(where + 31, bufferCbmFile.getSizeInBlocks() / BLOCK_SIZE );
+		setCbmDiskValue(where + 30, cbmFile.getSizeInBlocks() );
+		setCbmDiskValue(where + 31, cbmFile.getSizeInBlocks() / BLOCK_SIZE );
 	}
 
 	/** {@inheritDoc} */
-	protected boolean addDirectoryEntry(String thisFilename, int thisFiletype, int destTrack, int destSector, boolean isCopyFile, int lengthInBytes){
-		feedbackMessage.append("\naddDirectoryEntry (\"").append(thisFilename).append("\", ").append(FILE_TYPES[thisFiletype]).append(", T[").append(destTrack).append("], S[").append(destSector).append("])\n");
-		if (cpmFormat != CPM_TYPE_UNKNOWN) {
+	public boolean addDirectoryEntry(CbmFile cbmFile, int fileTrack, int fileSector, boolean isCopyFile, int lengthInBytes){
+		feedbackMessage.append("addDirectoryEntry: \"").append(cbmFile.getName()).append("\", ").append(FILE_TYPES[cbmFile.getFileType()]).append(", ").append(fileTrack).append("/").append(fileSector).append("\n");
+		if (isCpmImage()) {
 			feedbackMessage.append("Not yet implemented for CP/M format.\n");
 			return false;
 		}
 		if (isCopyFile) {
 			// This a substitute for setNewDirectoryEntry(thisFilename, thisFiletype, destTrack, destSector, dirPosition)
 			// since we do not need to set other values than destTrack and destSector when copying a file. 
-			bufferCbmFile.setTrack(destTrack);
-			bufferCbmFile.setSector(destSector);
+			cbmFile.setTrack(fileTrack);
+			cbmFile.setSector(fileSector);
 		} else {
-			setNewDirEntry(bufferCbmFile, thisFilename, thisFiletype, destTrack, destSector, lengthInBytes);
+			setNewDirEntry(cbmFile, cbmFile.getName(), cbmFile.getFileType(), fileTrack, fileSector, lengthInBytes);
 		}
-		bufferCbmFile.setDirTrack(0);
-		bufferCbmFile.setDirSector(-1);
+		cbmFile.setDirTrack(0);
+		cbmFile.setDirSector(-1);
 		int dirEntryNumber = findFreeDirEntry();
-		if (dirEntryNumber != -1 && setNewDirLocation(dirEntryNumber)) {
-			writeSingleDirectoryEntry(getDirectoryEntryPosition(dirEntryNumber));
+		if (dirEntryNumber != -1 && setNewDirLocation(cbmFile, dirEntryNumber)) {
+			writeSingleDirectoryEntry(cbmFile, getDirectoryEntryPosition(dirEntryNumber));
 			fileNumberMax++;	// increase the maximum file numbers
 			return true;
 		} else {
@@ -913,13 +923,13 @@ public class D64 extends DiskImage {
 		cbmDisk = new byte[D64_SIZE];
 		Arrays.fill(cbmDisk, (byte) 0);
 		
-		if (cpmFormat == CPM_TYPE_UNKNOWN) {
+		if (!isCpmImage()) {
 			for (int i = 0; i < newD64Data.length; i++) {
 				setCbmDiskValue(91392+i, newD64Data[i]);
 			}
 			setDiskName(cbmFileName(newDiskName), cbmFileName(newDiskID));
 			return writeImage(filename);
-		} else if (cpmFormat == CPM_TYPE_D64_C128) {
+		} else if (imageFormat == D64_CPM_C128_IMAGE_TYPE) {
 			final int C128_SS_DIR_TRACK = 1;
 			final int[] C128_SS_DIR_SECTORS = { 10, 15, 20, 4, 9, 14, 19, 3 };			
 			for (int s=0; s<C128_SS_DIR_SECTORS.length; s++) {
@@ -934,7 +944,7 @@ public class D64 extends DiskImage {
 			cbmDisk[255] = 0x00;
 			setDiskName(CPM_DISKNAME_1, CPM_DISKID_GCR);						
 			return writeImage(filename);
-		} else if (cpmFormat == CPM_TYPE_D64_C64) {			
+		} else if (imageFormat == D64_CPM_C64_IMAGE_TYPE) {			
 			final int C64_SS_DIR_TRACK = 3;
 			final int[] C64_SS_DIR_SECTORS = { 1, 2, 3, 4, 5, 6 ,7 };
 			for (int s=0; s<C64_SS_DIR_SECTORS.length; s++) {
@@ -986,7 +996,7 @@ public class D64 extends DiskImage {
 	public int getBlocksFree() {
 		int blocksFree = 0;
 		if (cbmDisk != null) {
-			for (int track = 1; track <= lastTrack; track++) {
+			for (int track = 1; track <= LAST_TRACK; track++) {
 				if (track != DIR_TRACK) {
 					blocksFree = blocksFree + bam.getFreeSectors(track);
 				}
@@ -1012,7 +1022,7 @@ public class D64 extends DiskImage {
 		StringBuffer buf = new StringBuffer();
 		buf.append("D64[");
 		buf.append(" compressed=").append(compressed);
-		buf.append(" cpmFormat=").append(cpmFormat);
+		buf.append(" imageFormat=").append(imageFormat);
 		buf.append(" blocksFree=").append(getBlocksFree());
 		buf.append(" cbmFile=[");
 		for (int i=0; cbmFile!=null && i<cbmFile.length && i<fileNumberMax; i++) {
@@ -1040,7 +1050,7 @@ public class D64 extends DiskImage {
 	@Override
 	public void deleteFile(CbmFile cbmFile) throws CbmException {
 		feedbackMessage = new StringBuffer();
-		if (cpmFormat != CPM_TYPE_UNKNOWN) {
+		if (isCpmImage()) {
 			throw new CbmException("Delete not yet implemented for CP/M format.");
 		}
 
@@ -1066,6 +1076,163 @@ public class D64 extends DiskImage {
 		} else {
 			feedbackMessage.append("Error: Failed to delete ").append(cbmFile.getName());
 		}
+	}
+
+	public Integer validate(List<Integer> repairList) {
+		if (repairList == null) {
+			repairList = new ArrayList<Integer>();
+		}
+		validationErrorList.clear();
+		// init to null
+		Boolean[][] bamEntry = new Boolean[getTrackCount() + 1][getMaxSectorCount()];
+		for (int trk = 0; trk < bamEntry.length; trk++) {
+			for (int sec = 0; sec < bamEntry[trk].length; sec++) {
+				bamEntry[trk][sec] =  null;
+			}
+		}	
+
+		// read all the chains of BAM/directory blocks. Mark each block as used and also check that
+		// the block is not already marked as used. It would mean a block is referred to twice.
+		
+		// first check the chain of directory blocks.
+		
+		int track = BAM_TRACK;
+		int sector = BAM_SECTOR;
+		int errorCount = 0;
+		int warningCount = 0;
+		List<TrackSector> dirErrorList = new ArrayList<TrackSector>();
+		do {
+			if (errorCount > 1000) {
+				validationErrorList.add(new ValidationError(track,sector, ValidationError.ERROR_TOO_MANY));
+				break;
+			} else if (track >= bamEntry.length || sector >= bamEntry[track].length) {
+				validationErrorList.add(new ValidationError(track,sector, ValidationError.ERROR_DIR_SECTOR_OUTSIDE_IMAGE));
+				errorCount++;
+				break;
+			} else if (bamEntry[track][sector] == null) {
+				bamEntry[track][sector] = Boolean.FALSE;	// OK
+			} else {
+				
+				// Detect cyclic references by keeping track of all sectors used by one file and check if a sector is already seen.				
+				TrackSector thisBlock = new TrackSector(track, sector);
+				if (dirErrorList.contains(thisBlock)) {
+					validationErrorList.add(new ValidationError(track,sector, ValidationError.ERROR_DIR_SECTOR_ALREADY_SEEN));
+					errorCount++;
+					break;
+				} else {
+					dirErrorList.add(thisBlock);
+				}
+				if (bamEntry[track][sector].equals(Boolean.FALSE)) {					
+					validationErrorList.add(new ValidationError(track,sector, ValidationError.ERROR_DIR_SECTOR_ALREADY_USED));
+					errorCount++;
+				} else {
+					validationErrorList.add(new ValidationError(track,sector, ValidationError.ERROR_DIR_SECTOR_ALREADY_FREE));
+					errorCount++;
+				}
+			}
+			int tmpTrack = track;
+			int tmpSector = sector;
+			track = getCbmDiskValue(getSectorOffset(tmpTrack, tmpSector) + 0x00);
+			sector = getCbmDiskValue(getSectorOffset(tmpTrack, tmpSector) + 0x01);
+		} while (track != 0);
+		
+		// follow each file and check data blocks
+		for (int n=0; n < cbmFile.length; n++) {
+			if (cbmFile[n].getFileType() == TYPE_DEL) {
+				continue;
+			} else if (cbmFile[n].getFileType() == TYPE_CBM) {
+				validationErrorList.add(new ValidationError(track, sector, ValidationError.ERROR_PARTITIONS_UNSUPPORTED, cbmFile[n].getName()));
+				errorCount++;
+				continue;
+			}
+
+			List<TrackSector> fileErrorList = new ArrayList<TrackSector>();
+			track = cbmFile[n].getTrack();
+			sector = cbmFile[n].getSector();
+			if (track != 0) {
+				do {
+					if (errorCount > 1000) {
+						validationErrorList.add(new ValidationError(track,sector, ValidationError.ERROR_TOO_MANY));
+						break;
+					} else if (track >= bamEntry.length || sector >= bamEntry[track].length) {
+						validationErrorList.add(new ValidationError(track, sector, ValidationError.ERROR_FILE_SECTOR_OUTSIDE_IMAGE, cbmFile[n].getName()));
+						errorCount++;
+						break;
+					}
+					if (bamEntry[track][sector] == null) {
+						bamEntry[track][sector] = Boolean.FALSE;	// OK file's sector marked as used
+					} else {
+						errorCount++;
+						TrackSector thisBlock = new TrackSector(track, sector);
+						if (fileErrorList.contains(thisBlock)) {
+							validationErrorList.add(new ValidationError(track, sector, ValidationError.ERROR_FILE_SECTOR_ALREADY_SEEN, cbmFile[n].getName()));
+							break;
+						} else {
+							fileErrorList.add(thisBlock);
+						}
+						if (bamEntry[track][sector].equals(Boolean.FALSE)) {
+							validationErrorList.add(new ValidationError(track,sector, ValidationError.ERROR_FILE_SECTOR_ALREADY_USED, cbmFile[n].getName()));							
+						} else {
+							validationErrorList.add(new ValidationError(track,sector, ValidationError.ERROR_FILE_SECTOR_ALREADY_FREE, cbmFile[n].getName()));
+						}
+					}
+					int tmpTrack = track;
+					int tmpSector = sector;
+					track = getCbmDiskValue(getSectorOffset(tmpTrack, tmpSector) + 0x00);
+					sector = getCbmDiskValue(getSectorOffset(tmpTrack, tmpSector) + 0x01);
+				} while (track != 0);
+			}
+		}
+		
+		// iterate BAM and verify used blocks is matching what we got when following data chains above.
+		int bamOffset = getSectorOffset(BAM_TRACK, BAM_SECTOR);
+		for (int trk = 1; trk <= getTrackCount(); trk++) {
+			int freeSectors = 0;
+			for (int sec = 0; sec < getMaxSectors(trk); sec++) {
+				Boolean bamFree = new Boolean(isSectorFree(trk,sec));
+				Boolean fileFree = bamEntry[trk][sec];
+				if (bamFree) {
+					freeSectors++;
+				}
+				if (fileFree == null && bamFree || bamFree.equals(fileFree)) {
+					//System.out.println("OK: BAM sector "+trk+"/"+sec+" marked as used");
+				} else if (Boolean.FALSE.equals(fileFree) && !Boolean.FALSE.equals(bamFree)) {
+					if (repairList.contains(new Integer(ValidationError.ERROR_USED_SECTOR_IS_FREE))) {
+						markSectorUsed(trk, sec);
+						feedbackMessage.append("Info: marked sector ").append(trk).append("/").append(sec).append(" as used.\n");
+					} else {
+						validationErrorList.add(new ValidationError(trk,sec, ValidationError.ERROR_USED_SECTOR_IS_FREE));							
+						errorCount++;
+					}
+				} else if (trk != BAM_TRACK){
+					if (repairList.contains(new Integer(ValidationError.ERROR_UNUSED_SECTOR_IS_ALLOCATED))) {
+						markSectorFree(trk, sec);
+						feedbackMessage.append("Info: marked sector ").append(trk).append("/").append(sec).append(" as free.\n");
+					} else {					
+						validationErrorList.add(new ValidationError(trk,sec, ValidationError.ERROR_UNUSED_SECTOR_IS_ALLOCATED));							
+						warningCount++;
+					}
+				}
+			}
+			int bamFreeSectors = getCbmDiskValue(bamOffset + trk * 4);
+			if (freeSectors != bamFreeSectors) {
+				if (repairList.contains(new Integer(ValidationError.ERROR_BAM_FREE_SECTOR_MISMATCH))) {
+					setCbmDiskValue(bamOffset + trk * 4, freeSectors);
+					feedbackMessage.append("Info: corrected free founter on track ").append(trk).append(". New free count is ").append(freeSectors).append(".\n");
+				} else {
+					validationErrorList.add(new ValidationError(trk, 0, ValidationError.ERROR_BAM_FREE_SECTOR_MISMATCH));
+					errorCount++;					
+				}
+			}
+		}
+		errors = new Integer(errorCount);
+		warnings = new Integer(warningCount);
+		return errors;
+	}
+
+	@Override
+	public void readPartition(int track, int sector, int numBlocks) throws CbmException {
+		throw new CbmException("D64 images does not support partitions.");
 	}
 
 }

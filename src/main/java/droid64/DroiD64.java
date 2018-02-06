@@ -1,6 +1,7 @@
 package droid64;
 
 import droid64.gui.MainPanel;
+import droid64.gui.Settings;
 
 /**<pre style='font-family:sans-serif;'>
  * Created on 21.06.2004
@@ -30,7 +31,7 @@ import droid64.gui.MainPanel;
 public class DroiD64 {
 
 	public static final String PROGNAME = "droiD64";
-	public static final String VERSION = "0.065b";
+	public static final String VERSION = "0.1b";
 	public static final String TITLE = "Beta Version Warning: MAY HAVE ERRORS! USE ONLY ON BACKUPS! LOOK AT \"BUGS AND TO-DO\"!";
 	
 	public DroiD64() {
@@ -38,6 +39,7 @@ public class DroiD64 {
 	}
 	
 	public static void main(String[] args) {
+		Settings.loadSettingsFromFile();
 		new DroiD64();
 	}
 }

@@ -29,13 +29,19 @@ public class ExternalProgram {
 	private String command;
 	private String description;
 	private String label;
-	
-	/**
-	 * Constructor
-	 */
-	public ExternalProgram() {
-	}
 
+	/**
+	 * @param command_
+	 * @param description_
+	 * @param label_
+	 */
+	public ExternalProgram(String command, String description, String label) {
+		this.command = command;
+		this.description = description;
+		this.label = label;
+	}
+	
+	
 	/** {@inheritDoc} */
 	public String toString() {
 		StringBuilder builder = new StringBuilder();
@@ -52,10 +58,10 @@ public class ExternalProgram {
 	 * @param description_
 	 * @param label_
 	 */
-	public void setValues(String command_, String description_, String label_) {
-		command = command_;
-		description = description_;
-		label = label_;
+	public void setValues(String command, String description, String label) {
+		this.command = command;
+		this.description = description;
+		this.label = label;
 	}
 
 	/**
