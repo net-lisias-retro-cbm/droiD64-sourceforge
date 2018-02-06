@@ -2,6 +2,7 @@ package GUI;
 import java.awt.BorderLayout;
 import java.awt.Container;
 import java.awt.Dimension;
+import java.awt.GridLayout;
 import java.awt.Toolkit;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -13,8 +14,11 @@ import javax.swing.JDialog;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
+import javax.swing.JScrollPane;
 import javax.swing.JSlider;
 import javax.swing.JTabbedPane;
+import javax.swing.JTextArea;
+import javax.swing.JTextField;
 
 /*
  * Created on 30.06.2004
@@ -69,7 +73,13 @@ public class SettingsFrame extends JDialog {
 		"D81"
 	};
 	private JComboBox diskTypeBox;
-	private JPanel diskTypePanel;
+
+	private JPanel[] pluginPanel = new JPanel[MAX_PLUGINS];
+	private final static int MAX_PLUGINS = 2;
+	private JTextField[] pluginLabelTextField = new JTextField[MAX_PLUGINS];
+	private JTextArea[] pluginCommandTextField= new JTextArea[MAX_PLUGINS];
+	private JTextArea[] pluginDescriptionTextField = new JTextArea[MAX_PLUGINS];
+	
 
 	private JPanel generalPanel;
 	
@@ -88,9 +98,13 @@ public class SettingsFrame extends JDialog {
 		drawGeneralPanel();
 		drawGuiPanel();
 		drawD64Panel();
+	    drawPluginPanel();
 
 		tabPane.addTab("GUI", guiPanel);		
 		tabPane.addTab("D64", d64Panel);		
+		for (int i = 0; i < MAX_PLUGINS; i++) {
+			tabPane.addTab("Plugin "+(i+1), pluginPanel[i]);
+		}		
 		cp.add(tabPane, BorderLayout.NORTH);
 		cp.add(generalPanel, BorderLayout.SOUTH);
 
@@ -122,6 +136,14 @@ public class SettingsFrame extends JDialog {
 						mainPanel.setExitQuestion(exitConfirmCheckBox.isSelected());
 						mainPanel.setColourChoice(colourBox.getSelectedIndex());
 						mainPanel.setRowHeight(distSlider.getValue());
+						for (int i = 0; i < pluginCommandTextField.length; i++) {
+							mainPanel.setExternalProgram(
+								i,
+								pluginCommandTextField[i].getText(),
+								pluginDescriptionTextField[i].getText(),
+								pluginLabelTextField[i].getText()
+							);
+						}
 						dispose();
 				}
 			}
@@ -130,21 +152,16 @@ public class SettingsFrame extends JDialog {
 		buttonPanel.add(okButton);
 		
 		
-		generalPanel.add(new JLabel("Todo: Store settings in a .cfg file."), BorderLayout.NORTH);
+		generalPanel.add(new JLabel("Settings are stored in your home directory."), BorderLayout.NORTH);
 		generalPanel.add(buttonPanel, BorderLayout.SOUTH);
 	}
 	
 	
 	
 	private void drawGuiPanel(){
-		
 		guiPanel = new JPanel();
-		guiPanel.setLayout(new BorderLayout());
+		guiPanel.setLayout(new GridLayout(3,1));
 
-
-		JPanel panel1 = new JPanel();
-		panel1.setLayout(new BorderLayout());
-		
 		exitConfirmCheckBox = new JCheckBox("Confirm Exit");
 		exitConfirmCheckBox.setToolTipText("Whether to confirm quitting the program or not.");
 		exitConfirmCheckBox.setSelected(mainPanel.isExitQuestion());
@@ -159,7 +176,7 @@ public class SettingsFrame extends JDialog {
 		colourPanel.add(colourBox);
 		
 		JPanel distPanel = new JPanel();
-		distPanel.setLayout(new BorderLayout());
+		distPanel.setLayout(new GridLayout(2,1));
 		JLabel distMsgLabel = new JLabel("Grid distance:");
 		rowHeight = mainPanel.getRowHeight();
 		distSlider = new JSlider(JSlider.HORIZONTAL, 8, 20, rowHeight);
@@ -169,21 +186,17 @@ public class SettingsFrame extends JDialog {
 		distSlider.setPaintLabels(true);
 		distSlider.setPaintTicks(true);
 		distSlider.setToolTipText("Adjust grid spacing in directory window.");
-		distPanel.add(distMsgLabel, BorderLayout.NORTH);
-		distPanel.add(distSlider, BorderLayout.CENTER);
+		distPanel.add(distMsgLabel);
+		distPanel.add(distSlider);
 
-		panel1.add(exitConfirmCheckBox, BorderLayout.NORTH);
-		panel1.add(colourPanel, BorderLayout.CENTER);
-		panel1.add(distPanel, BorderLayout.SOUTH);
-
-
-
-		guiPanel.add(panel1, BorderLayout.NORTH);		
+		guiPanel.add(exitConfirmCheckBox);
+		guiPanel.add(colourPanel);
+		guiPanel.add(distPanel);
 	}
 	
 	private void drawD64Panel(){
 		d64Panel = new JPanel();
-		d64Panel.setLayout(new BorderLayout());
+		d64Panel.setLayout(new GridLayout(2,1));
 
 		JPanel diskTypePanel = new JPanel();
 		JLabel diskTypeLabel = new JLabel("DiskTypes:");
@@ -194,8 +207,46 @@ public class SettingsFrame extends JDialog {
 		diskTypePanel.add(diskTypeLabel);
 		diskTypePanel.add(diskTypeBox);
 		
-		d64Panel.add(diskTypePanel, BorderLayout.NORTH);
-		d64Panel.add(new JLabel("Not implemented yet."), BorderLayout.SOUTH);
+		d64Panel.add(diskTypePanel);
+		d64Panel.add(new JLabel("Not implemented yet."));
+	}
+
+	private void drawPluginPanel(){
+		for (int i = 0; i < MAX_PLUGINS; i++) {
+			pluginPanel[i] = new JPanel();
+			pluginPanel[i].setLayout(new BorderLayout());
+	
+			JPanel pluginLabelPanel = new JPanel();
+			pluginLabelPanel.setLayout(new BorderLayout());
+			pluginLabelTextField[i] = new JTextField(mainPanel.getExternalProgram(i).getLabel());
+			pluginLabelTextField[i].setToolTipText("Enter label here.");
+			pluginLabelPanel.add(new JLabel("Label:"), BorderLayout.WEST);
+			pluginLabelPanel.add(pluginLabelTextField[i], BorderLayout.CENTER);
+			
+			JPanel pluginCommandPanel = new JPanel();
+			pluginCommandPanel.setLayout(new BorderLayout());
+			pluginCommandTextField[i] = new JTextArea(4, 20);
+			pluginCommandTextField[i].setLineWrap(true);
+			pluginCommandTextField[i].setWrapStyleWord(true);
+			pluginCommandTextField[i].setText(mainPanel.getExternalProgram(i).getCommand());
+			pluginCommandTextField[i].setToolTipText("Enter a single command to execute here (no parameters allowed).");
+			pluginCommandPanel.add(new JLabel("Command:"), BorderLayout.WEST);
+			pluginCommandPanel.add(new JScrollPane(pluginCommandTextField[i]), BorderLayout.CENTER);
+	
+			JPanel pluginDescriptionPanel = new JPanel();
+			pluginDescriptionPanel.setLayout(new BorderLayout());
+			pluginDescriptionTextField[i] = new JTextArea(4, 20);
+			pluginDescriptionTextField[i].setLineWrap(true);
+			pluginDescriptionTextField[i].setWrapStyleWord(true);
+			pluginDescriptionTextField[i].setText(mainPanel.getExternalProgram(i).getDescription());
+			pluginDescriptionTextField[i].setToolTipText("Enter description here.");
+			pluginDescriptionPanel.add(new JLabel("Description:"), BorderLayout.WEST);
+			pluginDescriptionPanel.add(new JScrollPane(pluginDescriptionTextField[i]), BorderLayout.CENTER);
+	
+			pluginPanel[i].add(pluginLabelPanel, BorderLayout.NORTH);
+			pluginPanel[i].add(pluginCommandPanel, BorderLayout.CENTER);
+			pluginPanel[i].add(pluginDescriptionPanel, BorderLayout.SOUTH);
+		}
 	}
 
 		

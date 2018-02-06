@@ -6,6 +6,10 @@ import java.awt.GridLayout;
 import java.awt.Toolkit;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.io.BufferedReader;
+import java.io.FileReader;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
@@ -58,7 +62,7 @@ public class MainPanel extends JFrame
 	private SettingsFrame settingsFrame;
 
 	private static final String PROGNAME = "droiD64";
-	private static final String VERSION = "0.03b";
+	private static final String VERSION = "0.04b";
 	
 	private String Progname_ = PROGNAME;
 	private String Version_ = VERSION;
@@ -77,18 +81,48 @@ public class MainPanel extends JFrame
 	
 	private boolean isExitQuestion = true;
 
-	private int rowHeight;
+	private int rowHeight = 8;
 
 	private JPanel obenPanel;
 	private Container cp;
+
+//	private String settingsFileName = getClass().getResource("../droiD64.cfg").getFile();
+	private String settingsFileName;
+	private HashMap settingsData = new HashMap();
+
+	private static final int MAX_PLUGINS = 2;
+	private ExternalProgram[] externalProgram = new ExternalProgram[MAX_PLUGINS];
+
 	public MainPanel()
 	{
 		super( PROGNAME+" v"+VERSION + " - Beta-Version-Warning: MAY HAVE ERRORS! USE ONLY ON BACKUPS! LOOK AT \"BUGS AND TO-DO\"!" );
-		
-		rowHeight = 8;
 
+		externalProgram[0] = new ExternalProgram();
+		externalProgram[1] = new ExternalProgram();
+
+		//set correct settingsFileName for loadSettings and storeSettings
+		try {
+			settingsFileName = System.getProperty("user.home")+"/.droiD64.cfg";
+		}
+		catch (Exception e) {
+			System.out.println(e);
+			settingsFileName = ".droiD64.cfg";
+			System.out.println("Setting default filename \""+settingsFileName+"\" for config-file.");
+		}
+
+		loadSettings(settingsFileName);
+		
 		diskPanel1 = new DiskPanel();
 		diskPanel2 = new DiskPanel();
+		
+		diskPanel1.setExternalProgram(externalProgram);
+		diskPanel2.setExternalProgram(externalProgram);
+
+		diskPanel1.setOtherDiskPanelObject(diskPanel2);
+		diskPanel2.setOtherDiskPanelObject(diskPanel1);
+
+		diskPanel1.startDiskPanel();
+		diskPanel2.startDiskPanel();
 		
 		JMenuBar menubar = new JMenuBar();
 		menubar.add(createProgramMenu());
@@ -99,10 +133,6 @@ public class MainPanel extends JFrame
 
 		drawPanel();
 		
-		diskPanel1.setOtherDiskPanelObject(diskPanel2);
-		diskPanel2.setOtherDiskPanelObject(diskPanel1);
-		
-
 		Dimension dim = Toolkit.getDefaultToolkit().getScreenSize();
 		setLocation(
 			(int)((dim.width - getSize().getWidth()) / 4),
@@ -116,7 +146,10 @@ public class MainPanel extends JFrame
 
 		saveDefaultValues();
 //		setLookAndFeel(lookAndFeelChoice, colourChoice);
-		
+
+		doSettings();
+
+
 //		setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
 	}
@@ -272,21 +305,133 @@ public class MainPanel extends JFrame
 	}
 
 	private void showSettings(){
+		loadSettings(settingsFileName);
 		settingsFrame = new SettingsFrame(PROGNAME+" v"+VERSION+" - Settings", this);
+		doSettings();
+		storeSettings(settingsFileName);
+	}
+	
+	private void doSettings(){
 		setLookAndFeel(lookAndFeelChoice, colourChoice);
 		diskPanel1.setRowHeight(rowHeight);
 		diskPanel2.setRowHeight(rowHeight);
+		diskPanel1.setExternalProgram(externalProgram);
+		diskPanel2.setExternalProgram(externalProgram);
+	}
+	
+	public static int stringToInt(String c) {
+		int value = 0;
+		char myChar;
+		
+		for (int i = 0; i < c.length(); i++) {
+			
+			myChar = c.toCharArray()[i];
+			switch (myChar) {
+				case 48 : { value = value*10 + 0; break; }
+				case 49 : { value = value*10 + 1; break; }
+				case 50 : { value = value*10 + 2; break; }
+				case 51 : { value = value*10 + 3; break; }
+				case 52 : { value = value*10 + 4; break; }
+				case 53 : { value = value*10 + 5; break; }
+				case 54 : { value = value*10 + 6; break; }
+				case 55 : { value = value*10 + 7; break; }
+				case 56 : { value = value*10 + 8; break; }
+				case 57 : { value = value*10 + 9; break; }
+				default : return value;
+			}
+		}
+		return value;
+	}
+
+	private boolean loadSettings(String filename){
+		BufferedReader f;
+		String line, line_key, line_value;
+
+		try {
+			f = new BufferedReader( new FileReader( filename) );
+			settingsData.clear();
+		     while ((line = f.readLine()) != null) {
+		     	if ( line.trim().startsWith("#")==false ) {
+					line_key = line.substring( 0, line.indexOf("=") ) .trim();
+					line_value = line.substring(line.indexOf("=")+1).trim();
+		     		//System.out.println("\""+line_key+"\" = \""+line_value+"\"");
+		     		settingsData.put(line_key, line_value);
+
+		     		if (line_key.equalsIgnoreCase("ask_quit")) {
+		     			if (line_value.equalsIgnoreCase("yes")) setExitQuestion(true); else setExitQuestion(false);
+		     		}
+					if (line_key.equalsIgnoreCase("row_height")) {
+						
+						setRowHeight(stringToInt(line_value));
+					}
+					if (line_key.equalsIgnoreCase("colour")) {
+						setColourChoice(stringToInt(line_value));
+					}
+
+					for (int i = 0; i < externalProgram.length; i++) {
+						if (line_key.equalsIgnoreCase("plugin"+i+"_label")) {
+							setExternalProgram(i, externalProgram[i].getCommand(), externalProgram[i].getDescription(), line_value);
+						}
+						if (line_key.equalsIgnoreCase("plugin"+i+"_command")) {
+							setExternalProgram(i, line_value, externalProgram[i].getDescription(), externalProgram[i].getLabel());
+						}
+						if (line_key.equalsIgnoreCase("plugin"+i+"_description")) {
+							setExternalProgram(i, externalProgram[i].getCommand(), line_value, externalProgram[i].getLabel() );
+						}
+					}
+		     		
+		     	}
+		      }
+		      f.close();
+		    } catch (IOException e) {
+				System.err.println(e.toString());
+				System.out.println("Setting default values and storing settings-file ["+settingsFileName+"].");
+				setExitQuestion(isExitQuestion);
+				setColourChoice(colourChoice);
+				setRowHeight(rowHeight);
+	//			externalProgram[0].setValues("/usr/local/bin/d64copy -t  serial2 -w -B -d 1 9", "Transfer this disk image to a real floppy.", "cbm4linux");
+				setExternalProgram(0, "/home/wolf/bin/d64_to_floppy.sh", "Transfer this disk image to a real floppy (bash-script: \"d64copy -t serial2 -w -B -d 1 $1 8\").", "cbm4linux");
+				setExternalProgram(1, "/usr/local/bin/x64", "Invoke VICE emulator with this disk image.", "VICE");
+				storeSettings(filename);
+				return false;
+		     }
+		
+		return true;
+	}
+		
+	private boolean storeSettings(String filename){
+
+		FileWriter output;
+		try {		
+	     output = new FileWriter(filename);
+
+		 output.write("# Configuration file for "+PROGNAME+" v"+VERSION+"\n");
+		 output.write("#\n");
+
+		 Iterator it = settingsData.entrySet().iterator(); 
+		 while (it.hasNext()) {
+		   Map.Entry entry = (Map.Entry)it.next();
+	       output.write(entry.getKey()+"="+entry.getValue() + "\n");
+		 }
+	      output.close();
+	    }
+		
+		catch (IOException e){
+			System.err.println(e.toString());
+			return false;
+		}
+		
+		
+		//System.out.println("Settings stored in \""+filename+"\".");
+
+		return true;
+
 	}
 
 	private void showHelp(){
 		showHelpFrame = new ShowHelpFrame(PROGNAME+" v"+VERSION+" - About");
 	}
 		
-
-//	public static void main(String[] args) {
-//		MainPanel program = new MainPanel();
-//	}
-
 
 	private void setLookAndFeel(int lookAndFeelChoice, int colorChoice){
 		//	Set look&feel (skin) here
@@ -412,6 +557,7 @@ public class MainPanel extends JFrame
 	 * @param i
 	 */
 	public void setColourChoice(int i) {
+		settingsData.put("colour", i+"" );
 		colourChoice = i;
 	}
 
@@ -427,9 +573,11 @@ public class MainPanel extends JFrame
 	 */
 	public void setExitQuestion(boolean b) {
 		if (b) { 
+			settingsData.put("ask_quit", "yes");
 			setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
 		}
 		else {
+			settingsData.put("ask_quit", "no");
 			setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		}
 
@@ -447,7 +595,29 @@ public class MainPanel extends JFrame
 	 * @param i
 	 */
 	public void setRowHeight(int i) {
+		settingsData.put("row_height", i+"" );
 		rowHeight = i;
+	}
+
+	/**
+	 * @return
+	 */
+	public ExternalProgram getExternalProgram(int which_one) {
+		return externalProgram[which_one];
+	}
+
+
+	/**
+	 * @param which_one
+	 * @param command_
+	 * @param description_
+	 * @param label_
+	 */
+	public void setExternalProgram(int which_one, String command_, String description_, String label_) {
+		settingsData.put("plugin"+which_one+"_label", label_);
+		settingsData.put("plugin"+which_one+"_command", command_);
+		settingsData.put("plugin"+which_one+"_description", description_);
+		externalProgram[which_one].setValues(command_, description_, label_);
 	}
 
 }

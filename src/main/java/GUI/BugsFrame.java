@@ -47,30 +47,23 @@ public class BugsFrame extends JFrame {
 	private Container cp;
 	private JButton okButton;
 	
-	final static private String myDate = "20.07.2004";
+	final static private String myDate = "2.08.2004";
 	
 	final static private String bugsMessage = 
 		"None known. Do intensive testing, find some and mail them to me please.\n"+
 		"\n";
 	
 	final static private String todoMessage = 
-		"Settings:\n" +
-		"Store settings in some kind of .ini file.\n"+
+		"general: do intensive testing\n"+
 		"\n" +
 		"DiskPanel:\n" +
 		"Implement \"Reload D64\" function.\n"+
 		"\n" +
-		"general: allow users to enter special characters when editing diskname and filenames.\n"+
-		"\n" +
-		"general: allow users to combine external transfer programs within\n"+
-		"\n" +
-		"general: do intensive testing\n"+
-		"\n" +
-		"general: implement drag and drop\n"+
-		"\n" +
 		"delPRG: implement method\n"+
 		"\n" +
-		"Settings: implement methods\n" +
+		"general: allow users to enter special characters when editing diskname and filenames.\n"+
+		"\n" +
+		"general: implement drag and drop\n"+
 		"\n" +
 		"DiskPanel:\n" +
 		"Warn users if file will get overwritten. Include nice .D64 and .PRG extensions automatically.\n"+

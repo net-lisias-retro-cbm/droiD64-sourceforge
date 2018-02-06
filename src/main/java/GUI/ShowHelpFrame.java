@@ -101,7 +101,7 @@ public class ShowHelpFrame extends JFrame {
 		cp.setLayout( new BorderLayout());
 
 		JPanel imagePanel = new JPanel();
-		ImageIcon imageIcon = new ImageIcon(this.getClass().getResource("ressources/wolf.jpg"));
+		ImageIcon imageIcon = new ImageIcon(getClass().getResource("ressources/wolf.jpg"));
 		imageIcon.setDescription("Me having some breakfast.");
 		imagePanel.add(new JLabel(imageIcon, JLabel.CENTER), BorderLayout.CENTER);
 		imagePanel.setToolTipText("Me having some breakfast.");

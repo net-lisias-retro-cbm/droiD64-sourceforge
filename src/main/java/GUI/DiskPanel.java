@@ -6,9 +6,11 @@ import java.awt.Font;
 import java.awt.FontFormatException;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.InputStreamReader;
 
 import javax.swing.BorderFactory;
 import javax.swing.JButton;
@@ -101,14 +103,16 @@ public class DiskPanel extends JPanel implements TableModelListener {
 	
 	private int blocks_free = 644;
 
-	private JPanel wahlPanel, dirPanel, feedBackPanel;
+	private JPanel choicePanel, dirPanel, feedBackPanel;
 	private BAMFrame bamFrame;
 	
 	private boolean isSetD64 = false;	//indicates whether a D64 was selected or not
 	private String thisD64Name = "";
 
 	private JLabel diskLabel, diskName;
-	private JButton showBamButton, loadButton, extractButton, copyButton, insertButton, newButton, renameDiskButton, renamePRGButton, delPRGButton;
+	private JButton showBamButton, loadButton, extractButton, copyButton, insertButton, newButton;
+	private JButton renameDiskButton, renamePRGButton, delPRGButton;
+	private JButton misc01Button, misc02Button;
 	private String progname_, version_;
 	private String loadName = "";
 	private String saveName = "";
@@ -119,26 +123,32 @@ public class DiskPanel extends JPanel implements TableModelListener {
 	public D64 d64 = new D64();
 	private String feedBackMessage = "";
 
-	private JTextArea textArea = new JTextArea(10, 60);
+	private JTextArea textArea;
 	
 	private int rowHeight = 10;
 
+	private ExternalProgram[] externalProgram = new ExternalProgram[2];
+	
 
 	
-	public DiskPanel() {
+	public DiskPanel() {}
+	
+	public void startDiskPanel(){
+		//externalProgram[0] = new ExternalProgram();
+		//externalProgram[1] = new ExternalProgram();
+		
 		makeFont();
 		
 		drawDirPanel();
-		drawWahlPanel();
+		drawChoicePanel();
 		drawFeedBackPanel();
 
 		setLayout(new BorderLayout());
 
 		add(dirPanel, BorderLayout.NORTH);
-		add(wahlPanel, BorderLayout.CENTER);
+		add(choicePanel, BorderLayout.CENTER);
 		add(feedBackPanel, BorderLayout.SOUTH);
 		setBorder(BorderFactory.createRaisedBevelBorder());
-		
 	}
 
 	private void makeFont(){
@@ -245,17 +255,47 @@ public class DiskPanel extends JPanel implements TableModelListener {
 	};
 
 	
-	private void drawWahlPanel() {
+	private static int MAX_PLUGINS = 2;
+	JButton[] miscButton = new JButton[MAX_PLUGINS];
+	
+	private void drawChoicePanel() {
 		JPanel choice1Panel, choice2Panel, choice3Panel;
+
+		choicePanel = new JPanel();
+		choicePanel.setLayout(new BorderLayout());
 
 		choice1Panel = new JPanel();
 		choice2Panel = new JPanel();
 		choice3Panel = new JPanel();
 
-		wahlPanel = new JPanel();
-		wahlPanel.setLayout(new BorderLayout());
 
-		showBamButton = new JButton("Show BAM");
+		newButton = new JButton("New");
+		newButton.setToolTipText("Create a new blank disk.");
+		newButton.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent event) {
+				if (event.getSource() == newButton) {
+					/*
+					 * Insert nice function here
+					 */
+					newD64();
+				}
+			}
+		});
+
+//		loadKnopf =new JButton(new ImageIcon(this.getClass().getResource("file_open.gif")));
+		loadButton =new JButton("Load");
+		loadButton.setToolTipText("Open a disk.");
+		loadButton.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent event) {
+				if (event.getSource() == loadButton) {
+					{
+						loadD64();
+					}
+				}
+			}
+		});
+
+		showBamButton = new JButton("BAM");
 		showBamButton.setToolTipText("Show the BAM of this disk.");
 		showBamButton.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent event) {
@@ -274,73 +314,7 @@ public class DiskPanel extends JPanel implements TableModelListener {
 			}
 		});
 
-		extractButton = new JButton("Extract File");
-		extractButton.setToolTipText("Extract a file from this disk.");
-		extractButton.addActionListener(new ActionListener() {
-			public void actionPerformed(ActionEvent event) {
-				if (event.getSource() == extractButton) {
-					/*
-					 * Insert nice function here
-					 */
-					extractPRG();
-				}
-			}
-		});
-
-		copyButton = new JButton("Copy File");
-		copyButton.setToolTipText("Copy a PRG file to the other disk.");
-		copyButton.addActionListener(new ActionListener() {
-			public void actionPerformed(ActionEvent event) {
-				if (event.getSource() == copyButton) {
-					/*
-					 * Insert nice function here
-					 */
-					copyPRG();
-				}
-			}
-		});
-
-		insertButton = new JButton("Insert File");
-		insertButton.setToolTipText("Insert a PRG file into this disk.");
-		insertButton.addActionListener(new ActionListener() {
-			public void actionPerformed(ActionEvent event) {
-				if (event.getSource() == insertButton) {
-					/*
-					 * Insert nice function here
-					 */
-					insertPRG();
-				}
-			}
-		});
-
-		newButton = new JButton("New Disk");
-		newButton.setToolTipText("Create a new blank disk.");
-		newButton.addActionListener(new ActionListener() {
-			public void actionPerformed(ActionEvent event) {
-				if (event.getSource() == newButton) {
-					/*
-					 * Insert nice function here
-					 */
-					newD64();
-				}
-			}
-		});
-
-//		loadKnopf =new JButton(new ImageIcon(this.getClass().getResource("file_open.gif")));
-		loadButton =new JButton("Load Disk");
-		loadButton.setToolTipText("Open a disk.");
-		loadButton.addActionListener(new ActionListener() {
-			public void actionPerformed(ActionEvent event) {
-				if (event.getSource() == loadButton) {
-					{
-						loadD64();
-					}
-				}
-			}
-		});
-
-
-		renameDiskButton = new JButton("Rename Disk");
+		renameDiskButton = new JButton("Rename");
 		renameDiskButton.setToolTipText("Modify the label of the disk.");
 		renameDiskButton.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent event) {
@@ -353,7 +327,56 @@ public class DiskPanel extends JPanel implements TableModelListener {
 			}
 		});
 
-		renamePRGButton = new JButton("Rename File");
+		choice1Panel.add(new JLabel("Disk"));
+		choice1Panel.add(newButton);
+		choice1Panel.add(loadButton);
+		choice1Panel.add(showBamButton);
+		choice1Panel.add(renameDiskButton);
+
+
+
+
+		insertButton = new JButton("In");
+		insertButton.setToolTipText("Insert a PRG file into this disk.");
+		insertButton.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent event) {
+				if (event.getSource() == insertButton) {
+					/*
+					 * Insert nice function here
+					 */
+					insertPRG();
+				}
+			}
+		});
+
+		extractButton = new JButton("Out");
+		extractButton.setToolTipText("Extract a PRG file from this disk.");
+		extractButton.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent event) {
+				if (event.getSource() == extractButton) {
+					/*
+					 * Insert nice function here
+					 */
+					extractPRG();
+				}
+			}
+		});
+
+		copyButton = new JButton("Copy");
+		copyButton.setToolTipText("Copy a PRG file to the other disk.");
+		copyButton.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent event) {
+				if (event.getSource() == copyButton) {
+					/*
+					 * Insert nice function here
+					 */
+					copyPRG();
+				}
+			}
+		});
+
+
+		renamePRGButton = new JButton("Rename");
 		renamePRGButton.setToolTipText("Modify a PRG file in this disk.");
 		renamePRGButton.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent event) {
@@ -366,8 +389,8 @@ public class DiskPanel extends JPanel implements TableModelListener {
 			}
 		});
 
-		delPRGButton = new JButton("Delete File");
-		delPRGButton.setToolTipText("Delete a file in this disk.");
+		delPRGButton = new JButton("Delete");
+		delPRGButton.setToolTipText("Delete a PRG file in this disk.");
 		delPRGButton.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent event) {
 				if (event.getSource() == delPRGButton) {
@@ -379,21 +402,46 @@ public class DiskPanel extends JPanel implements TableModelListener {
 			}
 		});
 
-		choice1Panel.add(newButton);
-		choice1Panel.add(loadButton);
-		choice1Panel.add(showBamButton);
-
+		choice2Panel.add(new JLabel("File"));
 		choice2Panel.add(insertButton);
 		choice2Panel.add(extractButton);
+		choice2Panel.add(renamePRGButton);
+		choice2Panel.add(delPRGButton);
 		choice2Panel.add(copyButton);
 
-		choice3Panel.add(renameDiskButton);
-		choice3Panel.add(renamePRGButton);
-		choice3Panel.add(delPRGButton);
 
-		wahlPanel.add(choice1Panel, BorderLayout.NORTH);
-		wahlPanel.add(choice2Panel, BorderLayout.CENTER);
-		wahlPanel.add(choice3Panel, BorderLayout.SOUTH);
+
+
+		choice3Panel.add(new JLabel("Misc"));
+
+		for (int i = 0; i < externalProgram.length; i++) {
+			miscButton[i] = new JButton(externalProgram[i].getLabel());
+			miscButton[i].setToolTipText(externalProgram[i].getDescription());
+			miscButton[i].addActionListener(new ActionListener() {
+				public void actionPerformed(ActionEvent event) {
+					for (int cnt = 0; cnt < MAX_PLUGINS; cnt ++){
+						if ( event.getSource()==miscButton[cnt] ){
+							/*
+							 * Insert nice function here
+							 */
+								if (isSetD64 == false){
+									showErrorMessage("noDisk");
+									return;
+								}
+							doExternalProgram(cnt);
+						}
+					}
+				}
+			});
+			choice3Panel.add(miscButton[i]);
+		}
+
+
+
+
+		choicePanel.add(choice1Panel, BorderLayout.NORTH);
+		choicePanel.add(choice2Panel, BorderLayout.CENTER);
+		choicePanel.add(choice3Panel, BorderLayout.SOUTH);
 	}
 
 	private void drawFeedBackPanel() {
@@ -404,6 +452,7 @@ public class DiskPanel extends JPanel implements TableModelListener {
 		feedBackLabel.setToolTipText("The status-report is displayed here.");
 		feedBackLabel.setFont(new Font("Monospaced", Font.PLAIN, 12));
 
+		textArea = new JTextArea(10, 60);
 		textArea.setToolTipText("The status-report is displayed here.");
 		textArea.setFont(new Font("Monospaced", Font.PLAIN, 12));
 
@@ -494,6 +543,38 @@ public class DiskPanel extends JPanel implements TableModelListener {
 		}
 	}
 
+	private void doExternalProgram(int which_one){
+		feedBackMessage =
+			feedBackMessage
+				+ "Executing \""+externalProgram[which_one].getCommand()+"\" on disk "+loadName+"\n";
+		
+		String[] doThat = new String[2];
+		
+		doThat[0] = externalProgram[which_one].getCommand();
+		doThat[1] = loadName;
+
+		try
+		{
+			Runtime rt = Runtime.getRuntime();
+			Process pr = rt.exec(doThat);
+			
+			BufferedReader procout = new BufferedReader(
+				new InputStreamReader(pr.getInputStream())
+			);
+			String line;
+			while ((line = procout.readLine()) != null)
+			{
+			  //System.out.println(line);
+			  feedBackMessage =feedBackMessage + line + "\n";
+			}
+		}
+		catch (Exception e)
+		{
+		  System.err.println(e.toString());
+		}
+
+		textArea.setText(feedBackMessage);
+	}
 
 
 	private DirEntry dirEntry;
@@ -1151,6 +1232,20 @@ public class DiskPanel extends JPanel implements TableModelListener {
 		rowHeight = i;
 		table.setRowHeight(rowHeight);
 		table.revalidate();
+	}
+
+	/**
+	 * @return
+	 */
+	public ExternalProgram getExternalProgram(int which_one) {
+		return externalProgram[which_one];
+	}
+
+	/**
+	 * @param programs
+	 */
+	public void setExternalProgram(ExternalProgram[] programs) {
+		externalProgram = programs;
 	}
 
 }
