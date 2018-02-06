@@ -5,7 +5,7 @@ import javax.swing.table.AbstractTableModel;
 /**
  * Table model used by HexViewFrame.
  * @author Henrik
- * @see HexViewFrame
+ * @see HexViewDialog
  */
 public class HexTableModel extends AbstractTableModel {
 

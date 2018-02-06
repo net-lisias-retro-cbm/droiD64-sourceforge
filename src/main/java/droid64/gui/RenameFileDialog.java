@@ -48,7 +48,7 @@ import droid64.d64.CbmException;
 /**
  * @author wolf
  */
-public class RenamePRGFrame extends JDialog {
+public class RenameFileDialog extends JDialog {
 
 	private static final long serialVersionUID = 1L;
 
@@ -63,9 +63,9 @@ public class RenamePRGFrame extends JDialog {
 	 * @param oldFileName
 	 * @param oldFileType 
 	 * */
-	public RenamePRGFrame (String topText, final DiskPanel diskPanel, String oldFileName, int oldFileType) {
+	public RenameFileDialog (String topText, final DiskPanel diskPanel, String oldFileName, int oldFileType) {
 		setTitle(topText);
-		diskPanel.setNewPRGType(oldFileType);
+		diskPanel.setNewFileType(oldFileType);
 		setModal(true);
 
 		Container cp = getContentPane();
@@ -135,7 +135,7 @@ public class RenamePRGFrame extends JDialog {
 		okButton.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent event) {
 				if ( event.getSource() == okButton ) {
-					diskPanel.setNewPRGNameSuccess(true);
+					diskPanel.setNewFileNameSuccess(true);
 					String name = nameTextField.getText();
 					if (name.isEmpty()) {
 						return;
@@ -143,9 +143,9 @@ public class RenamePRGFrame extends JDialog {
 					if (name.length() > 16) {
 						name = name.substring(0, 16);
 					}
-					diskPanel.setNewPRGName(name);
+					diskPanel.setNewFileName(name);
 					if (fileTypeBox.getSelectedIndex() != -1) {
-						diskPanel.setNewPRGType(fileTypeBox.getSelectedIndex());
+						diskPanel.setNewFileType(fileTypeBox.getSelectedIndex());
 					}
 					dispose();
 				}
@@ -187,7 +187,7 @@ public class RenamePRGFrame extends JDialog {
 	 * @param diskPanel
 	 * @param oldFileName
 	 */
-	public RenamePRGFrame (String topText, final DiskPanel diskPanel, String oldFileName) {
+	public RenameFileDialog (String topText, final DiskPanel diskPanel, String oldFileName) {
 		setTitle(topText);		
 		setModal(true);
 
@@ -203,12 +203,12 @@ public class RenamePRGFrame extends JDialog {
 		okButton.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent event) {
 				if ( event.getSource() == okButton ) {
-					diskPanel.setNewPRGNameSuccess(true);
+					diskPanel.setNewFileNameSuccess(true);
 					String diskName = nameTextField.getText();
 					if (diskName.isEmpty()) {
 						return;
 					}
-					diskPanel.setNewPRGName(diskName);
+					diskPanel.setNewFileName(diskName);
 					dispose();
 				}
 			}

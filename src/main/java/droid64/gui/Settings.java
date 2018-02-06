@@ -21,6 +21,14 @@ import javax.swing.JPanel;
 
 import droid64.DroiD64;
 import droid64.d64.CbmException;
+import droid64.d64.D64;
+import droid64.d64.D67;
+import droid64.d64.D71;
+import droid64.d64.D80;
+import droid64.d64.D81;
+import droid64.d64.D82;
+import droid64.d64.LNX;
+import droid64.d64.T64;
 
 public class Settings {
 
@@ -30,20 +38,20 @@ public class Settings {
 	public static final int MAX_PLUGINS = 4;
 
 	public static final Color DIR_BG_COLOR_C64 = new Color( 64, 64, 224);
-	public static final Color DIR_FG_COLOR_C64 = new Color(160,160, 255);		
+	public static final Color DIR_FG_COLOR_C64 = new Color(160,160, 255);
 	public static final Color DIR_BG_COLOR_CPM = new Color( 16,  16,  16);
 	public static final Color DIR_FG_COLOR_CPM = new Color(192, 255, 192);
 	public static final Color DIR_BG_COLOR_LOCAL = DEFAULT_PANEL.getBackground();
 	public static final Color DIR_FG_COLOR_LOCAL = DEFAULT_PANEL.getForeground();
-	
+
 	public static final Color ACTIVE_BORDER_COLOR = Color.RED;
 	public static final Color INACTIVE_BORDER_COLOR = Color.GRAY;
-	
+
 	/** Default name of settings file (without path). */
 	private final static String DEFAULT_SETTING_FILE_NAME = ".droiD64.cfg";
 	/** Name (with path) actually used. */
 	private static String settingsFileName = null;
-	
+
 	// Setting file parameters
 	private static final String SETTING_ASK_QUIT            = "ask_quit";
 	public  static final String SETTING_DIR_BG              = "color_dir_bg";
@@ -63,6 +71,7 @@ public class Settings {
 	private static final String SETTING_LOCAL_FONT_SIZE     = "local_font_size";
 	private static final String SETTING_PLUGIN_DESCRIPTION  = "plugin_description";
 	private static final String SETTING_PLUGIN_COMMAND      = "plugin_command";
+	private static final String SETTING_PLUGIN_ARGUMENTS    = "plugin_arguments";
 	private static final String SETTING_PLUGIN_LABEL        = "plugin_label";
 	private static final String SETTING_USE_DB              = "use_database";
 	private static final String SETTING_JDBC_DRIVER         = "jdbc_driver";
@@ -71,7 +80,17 @@ public class Settings {
 	private static final String SETTING_JDBC_PASSWORD       = "jdbc_password";
 	private static final String SETTING_MAX_ROWS            = "max_rows";
 	private static final String SETTING_LOOK_AND_FEEL       = "look_and_feel";
-	
+
+	private static final String SETTING_FILE_EXT_D64        = "file_ext_d64";
+	private static final String SETTING_FILE_EXT_D67        = "file_ext_d67";
+	private static final String SETTING_FILE_EXT_D71        = "file_ext_d71";
+	private static final String SETTING_FILE_EXT_D81        = "file_ext_d81";
+	private static final String SETTING_FILE_EXT_T64        = "file_ext_t64";
+	private static final String SETTING_FILE_EXT_D80        = "file_ext_d80";
+	private static final String SETTING_FILE_EXT_D82        = "file_ext_d82";
+	private static final String SETTING_FILE_EXT_LNX        = "file_ext_lnx";
+
+
 	// Types of parameters
 	private static final int STRING_PARAM 			= 1;
 	private static final int INTEGER_PARAM	 		= 2;
@@ -80,35 +99,34 @@ public class Settings {
 	private static final int FONT_PARAM				= 5;
 	private static final int STRING_LIST_PARAM		= 6;
 	private static final int INDEXED_STRING_PARAM	= 7;	// param_name.1=value
-	
+
 	// For convenience
 	private static final String USER_HOME = System.getProperty("user.home");
 
-//	private static final Color C64_FG_COLOR = new Color(160,160,255);
-//	private static final Color C64_BG_COLOR = new Color(64,64,224);
+	//	private static final Color C64_FG_COLOR = new Color(160,160,255);
+	//	private static final Color C64_BG_COLOR = new Color(64,64,224);
 	private static ExternalProgram[] externalPrograms = new ExternalProgram[MAX_PLUGINS];
+
+	private static Font commodoreFont = null;
+	private static Font commodoreScaledFont = null;
+	private static Integer commodoreFontSize = null;
 
 	/** Setting parameter definitions */
 	private static Map<String,Parameter> settingTypeMap = new HashMap<String,Parameter>() {
 		private static final long serialVersionUID = 1L;
 		{
 			put(SETTING_ASK_QUIT,			new Parameter(SETTING_ASK_QUIT,				BOOLEAN_PARAM,	Boolean.TRUE));
-
 			put(SETTING_BORDER_ACTIVE,		new Parameter(SETTING_BORDER_ACTIVE,		COLOR_PARAM,	ACTIVE_BORDER_COLOR));
 			put(SETTING_BORDER_INACTIVE,	new Parameter(SETTING_BORDER_INACTIVE,		COLOR_PARAM,	INACTIVE_BORDER_COLOR));
-			
 			put(SETTING_COLOUR,				new Parameter(SETTING_COLOUR,				INTEGER_PARAM,	new Integer(1)));
-
 			put(SETTING_DEFAULT_IMAGE_DIR,	new Parameter(SETTING_DEFAULT_IMAGE_DIR,	STRING_PARAM,	USER_HOME));
 			put(SETTING_DEFAULT_IMAGE_DIR2,	new Parameter(SETTING_DEFAULT_IMAGE_DIR2,	STRING_PARAM,	USER_HOME));
-			
 			put(SETTING_DIR_BG,				new Parameter(SETTING_DIR_BG,				COLOR_PARAM,	DIR_BG_COLOR_C64));
 			put(SETTING_DIR_FG,				new Parameter(SETTING_DIR_FG,				COLOR_PARAM,	DIR_FG_COLOR_C64));
 			put(SETTING_DIR_CPM_BG,			new Parameter(SETTING_DIR_CPM_BG,			COLOR_PARAM,	DIR_BG_COLOR_CPM));
 			put(SETTING_DIR_CPM_FG,			new Parameter(SETTING_DIR_CPM_FG,			COLOR_PARAM,	DIR_FG_COLOR_CPM));
 			put(SETTING_DIR_LOCAL_BG,		new Parameter(SETTING_DIR_LOCAL_BG,			COLOR_PARAM,	DIR_BG_COLOR_LOCAL));
 			put(SETTING_DIR_LOCAL_FG,		new Parameter(SETTING_DIR_LOCAL_FG,			COLOR_PARAM,	DIR_FG_COLOR_LOCAL));
-			
 			put(SETTING_FONT_SIZE,			new Parameter(SETTING_FONT_SIZE,			INTEGER_PARAM,	new Integer(10)));
 			put(SETTING_LOCAL_FONT_SIZE,	new Parameter(SETTING_LOCAL_FONT_SIZE,		INTEGER_PARAM,	new Integer(10)));
 			put(SETTING_JDBC_DRIVER,		new Parameter(SETTING_JDBC_DRIVER,			STRING_PARAM,	"com.mysql.jdbc.Driver"));
@@ -116,22 +134,29 @@ public class Settings {
 			put(SETTING_JDBC_USER,			new Parameter(SETTING_JDBC_USER,			STRING_PARAM,	"droid64"));
 			put(SETTING_JDBC_PASSWORD,		new Parameter(SETTING_JDBC_PASSWORD,		STRING_PARAM,	"uridium"));
 			put(SETTING_MAX_ROWS,			new Parameter(SETTING_MAX_ROWS,				INTEGER_PARAM,	new Integer(25)));
-			
 			put(SETTING_ROW_HEIGHT,			new Parameter(SETTING_ROW_HEIGHT,			INTEGER_PARAM,	new Integer(10)));
 			put(SETTING_LOCAL_ROW_HEIGHT,	new Parameter(SETTING_LOCAL_ROW_HEIGHT,		INTEGER_PARAM,	new Integer(10)));
-
 			put(SETTING_USE_DB,				new Parameter(SETTING_USE_DB,				BOOLEAN_PARAM,	Boolean.FALSE));
-			
 			put(SETTING_LOOK_AND_FEEL,		new Parameter(SETTING_LOOK_AND_FEEL,		INTEGER_PARAM,	new Integer(1)));
-
 			put(SETTING_PLUGIN_COMMAND,		new Parameter(SETTING_PLUGIN_COMMAND,		INDEXED_STRING_PARAM,	new ArrayList<String>(Arrays.asList(new String[]{
-					"/usr/local/bin/d64_to_floppy.sh", 
-					"/usr/bin/x64" }))));
+					"d64copy", "x64", "128", "cbmctrl" }))));
+			put(SETTING_PLUGIN_ARGUMENTS,	new Parameter(SETTING_PLUGIN_ARGUMENTS,		INDEXED_STRING_PARAM,	new ArrayList<String>(Arrays.asList(new String[]{
+					"{image} 8", "{imagefiles}", "{imagefiles}", "dir 8" }))));
 			put(SETTING_PLUGIN_DESCRIPTION,	new Parameter(SETTING_PLUGIN_DESCRIPTION,	INDEXED_STRING_PARAM,	new ArrayList<String>(Arrays.asList(new String[]{
-					"Transfer this disk image to a real floppy (bash-script: \"d64copy -t serial2 -w -B -d 1 $1 8\").", 
-					"Invoke VICE emulator with this disk image" }))));
+					"Transfer this disk image to a real floppy.",
+					"Invoke VICE 64 emulator with this disk image",
+					"Invoke VICE 128 emulator with this disk image",
+			"List files using OpenCBM" }))));
 			put(SETTING_PLUGIN_LABEL,		new Parameter(SETTING_PLUGIN_LABEL,			INDEXED_STRING_PARAM,	new ArrayList<String>(Arrays.asList(new String[]{
-					"cbm4linux", "VICE" }))));
+					"d64copy", "VICE 64", "VICE 128", "CBM dir"}))));
+			put(SETTING_FILE_EXT_D64,		new Parameter(SETTING_FILE_EXT_D64,			STRING_LIST_PARAM,	Arrays.asList(".d64;.d64.gz".split(";")) ));
+			put(SETTING_FILE_EXT_D67,		new Parameter(SETTING_FILE_EXT_D67,			STRING_LIST_PARAM,	Arrays.asList(".d67;.d67.gz".split(";")) ));
+			put(SETTING_FILE_EXT_D71,		new Parameter(SETTING_FILE_EXT_D71,			STRING_LIST_PARAM,	Arrays.asList(".d71;.d71.gz".split(";")) ));
+			put(SETTING_FILE_EXT_D81,		new Parameter(SETTING_FILE_EXT_D81,			STRING_LIST_PARAM,	Arrays.asList(".d81;.d81.gz".split(";")) ));
+			put(SETTING_FILE_EXT_T64,		new Parameter(SETTING_FILE_EXT_T64,			STRING_LIST_PARAM,	Arrays.asList(".t64;.t64.gz".split(";")) ));
+			put(SETTING_FILE_EXT_D80,		new Parameter(SETTING_FILE_EXT_D80,			STRING_LIST_PARAM,	Arrays.asList(".d80;.d80.gz".split(";")) ));
+			put(SETTING_FILE_EXT_D82,		new Parameter(SETTING_FILE_EXT_D82,			STRING_LIST_PARAM,	Arrays.asList(".d82;.d82.gz".split(";")) ));
+			put(SETTING_FILE_EXT_LNX,		new Parameter(SETTING_FILE_EXT_LNX,			STRING_LIST_PARAM,	Arrays.asList(".lnx;.lnx.gz".split(";")) ));
 		}
 	};
 
@@ -146,11 +171,11 @@ public class Settings {
 	}
 	public static Color getInactiveBorderColor() {
 		return getColorParam(SETTING_BORDER_INACTIVE);
-	}	
-	
+	}
+
 	public static void setDirColors(Color bg, Color fg) {
 		setColorParam(SETTING_DIR_BG, bg);
-		setColorParam(SETTING_DIR_FG, fg);		
+		setColorParam(SETTING_DIR_FG, fg);
 	}
 	public static Color getDirColorBg() {
 		return getColorParam(SETTING_DIR_BG);
@@ -161,7 +186,7 @@ public class Settings {
 
 	public static void setDirCpmColors(Color bg, Color fg) {
 		setColorParam(SETTING_DIR_CPM_BG, bg);
-		setColorParam(SETTING_DIR_CPM_FG, fg);		
+		setColorParam(SETTING_DIR_CPM_FG, fg);
 	}
 	public static Color getDirCpmColorBg() {
 		return getColorParam(SETTING_DIR_CPM_BG);
@@ -172,7 +197,7 @@ public class Settings {
 
 	public static void setDirLocalColors(Color bg, Color fg) {
 		setColorParam(SETTING_DIR_LOCAL_BG, bg);
-		setColorParam(SETTING_DIR_LOCAL_FG, fg);		
+		setColorParam(SETTING_DIR_LOCAL_FG, fg);
 	}
 	public static Color getDirLocalColorBg() {
 		return getColorParam(SETTING_DIR_LOCAL_BG);
@@ -180,49 +205,49 @@ public class Settings {
 	public static Color getDirLocalColorFg() {
 		return getColorParam(SETTING_DIR_LOCAL_FG);
 	}
-	
-	
+
 	public static void parseExternalPrograms() {
 		List<ExternalProgram> list = new ArrayList<ExternalProgram>();
-		List <String> cmdList = getIndexStringList(SETTING_PLUGIN_COMMAND); 
-		List <String> descrList = getIndexStringList(SETTING_PLUGIN_DESCRIPTION); 
-		List <String> labelList = getIndexStringList(SETTING_PLUGIN_LABEL); 
-		int i = 0;
-		while (true) {
+		List <String> cmdList = getIndexStringList(SETTING_PLUGIN_COMMAND);
+		List <String> argList = getIndexStringList(SETTING_PLUGIN_ARGUMENTS);
+		List <String> descrList = getIndexStringList(SETTING_PLUGIN_DESCRIPTION);
+		List <String> labelList = getIndexStringList(SETTING_PLUGIN_LABEL);
+		for (int i=0; i < Settings.MAX_PLUGINS; i++) {
 			String cmd = i <cmdList.size() ? cmdList.get(i) : "";
+			String args = i <argList.size() ? argList.get(i) : "";
 			String descr = i <descrList.size() ? descrList.get(i) : "";
 			String label = i <labelList.size() ? labelList.get(i) : "";
-			
+
 			if ("".equals(cmd) && "".equals(descr) && "".equals(label)) {
-				break;
+				list.add(null);
 			} else {
-				list.add(new ExternalProgram(cmd, descr, label));
-				i++;
+				list.add(new ExternalProgram(cmd, args, descr, label));
 			}
 		}
-		externalPrograms = (ExternalProgram[]) list.toArray(new ExternalProgram[Settings.MAX_PLUGINS]);
+		externalPrograms = list.toArray(new ExternalProgram[Settings.MAX_PLUGINS]);
 	}
-	
+
 	public static ExternalProgram[] getExternalPrograms() {
 		return externalPrograms;
 	}
-	
+
 	private static List<String> getIndexStringList(String key) {
 		Parameter param = settingTypeMap.get(key);
 		if (param != null) {
-			List <String> list = param.getListValue(); 
+			List <String> list = param.getListValue();
 			return list == null ? new ArrayList<String>() : list;
 		} else {
 			return new ArrayList<String>();
 		}
 	}
-	
-	public static void setExternalProgram(int num, String cmd, String descr, String label) {
+
+	public static void setExternalProgram(int num, String cmd, String args, String descr, String label) {
 		setIndexedString(SETTING_PLUGIN_COMMAND, num, cmd);
+		setIndexedString(SETTING_PLUGIN_ARGUMENTS, num, args);
 		setIndexedString(SETTING_PLUGIN_DESCRIPTION, num, descr);
 		setIndexedString(SETTING_PLUGIN_LABEL, num, label);
 	}
-	
+
 	private static void setIndexedString(String key, int num, String value) {
 		Parameter param = settingTypeMap.get(key);
 		List<String> list = param.getListValue();
@@ -231,24 +256,24 @@ public class Settings {
 		}
 		list.set(num, value);
 	}
-	
+
 	//////////////////////////
-	
+
 	public static boolean getAskQuit() {
 		return Boolean.TRUE.equals(getBooleanParameter(SETTING_ASK_QUIT));
-	}	
+	}
 	public static void setAskQuit(boolean askQuit) {
 		setBooleanParameter(SETTING_ASK_QUIT, askQuit);
 	}
-	
+
 	public static int getColourChoice() {
 		Integer size = getIntegerParameter(SETTING_COLOUR);
-		return size != null ? size.intValue() : 1;		
+		return size != null ? size.intValue() : 1;
 	}
 	public static void setColourChoice(int choice) {
-		setIntegerParameter(SETTING_COLOUR, choice);		
+		setIntegerParameter(SETTING_COLOUR, choice);
 	}
-	
+
 	public static String getDefaultImageDir() {
 		String dir = getStringParameter(SETTING_DEFAULT_IMAGE_DIR);
 		return dir != null ? dir : ".";
@@ -264,7 +289,7 @@ public class Settings {
 	public static void setDefaultImageDir2(String dir2) {
 		setStringParameter(SETTING_DEFAULT_IMAGE_DIR2, dir2);
 	}
-	
+
 	public static int getFontSize() {
 		Integer size = getIntegerParameter(SETTING_FONT_SIZE);
 		return size != null ? size.intValue() : 10;
@@ -280,7 +305,7 @@ public class Settings {
 	public static void setLocalFontSize(int fontSize) {
 		setIntegerParameter(SETTING_LOCAL_FONT_SIZE, fontSize);
 	}
-	
+
 	public static int getLookAndFeel() {
 		Integer laf = getIntegerParameter(SETTING_LOOK_AND_FEEL);
 		return laf != null ? laf.intValue() : 1;
@@ -288,7 +313,7 @@ public class Settings {
 	public static void setLookAndFeel(int laf) {
 		setIntegerParameter(SETTING_LOOK_AND_FEEL, laf);
 	}
-	
+
 	public static String getJdbcDriver() {
 		String driver = getStringParameter(SETTING_JDBC_DRIVER);
 		return driver != null ? driver : "com.mysql.jdbc.Driver";
@@ -296,7 +321,7 @@ public class Settings {
 	public static void setJdbcDriver(String driver) {
 		setStringParameter(SETTING_JDBC_DRIVER, driver);
 	}
-	
+
 	public static String getJdbcUrl() {
 		String url = getStringParameter(SETTING_JDBC_URL);
 		return url != null ? url : "jdbc:mysql://localhost:3306/droid64";
@@ -304,7 +329,7 @@ public class Settings {
 	public static void setJdbcUrl(String url) {
 		setStringParameter(SETTING_JDBC_URL, url);
 	}
-	
+
 	public static String getJdbcUser() {
 		String url = getStringParameter(SETTING_JDBC_USER);
 		return url != null ? url : "droid64";
@@ -312,7 +337,7 @@ public class Settings {
 	public static void setJdbcUser(String url) {
 		setStringParameter(SETTING_JDBC_USER, url);
 	}
-	
+
 	public static String getJdbcPassword() {
 		String pass = getStringParameter(SETTING_JDBC_PASSWORD);
 		return pass != null ? pass : "uridium";
@@ -320,7 +345,7 @@ public class Settings {
 	public static void setJdbcPassword(String pass) {
 		setStringParameter(SETTING_JDBC_PASSWORD, pass);
 	}
-	
+
 	public static int getMaxRows() {
 		Integer rows = getIntegerParameter(SETTING_MAX_ROWS);
 		return rows != null ? rows.intValue() : 25;
@@ -337,7 +362,7 @@ public class Settings {
 	public static void setRowHeight(int hgt) {
 		setIntegerParameter(SETTING_ROW_HEIGHT, hgt);
 	}
-	
+
 	public static int getLocalRowHeight() {
 		Integer rows = getIntegerParameter(SETTING_LOCAL_ROW_HEIGHT);
 		return rows != null ? rows.intValue() : 10;
@@ -345,21 +370,81 @@ public class Settings {
 	public static void setLocalRowHeight(int hgt) {
 		setIntegerParameter(SETTING_LOCAL_ROW_HEIGHT, hgt);
 	}
-	
+
 	public static boolean getUseDb() {
 		return Boolean.TRUE.equals(getBooleanParameter(SETTING_USE_DB));
-	}	
+	}
 	public static void setUseDb(boolean useDb) {
 		setBooleanParameter(SETTING_USE_DB, useDb);
-	}	
-	
+	}
+
+	public static Map<String,List<String>> getFileExtensionMap() {
+		Map<String,List<String>> map = new HashMap<String,List<String>>();
+		map.put(D64.IMAGE_TYPE_NAME, getStringListParam(SETTING_FILE_EXT_D64));
+		map.put(D67.IMAGE_TYPE_NAME, getStringListParam(SETTING_FILE_EXT_D67));
+		map.put(D71.IMAGE_TYPE_NAME, getStringListParam(SETTING_FILE_EXT_D71));
+		map.put(D81.IMAGE_TYPE_NAME, getStringListParam(SETTING_FILE_EXT_D81));
+		map.put(T64.IMAGE_TYPE_NAME, getStringListParam(SETTING_FILE_EXT_T64));
+		map.put(D80.IMAGE_TYPE_NAME, getStringListParam(SETTING_FILE_EXT_D80));
+		map.put(D82.IMAGE_TYPE_NAME, getStringListParam(SETTING_FILE_EXT_D82));
+		map.put(LNX.IMAGE_TYPE_NAME, getStringListParam(SETTING_FILE_EXT_LNX));
+		return map;
+	}
+
+	public static void setFileExtensions(String imgType, String value) {
+		switch (imgType) {
+		case D64.IMAGE_TYPE_NAME: setStringListParam(SETTING_FILE_EXT_D64, value); break;
+		case D67.IMAGE_TYPE_NAME: setStringListParam(SETTING_FILE_EXT_D67, value); break;
+		case D71.IMAGE_TYPE_NAME: setStringListParam(SETTING_FILE_EXT_D71, value); break;
+		case D81.IMAGE_TYPE_NAME: setStringListParam(SETTING_FILE_EXT_D81, value); break;
+		case T64.IMAGE_TYPE_NAME: setStringListParam(SETTING_FILE_EXT_T64, value); break;
+		case D80.IMAGE_TYPE_NAME: setStringListParam(SETTING_FILE_EXT_D80, value); break;
+		case D82.IMAGE_TYPE_NAME: setStringListParam(SETTING_FILE_EXT_D82, value); break;
+		case LNX.IMAGE_TYPE_NAME: setStringListParam(SETTING_FILE_EXT_LNX, value); break;
+		}
+	}
+
+	public static String getFileExtensions(String imgType) {
+		List<String> typeList;
+
+		switch (imgType) {
+		case D64.IMAGE_TYPE_NAME: typeList = getStringListParam(SETTING_FILE_EXT_D64); break;
+		case D67.IMAGE_TYPE_NAME: typeList = getStringListParam(SETTING_FILE_EXT_D67); break;
+		case D71.IMAGE_TYPE_NAME: typeList = getStringListParam(SETTING_FILE_EXT_D71); break;
+		case D81.IMAGE_TYPE_NAME: typeList = getStringListParam(SETTING_FILE_EXT_D81); break;
+		case T64.IMAGE_TYPE_NAME: typeList = getStringListParam(SETTING_FILE_EXT_T64); break;
+		case D80.IMAGE_TYPE_NAME: typeList = getStringListParam(SETTING_FILE_EXT_D80); break;
+		case D82.IMAGE_TYPE_NAME: typeList = getStringListParam(SETTING_FILE_EXT_D82); break;
+		case LNX.IMAGE_TYPE_NAME: typeList = getStringListParam(SETTING_FILE_EXT_LNX); break;
+		default:
+			return null;
+		}
+		if (typeList == null) {
+			return null;
+		} else {
+			boolean b = false;
+			StringBuffer buf = new StringBuffer();
+			for (String ext : typeList) {
+				if (b) {
+					buf.append(';');
+				} else {
+					b = true;
+				}
+				buf.append(ext);
+			}
+			return buf.toString();
+		}
+	}
+
+
+
 	//////////////////////////////////
-	
+
 	public static String getAllAsString() {
 		StringBuffer buf = new StringBuffer();
 		for(String key: new TreeSet<String>(settingTypeMap.keySet())) {
 			buf.append(key).append("=").append(settingTypeMap.get(key)).append('\n');
-			
+
 		}
 		return buf.toString();
 	}
@@ -369,10 +454,10 @@ public class Settings {
 			settingsFileName = USER_HOME + File.separator + DEFAULT_SETTING_FILE_NAME;
 		} else {
 			settingsFileName = DEFAULT_SETTING_FILE_NAME;
-		}			
+		}
 		loadSettingsFromFile(settingsFileName);
 	}
-	
+
 	/** Load settings from file */
 	private static void loadSettingsFromFile(String fileName) {
 		settingsFileName = getSettingFileName(fileName);
@@ -395,15 +480,15 @@ public class Settings {
 									param.value = "yes".equals(line_value) ? Boolean.TRUE : new Boolean(line_value);
 									break;
 								case COLOR_PARAM: {
-										String[] split = line_value.split("[ \t]*[,;.][ \t]*");
-										if (split.length >= 3) {
-											int r = Integer.parseInt(split[0]) & 0xff;
-											int g = Integer.parseInt(split[1]) & 0xff;
-											int b = Integer.parseInt(split[2]) & 0xff;
-											param.value = new Color(r, g, b);
-										}
+									String[] split = line_value.split("[ \t]*[,;.][ \t]*");
+									if (split.length >= 3) {
+										int r = Integer.parseInt(split[0]) & 0xff;
+										int g = Integer.parseInt(split[1]) & 0xff;
+										int b = Integer.parseInt(split[2]) & 0xff;
+										param.value = new Color(r, g, b);
 									}
-									break;
+								}
+								break;
 								case FONT_PARAM:
 									Font fnt = getFontFromString(line_value);
 									if (fnt != null) {
@@ -411,10 +496,10 @@ public class Settings {
 									}
 									break;
 								case STRING_LIST_PARAM: {
-										String[] split = line_value.split("[ \t]*[;][ \t]*");
-										param.value = Arrays.asList(split);
-									}
-									break;
+									String[] split = line_value.split("[ \t]*[;][ \t]*");
+									param.value = Arrays.asList(split);
+								}
+								break;
 								default:
 								}
 							} catch (IllegalArgumentException e) {
@@ -429,9 +514,10 @@ public class Settings {
 				br.close();
 				parseExternalPrograms();
 			} catch (IOException e) {
-				System.out.println("Load settings failed: "+e.getMessage());
+				System.err.println("Load settings failed: "+e.getMessage());
 			}
 		} else {
+			parseExternalPrograms();
 			System.out.println("loadSettings: use defaults. No settingsFileName="+settingsFileName);
 		}
 	}
@@ -441,14 +527,14 @@ public class Settings {
 		case "plugin0_command": return parseIndexedParam(SETTING_PLUGIN_COMMAND+".0", value);
 		case "plugin1_command": return parseIndexedParam(SETTING_PLUGIN_COMMAND+".1", value);
 		case "plugin0_description": return parseIndexedParam(SETTING_PLUGIN_DESCRIPTION+".0", value);
-		case "plugin1_description": return parseIndexedParam(SETTING_PLUGIN_DESCRIPTION+".1", value);		
+		case "plugin1_description": return parseIndexedParam(SETTING_PLUGIN_DESCRIPTION+".1", value);
 		case "plugin0_label": return parseIndexedParam(SETTING_PLUGIN_LABEL+".0", value);
 		case "plugin1_label": return parseIndexedParam(SETTING_PLUGIN_LABEL+".1", value);
 		default:
 			return false;
 		}
 	}
-	
+
 	private static boolean parseIndexedParam(String key, String value) {
 		String[] split = key.split("[.]");
 		if (split.length == 2) {
@@ -456,12 +542,14 @@ public class Settings {
 				int index = new Integer(split[1]);
 				Parameter param = null;
 				switch (split[0]) {
-					case SETTING_PLUGIN_COMMAND:
-						param = settingTypeMap.get(SETTING_PLUGIN_COMMAND); break;
-					case SETTING_PLUGIN_DESCRIPTION:
-						param = settingTypeMap.get(SETTING_PLUGIN_DESCRIPTION); break;
-					case SETTING_PLUGIN_LABEL:
-						param = settingTypeMap.get(SETTING_PLUGIN_LABEL); break;
+				case SETTING_PLUGIN_COMMAND:
+					param = settingTypeMap.get(SETTING_PLUGIN_COMMAND); break;
+				case SETTING_PLUGIN_ARGUMENTS:
+					param = settingTypeMap.get(SETTING_PLUGIN_ARGUMENTS); break;
+				case SETTING_PLUGIN_DESCRIPTION:
+					param = settingTypeMap.get(SETTING_PLUGIN_DESCRIPTION); break;
+				case SETTING_PLUGIN_LABEL:
+					param = settingTypeMap.get(SETTING_PLUGIN_LABEL); break;
 				}
 				if (index >= 0 && param != null && param.type == INDEXED_STRING_PARAM) {
 					@SuppressWarnings("unchecked")
@@ -473,7 +561,7 @@ public class Settings {
 						for (int i=list.size(); i<=index; i++) {
 							list.add(null);
 						}
-						list.set(index, value);												
+						list.set(index, value);
 					}
 					param.value = list;
 					return true;
@@ -482,17 +570,17 @@ public class Settings {
 		}
 		return false;
 	}
-	
-	
+
+
 	/** Save settings to file */
 	public static void saveSettingsToFile() {
-		try {		
+		try {
 			FileWriter output = new FileWriter(settingsFileName);
 			output.write("# Configuration file for "+DroiD64.PROGNAME+" v"+DroiD64.VERSION+"\n");
 			output.write("# Saved " + new Date() + "\n");
 			output.write("#\n");
 			List<String> settingKeyList = new ArrayList<String>(settingTypeMap.keySet());
-			Collections.sort(settingKeyList);		
+			Collections.sort(settingKeyList);
 			for (String key : settingKeyList) {
 				Parameter param = settingTypeMap.get(key);
 				String value;
@@ -519,7 +607,7 @@ public class Settings {
 					}
 					break;
 				default:
-					value = param.value.toString(); 
+					value = param.value.toString();
 					output.write(key + "=" + value + "\n");
 					break;
 				}
@@ -530,12 +618,12 @@ public class Settings {
 			System.err.println("Save settings failed: "+e.getMessage());
 		}
 	}
-	
+
 	public static String getStringParameter(String name) {
 		Parameter param = settingTypeMap.get(name);
 		if (param == null || param.type != STRING_PARAM) {
 			return null;
-		} else {		
+		} else {
 			return (String) param.value;
 		}
 	}
@@ -546,39 +634,39 @@ public class Settings {
 			param.setValue(value);
 		}
 	}
-	
+
 	public static Integer getIntegerParameter(String name) {
 		Parameter param = settingTypeMap.get(name);
 		if (param == null || param.type != INTEGER_PARAM) {
 			return null;
-		} else {		
+		} else {
 			return (Integer) param.value;
 		}
 	}
-	
+
 	public static void setIntegerParameter(String name, int value) {
 		Parameter param = settingTypeMap.get(name);
 		if (param != null && param.type == INTEGER_PARAM) {
 			param.value = value;
 		}
 	}
-	
+
 	public static Boolean getBooleanParameter(String name) {
 		Parameter param = settingTypeMap.get(name);
 		if (param == null || param.type != BOOLEAN_PARAM) {
 			return null;
-		} else {		
+		} else {
 			return (Boolean) param.value;
 		}
 	}
-	
+
 	public static void setBooleanParameter(String name, boolean value) {
 		Parameter param = settingTypeMap.get(name);
 		if (param != null && param.type == BOOLEAN_PARAM) {
 			param.value = value;
 		}
 	}
-	
+
 	private static String getSettingFileName(String fileName) {
 		if (fileName == null) {
 			String userHome = null;
@@ -590,7 +678,7 @@ public class Settings {
 					fileName = userHome + "/" + DEFAULT_SETTING_FILE_NAME;
 				} else {
 					fileName = DEFAULT_SETTING_FILE_NAME;
-				}			
+				}
 			}
 		}
 		return fileName;
@@ -600,18 +688,18 @@ public class Settings {
 		Parameter param = settingTypeMap.get(name);
 		if (param == null || param.type != FONT_PARAM) {
 			return null;
-		} else {		
+		} else {
 			return (Font) param.value;
 		}
 	}
-	
+
 	public static void setFontParameter(String name, Font font) {
 		Parameter param = settingTypeMap.get(name);
 		if (param != null && param.type == FONT_PARAM) {
 			param.value = font;
 		}
 	}
-	
+
 	private static Font getFontFromString(String str) {
 		if (str != null) {
 			String[] s = str.split("[ \t]*[;][ \t]*");
@@ -621,7 +709,7 @@ public class Settings {
 		}
 		return null;
 	}
-	
+
 	public static void setColorParam(String name, Color value) {
 		Parameter param = settingTypeMap.get(name);
 		if (param != null && param.type == COLOR_PARAM) {
@@ -647,7 +735,20 @@ public class Settings {
 			return null;
 		}
 	}
-	
+
+	@SuppressWarnings("unchecked")
+	public static void setStringListParam(String name, String value) {
+		Parameter param = settingTypeMap.get(name);
+		if (param != null && param.type == STRING_LIST_PARAM) {
+			param.value = new ArrayList<String>();
+			if (value != null) {
+				for (String str : Arrays.asList(value.split("\\s*;\\s*"))) {
+					((List<String>)param.value).add(str);
+				}
+			}
+		}
+	}
+
 	@SuppressWarnings("unchecked")
 	public static String getStringListParamAsString(String name) {
 		Parameter param = settingTypeMap.get(name);
@@ -664,7 +765,7 @@ public class Settings {
 			return "";
 		}
 	}
-	
+
 	/** Class used to store one parameter.*/
 	static class Parameter {
 		String name;
@@ -717,11 +818,7 @@ public class Settings {
 			return buf.toString();
 		}
 	}
-	
-	private static Font commodoreFont = null;
-	private static Font commodoreScaledFont = null;
-	private static Integer commodoreFontSize = null;
-	
+
 	public static Font getCommodoreFont() throws CbmException {
 		if (commodoreFont == null) {
 			try {
@@ -736,5 +833,5 @@ public class Settings {
 		}
 		return commodoreScaledFont;
 	}
-	
+
 }

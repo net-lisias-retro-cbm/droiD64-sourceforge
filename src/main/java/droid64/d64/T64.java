@@ -30,12 +30,19 @@ import java.util.List;
  */
 public class T64 extends DiskImage {
 
+	/** Name of the image type */
+	public final static String IMAGE_TYPE_NAME = "T64";
 //	private int tapeVersionLow;
 //	private int tapeVersionHigh;
 	private int maxEntries;
 	private int usedEntries;
 	
 	public T64() {
+	}
+
+	public T64(byte[] imageData) {
+		cbmDisk = imageData;
+		bam = new CbmBam(1, 1);
 	}
 
 	@Override
@@ -67,7 +74,7 @@ public class T64 extends DiskImage {
 	@Override
 	protected void readImage(String filename) throws CbmException {	
 		bam = new CbmBam(1, 1);
-		readImage(filename, 0x40, "T64");
+		readImage(filename, 0x40, IMAGE_TYPE_NAME);
 //		tapeVersionLow  = cbmDisk[0x20] & 0xff;
 //		tapeVersionHigh = cbmDisk[0x21] & 0xff;
 		maxEntries  = (cbmDisk[0x22] & 0xff) | ((cbmDisk[0x23] & 0xff) << 8);

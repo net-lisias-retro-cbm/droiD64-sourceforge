@@ -53,7 +53,7 @@ import droid64.d64.DiskImage;
 /**
  * @author wolf
  */
-public class RenameD64Frame extends JDialog {
+public class RenameDiskImageDialog extends JDialog {
 
 	private static final long serialVersionUID = 1L;
 
@@ -63,7 +63,7 @@ public class RenameD64Frame extends JDialog {
 	private JCheckBox cpmBox;
 	private JComboBox<Object>  diskTypeBox;
 	
-	public RenameD64Frame (String topText, final DiskPanel diskPanel, String oldDiskName, String oldDiskID, final boolean create) {		
+	public RenameDiskImageDialog (String topText, final DiskPanel diskPanel, String oldDiskName, String oldDiskID, final boolean create) {		
 		setTitle(topText);
 
 		final JButton exitButton = new JButton("Cancel");

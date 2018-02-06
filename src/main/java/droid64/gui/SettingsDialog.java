@@ -10,6 +10,7 @@ import java.awt.Toolkit;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -38,6 +39,14 @@ import javax.swing.SpinnerNumberModel;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
 
+import droid64.d64.D64;
+import droid64.d64.D67;
+import droid64.d64.D71;
+import droid64.d64.D80;
+import droid64.d64.D81;
+import droid64.d64.D82;
+import droid64.d64.LNX;
+import droid64.d64.T64;
 import droid64.db.DaoFactoryImpl;
 
 
@@ -60,13 +69,13 @@ import droid64.db.DaoFactoryImpl;
  *   You should have received a copy of the GNU General Public License
  *   along with this program; if not, write to the Free Software
  *   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
- *   
+ *
  *   eMail: wolfvoz@users.sourceforge.net
  *   http://droid64.sourceforge.net
  *  </pre>
  * @author wolf
  */
-public class SettingsFrame extends JDialog {
+public class SettingsDialog extends JDialog {
 
 	private static final long serialVersionUID = 1L;
 
@@ -74,14 +83,26 @@ public class SettingsFrame extends JDialog {
 	private JCheckBox exitConfirmCheckBox;
 	private JSlider distSlider;
 	private JSlider distSlider2;
+	private JTextField fileExtD64;
+	private JTextField fileExtD67;
+	private JTextField fileExtD71;
+	private JTextField fileExtD81;
+	private JTextField fileExtT64;
+	private JTextField fileExtD80;
+	private JTextField fileExtD82;
+	private JTextField fileExtLNX;
+
 	// Plugin settings
 	private JTextField[] pluginLabelTextField = new JTextField[Settings.MAX_PLUGINS];
-	private JTextArea[] pluginCommandTextField= new JTextArea[Settings.MAX_PLUGINS];
-	private JTextArea[] pluginDescriptionTextField = new JTextArea[Settings.MAX_PLUGINS];	
+	private JTextField[] pluginCommandTextField= new JTextField[Settings.MAX_PLUGINS];
+	private JTextArea[] pluginArgumentTextField= new JTextArea[Settings.MAX_PLUGINS];
+	private JTextArea[] pluginDescriptionTextField = new JTextArea[Settings.MAX_PLUGINS];
+	private JFileChooser cmdChooser = null;
+
 	// Database settings
 	private JCheckBox useJdbcCheckBox;
 	private JTextField jdbcDriver;
-	private JTextField jdbcUrl; 
+	private JTextField jdbcUrl;
 	private JTextField jdbcUser;
 	private JPasswordField jdbcPassword;
 	private NumericTextField maxRows;
@@ -90,51 +111,51 @@ public class SettingsFrame extends JDialog {
 	private static final String[] COLORS = { "gray", "red", "green", "blue", "light-blue" };
 
 	private JLabel status = new JLabel();
-	
+
 	private final static String JDBC_POSTGRESQL_URL = "https://jdbc.postgresql.org/";
 	private final static String JDBC_MYSQL_URL = "http://dev.mysql.com/downloads/connector/j";
-	
-	
+
+	private final JDialog settingsFrame = this;
+
 	private static String SQL = null;
 	static {
-		InputStream in = SettingsFrame.class.getResourceAsStream("/setup_database.sql");
+		InputStream in = SettingsDialog.class.getResourceAsStream("/setup_database.sql");
 		BufferedReader input = new BufferedReader(new InputStreamReader(in));
-		StringBuffer buf = new StringBuffer();		
+		StringBuffer buf = new StringBuffer();
 		try {
 			for (String line = input.readLine(); line != null; line = input.readLine()) {
-	            buf.append(line);
-	            buf.append("\n");
+				buf.append(line);
+				buf.append("\n");
 			}
 			SQL = buf.toString();
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
 	}
-	
-	private final JDialog settingsFrame = this;
-	
-	/** 
+
+	/**
 	 * Constructor
 	 * @param topText String
 	 * @param mainPanel MainPanel
 	 */
-	public SettingsFrame (String topText, MainPanel mainPanel) {
+	public SettingsDialog (String topText, MainPanel mainPanel) {
 		setTitle(topText);
-		setModal(true);		
+		setModal(true);
 
 		Container cp = getContentPane();
 		cp.setLayout(new BorderLayout());
 		JTabbedPane tabPane = new JTabbedPane();
-		tabPane.addTab("GUI",      drawGuiPanel());	
+		tabPane.addTab("GUI",      drawGuiPanel());
 		tabPane.addTab("Colors", drawColorPanel());
 
 		tabPane.addTab("Database", drawDatabasePanel());
 
-	    JPanel pluginPanel[] = drawPluginPanel();
+		JPanel pluginPanel[] = drawPluginPanel(mainPanel);
 		for (int i = 0; i < Settings.MAX_PLUGINS; i++) {
 			tabPane.addTab("Plugin "+(i+1), pluginPanel[i]);
 		}
-		cp.add(tabPane, BorderLayout.CENTER);
+
+		cp.add(new JScrollPane(tabPane), BorderLayout.CENTER);
 
 		JPanel generalPanel = drawGeneralPanel(mainPanel);
 		cp.add(generalPanel, BorderLayout.SOUTH);
@@ -145,7 +166,7 @@ public class SettingsFrame extends JDialog {
 		setVisible(true);
 		setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
 	}
-	
+
 	/**
 	 * Setup up general settings panel
 	 * @return JPanel
@@ -169,6 +190,14 @@ public class SettingsFrame extends JDialog {
 					Settings.setJdbcUrl(jdbcUrl.getText());
 					Settings.setJdbcUser(jdbcUser.getText());
 					Settings.setJdbcPassword(new String(jdbcPassword.getPassword()));
+
+					Settings.setFileExtensions(D64.IMAGE_TYPE_NAME, fileExtD64.getText());
+					Settings.setFileExtensions(D71.IMAGE_TYPE_NAME, fileExtD71.getText());
+					Settings.setFileExtensions(D81.IMAGE_TYPE_NAME, fileExtD81.getText());
+					Settings.setFileExtensions(T64.IMAGE_TYPE_NAME, fileExtT64.getText());
+					Settings.setFileExtensions(D80.IMAGE_TYPE_NAME, fileExtD80.getText());
+					Settings.setFileExtensions(D82.IMAGE_TYPE_NAME, fileExtD82.getText());
+					Settings.setFileExtensions(LNX.IMAGE_TYPE_NAME, fileExtLNX.getText());
 					try {
 						Settings.setMaxRows(maxRows.getLongValue());
 					} catch (ParseException e) {
@@ -177,10 +206,11 @@ public class SettingsFrame extends JDialog {
 					for (int i = 0; i < pluginCommandTextField.length; i++) {
 						mainPanel.setPluginButtonLabel(i, pluginLabelTextField[i].getText());
 						Settings.setExternalProgram(i,
-							pluginCommandTextField[i].getText(),
-							pluginDescriptionTextField[i].getText(),
-							pluginLabelTextField[i].getText()
-						);
+								pluginCommandTextField[i].getText(),
+								pluginArgumentTextField[i].getText(),
+								pluginDescriptionTextField[i].getText(),
+								pluginLabelTextField[i].getText()
+								);
 					}
 					Settings.parseExternalPrograms();
 					Settings.saveSettingsToFile();
@@ -188,7 +218,7 @@ public class SettingsFrame extends JDialog {
 				}
 			}
 		});
-		buttonPanel.add(okButton);		
+		buttonPanel.add(okButton);
 		JPanel txtPanel = new JPanel();
 		txtPanel.setAlignmentX(CENTER_ALIGNMENT);
 		txtPanel.add(new JLabel("Settings are stored in your home directory."));
@@ -196,16 +226,16 @@ public class SettingsFrame extends JDialog {
 		generalPanel.add(buttonPanel, BorderLayout.SOUTH);
 		return generalPanel;
 	}
-	
+
 	/**
 	 * Setup panel with GUI settings
 	 * @return JPanel
 	 */
 	private JPanel drawGuiPanel() {
 		JPanel guiPanel = new JPanel();
-				
-		GridBagConstraints gbc = new GridBagConstraints();		
-		guiPanel.setLayout(new GridBagLayout());				
+
+		GridBagConstraints gbc = new GridBagConstraints();
+		guiPanel.setLayout(new GridBagLayout());
 		gbc.fill = GridBagConstraints.HORIZONTAL;
 
 		exitConfirmCheckBox = new JCheckBox("Confirm Exit");
@@ -217,7 +247,7 @@ public class SettingsFrame extends JDialog {
 		lookAndFeelBox.setEditable(false);
 		lookAndFeelBox.setSelectedIndex(0);
 		lookAndFeelBox.setSelectedIndex(Settings.getLookAndFeel() < MainPanel.getLookAndFeelNames().length ? Settings.getLookAndFeel() : 0);
-		
+
 		distSlider = new JSlider(JSlider.HORIZONTAL, 8, 20, Settings.getRowHeight());
 		distSlider.setMajorTickSpacing(2);
 		distSlider.setMinorTickSpacing(1);
@@ -233,10 +263,10 @@ public class SettingsFrame extends JDialog {
 		distSlider2.setPaintLabels(true);
 		distSlider2.setPaintTicks(true);
 		distSlider2.setToolTipText("Adjust grid spacing in directory window.");
-		
+
 		final JTextField defaultImgDir = new JTextField(Settings.getDefaultImageDir());
 		final JButton defaultImgButton = new JButton("..");
-		
+
 		defaultImgButton.addActionListener(new ActionListener(){
 			public void actionPerformed(ActionEvent event){
 				if ( event.getSource()==defaultImgButton ) {
@@ -248,10 +278,10 @@ public class SettingsFrame extends JDialog {
 				}
 			}
 		});
-		
+
 		final JTextField defaultImgDir2 = new JTextField(Settings.getDefaultImageDir2());
 		final JButton defaultImgButton2 = new JButton("..");
-		
+
 		defaultImgButton2.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent event){
 				if ( event.getSource()==defaultImgButton2 ) {
@@ -262,37 +292,46 @@ public class SettingsFrame extends JDialog {
 					}
 				}
 			}
-		});	
-		
+		});
+
 		final JSpinner fontSizeSpinner = new JSpinner(new SpinnerNumberModel(Settings.getFontSize(), 8, 72, 1));
 		fontSizeSpinner.setToolTipText("Adjust font size.");
 		fontSizeSpinner.addChangeListener(new ChangeListener() {
-	          public void stateChanged(ChangeEvent event) {
-	        	  if (event.getSource() == fontSizeSpinner) {
-	        		  try {
-	        			  int fs = Integer.parseInt(fontSizeSpinner.getValue().toString());
-	        			  Settings.setFontSize(fs);
-	        		  } catch (NumberFormatException e) {
-	        		  }
-	        	  }
-	          }
-	       });
-		
+			public void stateChanged(ChangeEvent event) {
+				if (event.getSource() == fontSizeSpinner) {
+					try {
+						int fs = Integer.parseInt(fontSizeSpinner.getValue().toString());
+						Settings.setFontSize(fs);
+					} catch (NumberFormatException e) {
+					}
+				}
+			}
+		});
+
 		final JSpinner localFontSizeSpinner = new JSpinner(new SpinnerNumberModel(Settings.getLocalFontSize(), 8, 72, 1));
 		localFontSizeSpinner.setToolTipText("Adjust font size.");
 		localFontSizeSpinner.addChangeListener(new ChangeListener() {
-	          public void stateChanged(ChangeEvent event) {
-	        	  if (event.getSource() == localFontSizeSpinner) {
-	        		  try {
-	        			  int fs = Integer.parseInt(localFontSizeSpinner.getValue().toString());
-	        			  Settings.setLocalFontSize(fs);
-	        		  } catch (NumberFormatException e) {
-	        		  }
-	        	  }
-	          }
-	       });		
-		
-		
+			public void stateChanged(ChangeEvent event) {
+				if (event.getSource() == localFontSizeSpinner) {
+					try {
+						int fs = Integer.parseInt(localFontSizeSpinner.getValue().toString());
+						Settings.setLocalFontSize(fs);
+					} catch (NumberFormatException e) {
+					}
+				}
+			}
+		});
+
+		JPanel fontSizePanel1 = new JPanel();
+		fontSizePanel1.setLayout(new BorderLayout());
+		fontSizePanel1.add(fontSizeSpinner, BorderLayout.WEST);
+		fontSizePanel1.add(new JPanel(), BorderLayout.CENTER);
+
+		JPanel fontSizePanel2 = new JPanel();
+		fontSizePanel2.setLayout(new BorderLayout());
+		fontSizePanel2.add(localFontSizeSpinner, BorderLayout.WEST);
+		fontSizePanel2.add(new JPanel(), BorderLayout.CENTER);
+
 		JPanel imgDirPanel = new JPanel();
 		imgDirPanel.setLayout(new BorderLayout());
 		imgDirPanel.add(defaultImgDir, BorderLayout.CENTER);
@@ -302,113 +341,135 @@ public class SettingsFrame extends JDialog {
 		imgDirPanel2.setLayout(new BorderLayout());
 		imgDirPanel2.add(defaultImgDir2, BorderLayout.CENTER);
 		imgDirPanel2.add(defaultImgButton2, BorderLayout.EAST);
-		
+
+		fileExtD64 = new JTextField(Settings.getFileExtensions(D64.IMAGE_TYPE_NAME));
+		fileExtD67 = new JTextField(Settings.getFileExtensions(D67.IMAGE_TYPE_NAME));
+		fileExtD71 = new JTextField(Settings.getFileExtensions(D71.IMAGE_TYPE_NAME));
+		fileExtD81 = new JTextField(Settings.getFileExtensions(D81.IMAGE_TYPE_NAME));
+		fileExtT64 = new JTextField(Settings.getFileExtensions(T64.IMAGE_TYPE_NAME));
+		fileExtD80 = new JTextField(Settings.getFileExtensions(D80.IMAGE_TYPE_NAME));
+		fileExtD82 = new JTextField(Settings.getFileExtensions(D82.IMAGE_TYPE_NAME));
+		fileExtLNX = new JTextField(Settings.getFileExtensions(LNX.IMAGE_TYPE_NAME));
+
 		addToGridBag(0, 0, 0.0, 0.0, gbc, guiPanel, new JPanel());
 		addToGridBag(1, 0, 0.5, 0.0, gbc, guiPanel, exitConfirmCheckBox);
 		addToGridBag(2, 0, 0.0, 0.0, gbc, guiPanel, new JPanel());
-		
+
 		addToGridBag(0, 1, 0.0, 0.0, gbc, guiPanel, new JLabel("Look & feel:"));
 		addToGridBag(1, 1, 0.5, 0.0, gbc, guiPanel, lookAndFeelBox);
 		addToGridBag(2, 1, 0.0, 0.0, gbc, guiPanel, new JPanel());
-		
-		addToGridBag(0, 2, 0.0, 0.0, gbc, guiPanel, new JLabel("Disk Image Grid distance:"));		
+
+		addToGridBag(0, 2, 0.0, 0.0, gbc, guiPanel, new JLabel("Disk Image Grid distance:"));
 		addToGridBag(1, 2, 0.0, 0.0, gbc, guiPanel, distSlider);
 		addToGridBag(2, 2, 0.0, 0.0, gbc, guiPanel, new JPanel());
 
-		addToGridBag(0, 3, 0.0, 0.0, gbc, guiPanel, new JLabel("Local Files Grid distance:"));		
+		addToGridBag(0, 3, 0.0, 0.0, gbc, guiPanel, new JLabel("Local Files Grid distance:"));
 		addToGridBag(1, 3, 0.0, 0.0, gbc, guiPanel, distSlider2);
 		addToGridBag(2, 3, 0.0, 0.0, gbc, guiPanel, new JPanel());
-		
-		addToGridBag(0, 4, 0.0, 0.0, gbc, guiPanel, new JLabel("Left default image dir:"));		
+
+		addToGridBag(0, 4, 0.0, 0.0, gbc, guiPanel, new JLabel("Left default image dir:"));
 		addToGridBag(1, 4, 1.0, 0.0, gbc, guiPanel, imgDirPanel);
 		addToGridBag(2, 4, 0.0, 0.0, gbc, guiPanel, new JPanel());
 
-		addToGridBag(0, 5, 0.0, 0.0, gbc, guiPanel, new JLabel("Right default image dir:"));		
+		addToGridBag(0, 5, 0.0, 0.0, gbc, guiPanel, new JLabel("Right default image dir:"));
 		addToGridBag(1, 5, 1.0, 0.0, gbc, guiPanel, imgDirPanel2);
 		addToGridBag(2, 5, 0.0, 0.0, gbc, guiPanel, new JPanel());
-		
-		JPanel fontSizePanel1 = new JPanel();
-		fontSizePanel1.setLayout(new BorderLayout());
-		fontSizePanel1.add(fontSizeSpinner, BorderLayout.WEST);
-		fontSizePanel1.add(new JPanel(), BorderLayout.CENTER);
-				
-		addToGridBag(0, 6, 0.0, 0.0, gbc, guiPanel, new JLabel("Disk Image Font size:"));		
+
+		addToGridBag(0, 6, 0.0, 0.0, gbc, guiPanel, new JLabel("Disk Image Font size:"));
 		addToGridBag(1, 6, 0.0, 0.0, gbc, guiPanel, fontSizePanel1);
 		addToGridBag(2, 6, 1.0, 0.0, gbc, guiPanel, new JPanel());
 
-		JPanel fontSizePanel2 = new JPanel();
-		fontSizePanel2.setLayout(new BorderLayout());
-		fontSizePanel2.add(localFontSizeSpinner, BorderLayout.WEST);
-		fontSizePanel2.add(new JPanel(), BorderLayout.CENTER);
-		
-		addToGridBag(0, 7, 0.0, 0.0, gbc, guiPanel, new JLabel("Local Files Font size:"));		
+		addToGridBag(0, 7, 0.0, 0.0, gbc, guiPanel, new JLabel("Local Files Font size:"));
 		addToGridBag(1, 7, 0.0, 0.0, gbc, guiPanel, fontSizePanel2);
 		addToGridBag(2, 7, 1.0, 0.0, gbc, guiPanel, new JPanel());
-		
-		addToGridBag(0, 8, 0.5, 0.8, gbc, guiPanel, new JPanel());
+
+		addToGridBag(0,  8, 0.0, 0.0, gbc, guiPanel, new JLabel("D64 file extensions:"));
+		addToGridBag(1,  8, 0.0, 0.0, gbc, guiPanel, fileExtD64);
+		addToGridBag(2,  8, 1.0, 0.0, gbc, guiPanel, new JPanel());
+		addToGridBag(0,  9, 0.0, 0.0, gbc, guiPanel, new JLabel("D67 file extensions:"));
+		addToGridBag(1,  9, 0.0, 0.0, gbc, guiPanel, fileExtD67);
+		addToGridBag(2,  9, 1.0, 0.0, gbc, guiPanel, new JPanel());
+		addToGridBag(0, 10, 0.0, 0.0, gbc, guiPanel, new JLabel("D71 file extensions:"));
+		addToGridBag(1, 10, 0.0, 0.0, gbc, guiPanel, fileExtD71);
+		addToGridBag(2, 10, 1.0, 0.0, gbc, guiPanel, new JPanel());
+		addToGridBag(0, 11, 0.0, 0.0, gbc, guiPanel, new JLabel("D80 file extensions:"));
+		addToGridBag(1, 11, 0.0, 0.0, gbc, guiPanel, fileExtD80);
+		addToGridBag(2, 11, 1.0, 0.0, gbc, guiPanel, new JPanel());
+		addToGridBag(0, 12, 0.0, 0.0, gbc, guiPanel, new JLabel("D81 file extensions:"));
+		addToGridBag(1, 12, 0.0, 0.0, gbc, guiPanel, fileExtD81);
+		addToGridBag(2, 12, 1.0, 0.0, gbc, guiPanel, new JPanel());
+		addToGridBag(0, 13, 0.0, 0.0, gbc, guiPanel, new JLabel("D82 file extensions:"));
+		addToGridBag(1, 13, 0.0, 0.0, gbc, guiPanel, fileExtD82);
+		addToGridBag(2, 13, 1.0, 0.0, gbc, guiPanel, new JPanel());
+		addToGridBag(0, 14, 0.0, 0.0, gbc, guiPanel, new JLabel("T64 file extensions:"));
+		addToGridBag(1, 14, 0.0, 0.0, gbc, guiPanel, fileExtT64);
+		addToGridBag(2, 14, 1.0, 0.0, gbc, guiPanel, new JPanel());
+		addToGridBag(0, 15, 0.0, 0.0, gbc, guiPanel, new JLabel("LNX file extensions:"));
+		addToGridBag(1, 15, 0.0, 0.0, gbc, guiPanel, fileExtLNX);
+		addToGridBag(2, 15, 1.0, 0.0, gbc, guiPanel, new JPanel());
+
+		addToGridBag(0, 16, 0.5, 0.8, gbc, guiPanel, new JPanel());
 		return guiPanel;
 	}
 
-	
-	
-	private void setupColorButton(final JButton fgButton, final JButton bgButton, final String fg, final String bg) {	
+	private void setupColorButton(final JButton fgButton, final JButton bgButton, final String fg, final String bg) {
 		fgButton.setForeground(Settings.getColorParam(fg));
 		fgButton.setBackground(Settings.getColorParam(bg));
 		fgButton.addActionListener(new ActionListener(){
 			public void actionPerformed(ActionEvent event) {
 				if ( event.getSource()==fgButton ) {
-					Color c = JColorChooser.showDialog(fgButton, "Foreground", fgButton.getForeground());		
+					Color c = JColorChooser.showDialog(fgButton, "Foreground", fgButton.getForeground());
 					fgButton.setForeground(c);
 					bgButton.setForeground(c);
 					Settings.setColorParam(fg, fgButton.getForeground());
-					Settings.setColorParam(bg, bgButton.getBackground());					
+					Settings.setColorParam(bg, bgButton.getBackground());
 				}
 			}
 		});
 		bgButton.setForeground(Settings.getColorParam(fg));
-		bgButton.setBackground(Settings.getColorParam(bg));	
+		bgButton.setBackground(Settings.getColorParam(bg));
 		bgButton.addActionListener(new ActionListener(){
 			public void actionPerformed(ActionEvent event) {
 				if ( event.getSource()==bgButton ) {
-					Color c = JColorChooser.showDialog(bgButton, "Background", bgButton.getBackground());		
+					Color c = JColorChooser.showDialog(bgButton, "Background", bgButton.getBackground());
 					fgButton.setBackground(c);
 					bgButton.setBackground(c);
 					Settings.setColorParam(fg, fgButton.getForeground());
-					Settings.setColorParam(bg, bgButton.getBackground());	
+					Settings.setColorParam(bg, bgButton.getBackground());
 				}
 			}
 		});
 	}
-	
+
 	/**
 	 * Setup Color settings
 	 * @return JPanel
 	 */
 	private JPanel drawColorPanel() {
-		
+
 		colourBox = new JComboBox<Object>(COLORS);
 		colourBox.setToolTipText("Select a colour scheme.");
 		colourBox.setEditable(false);
 		colourBox.setSelectedIndex(Settings.getColourChoice()<COLORS.length ? Settings.getColourChoice() : 0);
-		
+
 		final JButton colorFgButton = new JButton("Foreground");
 		final JButton colorBgButton = new JButton("Background");
 		setupColorButton(colorFgButton, colorBgButton, Settings.SETTING_DIR_FG, Settings.SETTING_DIR_BG);
-		
+
 		final JButton colorCpmFgButton = new JButton("Foreground");
 		final JButton colorCpmBgButton = new JButton("Background");
 		setupColorButton(colorCpmFgButton, colorCpmBgButton, Settings.SETTING_DIR_CPM_FG, Settings.SETTING_DIR_CPM_BG);
-		
+
 		final JButton colorLocalFgButton = new JButton("Foreground");
 		final JButton colorLocalBgButton = new JButton("Background");
 		setupColorButton(colorLocalFgButton, colorLocalBgButton, Settings.SETTING_DIR_LOCAL_FG, Settings.SETTING_DIR_LOCAL_BG);
-		
+
 		final JButton colorActiveBorderButton = new JButton("Active border");
 		colorActiveBorderButton.setBorder(BorderFactory.createLineBorder(Settings.getActiveBorderColor(), 3));
 		colorActiveBorderButton.addActionListener(new ActionListener(){
 			public void actionPerformed(ActionEvent event) {
 				if ( event.getSource()==colorActiveBorderButton ) {
-					Color c = JColorChooser.showDialog(colorActiveBorderButton, "Foreground", Settings.getActiveBorderColor());		
+					Color c = JColorChooser.showDialog(colorActiveBorderButton, "Foreground", Settings.getActiveBorderColor());
 					colorActiveBorderButton.setBorder(BorderFactory.createLineBorder(c));
 					Settings.setActiveBorderColor(c);
 				}
@@ -419,7 +480,7 @@ public class SettingsFrame extends JDialog {
 		colorInactiveBorderButton.addActionListener(new ActionListener(){
 			public void actionPerformed(ActionEvent event) {
 				if ( event.getSource()==colorInactiveBorderButton ) {
-					Color c = JColorChooser.showDialog(colorInactiveBorderButton, "Background", Settings.getInactiveBorderColor());		
+					Color c = JColorChooser.showDialog(colorInactiveBorderButton, "Background", Settings.getInactiveBorderColor());
 					colorInactiveBorderButton.setBorder(BorderFactory.createLineBorder(c));
 					Settings.setInactiveBorderColor(c);
 				}
@@ -441,8 +502,7 @@ public class SettingsFrame extends JDialog {
 					colorLocalFgButton.setForeground(Settings.DIR_FG_COLOR_LOCAL);
 					colorLocalFgButton.setBackground(Settings.DIR_BG_COLOR_LOCAL);
 					colorLocalBgButton.setForeground(Settings.DIR_FG_COLOR_LOCAL);
-					colorLocalBgButton.setBackground(Settings.DIR_BG_COLOR_LOCAL);					
-					
+					colorLocalBgButton.setBackground(Settings.DIR_BG_COLOR_LOCAL);
 					colorActiveBorderButton.setBorder(BorderFactory.createLineBorder(Settings.ACTIVE_BORDER_COLOR));
 					colorInactiveBorderButton.setBorder(BorderFactory.createLineBorder(Settings.INACTIVE_BORDER_COLOR));
 
@@ -456,21 +516,21 @@ public class SettingsFrame extends JDialog {
 		});
 
 		JPanel colorPanel = new JPanel();
-		
-		GridBagConstraints gbc = new GridBagConstraints();		
-		colorPanel.setLayout(new GridBagLayout());		
+
+		GridBagConstraints gbc = new GridBagConstraints();
+		colorPanel.setLayout(new GridBagLayout());
 		gbc.fill = GridBagConstraints.HORIZONTAL;
-		
+
 		addToGridBag(0, 0, 0.0, 0.0, gbc, colorPanel, new JLabel("Color theme:"));
 		addToGridBag(1, 0, 0.0, 0.0, gbc, colorPanel, colourBox);
 		addToGridBag(2, 0, 0.5, 0.0, gbc, colorPanel, new JPanel());
 		addToGridBag(3, 0, 1.0, 0.0, gbc, colorPanel, new JPanel());
-		
+
 		addToGridBag(0, 1, 0.0, 0.0, gbc, colorPanel, new JLabel(""));
 		addToGridBag(1, 1, 0.0, 0.0, gbc, colorPanel, colorResetButton);
 		addToGridBag(2, 1, 0.0, 0.0, gbc, colorPanel, new JPanel());
 		addToGridBag(3, 1, 1.0, 0.0, gbc, colorPanel, new JPanel());
-		
+
 		addToGridBag(0, 2, 0.0, 0.0, gbc, colorPanel, new JLabel("Commodore"));
 		addToGridBag(1, 2, 0.0, 0.0, gbc, colorPanel, colorFgButton);
 		addToGridBag(2, 2, 0.0, 0.0, gbc, colorPanel, colorBgButton);
@@ -480,29 +540,29 @@ public class SettingsFrame extends JDialog {
 		addToGridBag(1, 3, 0.0, 0.0, gbc, colorPanel, colorCpmFgButton);
 		addToGridBag(2, 3, 0.0, 0.0, gbc, colorPanel, colorCpmBgButton);
 		addToGridBag(3, 3, 1.0, 0.0, gbc, colorPanel, new JPanel());
-	
+
 		addToGridBag(0, 4, 0.0, 0.0, gbc, colorPanel, new JLabel("File system"));
 		addToGridBag(1, 4, 0.0, 0.0, gbc, colorPanel, colorLocalFgButton);
 		addToGridBag(2, 4, 0.0, 0.0, gbc, colorPanel, colorLocalBgButton);
 		addToGridBag(3, 4, 1.0, 0.0, gbc, colorPanel, new JPanel());
-		
+
 		addToGridBag(0, 5, 0.0, 0.0, gbc, colorPanel, new JLabel("Border"));
 		addToGridBag(1, 5, 0.0, 0.0, gbc, colorPanel, colorActiveBorderButton);
 		addToGridBag(2, 5, 0.0, 0.0, gbc, colorPanel, colorInactiveBorderButton);
 		addToGridBag(3, 5, 1.0, 0.0, gbc, colorPanel, new JPanel());
-		
+
 		addToGridBag(0, 6, 0.5, 0.8, gbc, colorPanel, new JPanel());
 		return colorPanel;
 	}
-	
+
 	/**
 	 * Create the panel with database settings.
 	 * @return JPanel
 	 */
 	private JPanel drawDatabasePanel() {
-		JPanel dbPanel = new JPanel();		
-		GridBagConstraints gbc = new GridBagConstraints();		
-		dbPanel.setLayout(new GridBagLayout());		
+		JPanel dbPanel = new JPanel();
+		GridBagConstraints gbc = new GridBagConstraints();
+		dbPanel.setLayout(new GridBagLayout());
 		gbc.fill = GridBagConstraints.HORIZONTAL;
 
 		useJdbcCheckBox = new JCheckBox("Use database");
@@ -513,13 +573,13 @@ public class SettingsFrame extends JDialog {
 		jdbcPassword = new JPasswordField(Settings.getJdbcPassword());
 		final JButton testConnectionButton = new JButton("Test connection");
 		status.setFont(new Font("Verdana", Font.PLAIN, status.getFont().getSize()));
-		
+
 		DecimalFormat format = new DecimalFormat("###");
-	    format.setGroupingUsed(true);
-	    format.setGroupingSize(3);
-	    format.setParseIntegerOnly(false);
+		format.setGroupingUsed(true);
+		format.setGroupingSize(3);
+		format.setParseIntegerOnly(false);
 		maxRows = new NumericTextField("10", 10, format);
-		
+
 		useJdbcCheckBox.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent event) {
 				if (event.getSource() == useJdbcCheckBox) {
@@ -533,7 +593,7 @@ public class SettingsFrame extends JDialog {
 				}
 			}
 		});
-		
+
 		testConnectionButton.setToolTipText("Test the JDBC connection.");
 		testConnectionButton.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent event) {
@@ -543,7 +603,7 @@ public class SettingsFrame extends JDialog {
 				}
 			}
 		});
-		
+
 		boolean jdbcEnabled = useJdbcCheckBox.isSelected();
 		jdbcDriver.setEnabled(jdbcEnabled);
 		jdbcUrl.setEnabled(jdbcEnabled);
@@ -551,36 +611,35 @@ public class SettingsFrame extends JDialog {
 		jdbcPassword.setEnabled(jdbcEnabled);
 		maxRows.setEnabled(jdbcEnabled);
 		testConnectionButton.setEnabled(jdbcEnabled);
-		
-		String sqlString = 
+
+		String sqlString =
 				"\nThe database feature requires access to a SQL database and a JDBC driver for the database in the class path.\n" +
-				"MySQL ConnectJ ("+ JDBC_MYSQL_URL +") and PostgreSQL (" + JDBC_POSTGRESQL_URL + ") has been fouind working with DroiD64.\n" +
-				"The setup_database.sql script to prepare the database tables is included in the DroiD64 jar file.";
-		
+						"MySQL ConnectJ ("+ JDBC_MYSQL_URL +") and PostgreSQL (" + JDBC_POSTGRESQL_URL + ") has been fouind working with DroiD64.\n" +
+						"The setup_database.sql script to prepare the database tables is included in the DroiD64 jar file.";
+
 		final JTextArea messageTextArea = new JTextArea(10,45);
 
 		final JButton viewSqlButton = new JButton("Database SQL");
 		viewSqlButton.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent event) {
 				if (event.getSource() == viewSqlButton) {
-					new TextViewFrame(settingsFrame, "DroiD64","SQL database setup", SQL, true);
+					new TextViewDialog(settingsFrame, "DroiD64","SQL database setup", SQL, true, "text/plain");
 				}
 			}
 		});
-		
+
 		messageTextArea.setBackground(new Color(230,230,230));
 		messageTextArea.setEditable(false);
 		messageTextArea.setWrapStyleWord(true);
 		messageTextArea.setLineWrap(true);
 		messageTextArea.setText(sqlString);
 		messageTextArea.setCaretPosition(0);
-		
-		
+
 		JPanel buttonPanel = new JPanel();
 		buttonPanel.add(viewSqlButton);
 		buttonPanel.add(testConnectionButton);
 		buttonPanel.add(new JPanel());
-		
+
 		addToGridBag(0, 0, 0.0, 0.0, gbc, dbPanel, new JPanel());
 		addToGridBag(1, 0, 0.5, 0.0, gbc, dbPanel, useJdbcCheckBox);
 		addToGridBag(0, 1, 0.0, 0.0, gbc, dbPanel, new JLabel("JDBC driver class:"));
@@ -598,61 +657,128 @@ public class SettingsFrame extends JDialog {
 		addToGridBag(0, 7, 0.0, 0.0, gbc, dbPanel, new JLabel("Status:"));
 		addToGridBag(1, 7, 0.5, 0.0, gbc, dbPanel, status);
 		addToGridBag(0, 8, 0.0, 0.0, gbc, dbPanel, new JPanel());
-		
+
 		gbc.fill = GridBagConstraints.BOTH;
 
 		addToGridBag(1, 8, 0.5, 0.9, gbc, dbPanel, new JScrollPane(messageTextArea));
 
 		return dbPanel;
 	}
-		
+
 	/**
 	 * Setup MAX_PLUGINS of panels for plugins.
+	 * @param mainPanel
 	 * @return JPanel[]
 	 */
-	private JPanel[] drawPluginPanel(){
+	private JPanel[] drawPluginPanel(final MainPanel mainPanel){
 		JPanel pluginPanel[] = new JPanel[Settings.MAX_PLUGINS];
-		
+
+		final JButton[] browseButtons = new JButton[Settings.MAX_PLUGINS];
+
+		ActionListener browseButtonListener = new ActionListener() {
+			@Override
+			public void actionPerformed(ActionEvent event) {
+				for (int i=0; i<browseButtons.length; i++) {
+					if (browseButtons[i]!=null && event.getSource() == browseButtons[i]) {
+						if (cmdChooser == null) {
+							String dir = browseButtons[i].getText();
+							if (dir!= null && !dir.isEmpty()) {
+								File f = new File(dir);
+								if (f.exists()) {
+									dir = f.getParent();
+								} else {
+									dir = null;
+								}
+							}
+							if (dir == null) {
+								dir = System.getProperty("user.dir");
+							}
+							cmdChooser = new JFileChooser(dir!=null ? dir : "");
+							cmdChooser.setMultiSelectionEnabled(false);
+							cmdChooser.setDialogType(JFileChooser.FILES_ONLY | JFileChooser.OPEN_DIALOG);
+							cmdChooser.setDialogTitle("Choose executable");
+						}
+						if (cmdChooser.showOpenDialog(new JFrame()) == JFileChooser.APPROVE_OPTION) {
+							String cmd = cmdChooser.getSelectedFile()+"";
+							if (!cmd.isEmpty()) {
+								if (new File(cmd).canExecute()) {
+									pluginCommandTextField[i].setText(cmd);
+								} else {
+									mainPanel.appendConsole("File '" + cmd + "' is not executeable!");
+								}
+							} else {
+								pluginCommandTextField[i].setText("");
+							}
+						}
+					}
+				}
+			}
+		};
+
 		for (int i = 0; i < Settings.MAX_PLUGINS; i++) {
 			pluginPanel[i] = new JPanel();
-	
-			GridBagConstraints gbc = new GridBagConstraints();		
-			pluginPanel[i].setLayout(new GridBagLayout());				
+
+			GridBagConstraints gbc = new GridBagConstraints();
+			pluginPanel[i].setLayout(new GridBagLayout());
 			gbc.fill = GridBagConstraints.HORIZONTAL;
-			
+
 			pluginLabelTextField[i] = new JTextField();
 			pluginLabelTextField[i].setToolTipText("Enter label here.");
 			pluginLabelTextField[i].setBorder(BorderFactory.createLineBorder(Color.BLACK));
-						
-			pluginCommandTextField[i] = new JTextArea(4, 20);
-			pluginCommandTextField[i].setLineWrap(true);
-			pluginCommandTextField[i].setWrapStyleWord(true);
-			pluginCommandTextField[i].setToolTipText("Enter a single command to execute here (no parameters allowed).");
+
+			pluginCommandTextField[i] = new JTextField();
+			pluginCommandTextField[i].setToolTipText("File to execute.");
 			pluginCommandTextField[i].setBorder(BorderFactory.createLineBorder(Color.BLACK));
+
+			browseButtons[i] = new JButton("...");
+			browseButtons[i].addActionListener(browseButtonListener);
+
+			pluginArgumentTextField[i] = new JTextArea(4, 20);
+			pluginArgumentTextField[i].setLineWrap(true);
+			pluginArgumentTextField[i].setWrapStyleWord(true);
+			pluginArgumentTextField[i].setToolTipText(
+					"<html>Arguments to file to be executed. " +
+							"These are keywords which may be used in the arguments:<ul>" +
+							"<li><i>{image}</i> - The filename of the disk image.</li>" +
+							"<li><i>{files}</i> - The names of the selected files.</li>" +
+							"<li><i>{imagefiles}</i> - Similar to <i>{files}</i> but each file is prefixed by the <i>image</i>:.</li>" +
+							"<li><i>{target}</i> - The path of the the other disk pane.</li>" +
+							"<li><i>{newfile}</i> - Opens a file dialog asking for a name for a new disk image.</li>" +
+					"</ul></html>");
+			pluginArgumentTextField[i].setBorder(BorderFactory.createLineBorder(Color.BLACK));
 
 			pluginDescriptionTextField[i] = new JTextArea(4, 20);
 			pluginDescriptionTextField[i].setLineWrap(true);
 			pluginDescriptionTextField[i].setWrapStyleWord(true);
 			pluginDescriptionTextField[i].setToolTipText("Enter description here.");
 			pluginDescriptionTextField[i].setBorder(BorderFactory.createLineBorder(Color.BLACK));
-			
+
 			if (i < Settings.getExternalPrograms().length && Settings.getExternalPrograms()[i] != null) {
 				pluginLabelTextField[i].setText(Settings.getExternalPrograms()[i].getLabel());
 				pluginCommandTextField[i].setText(Settings.getExternalPrograms()[i].getCommand());
+				pluginArgumentTextField[i].setText(Settings.getExternalPrograms()[i].getArguments());
 				pluginDescriptionTextField[i].setText(Settings.getExternalPrograms()[i].getDescription());
 			} else {
 				pluginLabelTextField[i].setText("");
 				pluginCommandTextField[i].setText("");
-				pluginDescriptionTextField[i].setText("");				
+				pluginArgumentTextField[i].setText("");
+				pluginDescriptionTextField[i].setText("");
 			}
-			
+
+			JPanel cmdPanel = new JPanel();
+			cmdPanel.setLayout(new BorderLayout());
+			cmdPanel.add(pluginCommandTextField[i], BorderLayout.CENTER);
+			cmdPanel.add(browseButtons[i], BorderLayout.EAST);
+
 			addToGridBag(0, 0, 0.0, 0.0, gbc, pluginPanel[i], new JLabel("Label:"));
-			addToGridBag(1, 0, 0.5, 0.0, gbc, pluginPanel[i], pluginLabelTextField[i]);			
+			addToGridBag(1, 0, 0.5, 0.0, gbc, pluginPanel[i], pluginLabelTextField[i]);
 			addToGridBag(0, 1, 0.0, 0.0, gbc, pluginPanel[i], new JLabel("Command:"));
-			addToGridBag(1, 1, 0.5, 0.0, gbc, pluginPanel[i], pluginCommandTextField[i]);			
-			addToGridBag(0, 2, 0.0, 0.0, gbc, pluginPanel[i], new JLabel("Description:"));
-			addToGridBag(1, 2, 0.5, 0.0, gbc, pluginPanel[i], pluginDescriptionTextField[i]);
-			addToGridBag(0, 3, 0.5, 0.9, gbc, pluginPanel[i], new JPanel());
+			addToGridBag(1, 1, 0.5, 0.0, gbc, pluginPanel[i], cmdPanel);
+			addToGridBag(0, 2, 0.0, 0.0, gbc, pluginPanel[i], new JLabel("Arguments:"));
+			addToGridBag(1, 2, 0.5, 0.0, gbc, pluginPanel[i], pluginArgumentTextField[i]);
+			addToGridBag(0, 3, 0.0, 0.0, gbc, pluginPanel[i], new JLabel("Description:"));
+			addToGridBag(1, 3, 0.5, 0.0, gbc, pluginPanel[i], pluginDescriptionTextField[i]);
+			addToGridBag(0, 4, 0.5, 0.9, gbc, pluginPanel[i], new JPanel());
 		}
 		return pluginPanel;
 	}
@@ -664,14 +790,14 @@ public class SettingsFrame extends JDialog {
 	 */
 	private String openImgDirDialog(String directory) {
 		JFileChooser chooser = new JFileChooser(directory);
-	    chooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
+		chooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
 		chooser.setMultiSelectionEnabled(false);
 		if (chooser.showOpenDialog(this) == JFileChooser.APPROVE_OPTION) {
 			return chooser.getSelectedFile()+"";
 		}
 		return null;
-	}	
-	
+	}
+
 	/**
 	 * Wrapper to add a JComponent to a GridBagConstraints.
 	 * @param x column
@@ -689,5 +815,5 @@ public class SettingsFrame extends JDialog {
 		gbc.gridy = y;
 		parent.add(component, gbc);
 	}
-	
+
 }

@@ -17,7 +17,7 @@
  *   You should have received a copy of the GNU General Public License
  *   along with this program; if not, write to the Free Software
  *   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
- *   
+ *
  *   eMail: wolfvoz@users.sourceforge.net
  *   http://droid64.sourceforge.net
  */
@@ -46,16 +46,16 @@ class EntryTableModel extends AbstractTableModel {
 	public final static int MODE_LOCAL = 3;
 
 	private int mode = MODE_CBM;
-				
+
 	private static final String[] COLHEADS_CBM = { "Nr", "Bl", "Name", "Ty", "Fl", "Tr", "Se" };
 	private static final String[] COLHEADS_CPM = { "Nr", "Rec", "Name", "Ext", "Attr", "Tr", "Se" };
 	private static final String[] COLHEADS_LOCAL = { "Nr", "Name", "Attr", "Size" };
-	
+
 	private static final int[] COLWIDTH_CBM = {1,1,220, 1,1,1,1};
 	private static final int[] COLWIDTH_CPM = {1,1,220,1,1,1,1};
 	private static final int[] COLWIDTH_LOCAL = {1, 220, 1,1};
-	
-	
+
+
 	protected Vector<DirEntry> data = new Vector<DirEntry>();
 
 	public EntryTableModel() {
@@ -76,7 +76,7 @@ class EntryTableModel extends AbstractTableModel {
 		case MODE_CPM: return COLHEADS_CPM.length;
 		case MODE_LOCAL: return COLHEADS_LOCAL.length;
 		default: return 0;
-		}		
+		}
 	}
 
 	public synchronized int getRowCount() {
@@ -92,47 +92,50 @@ class EntryTableModel extends AbstractTableModel {
 		DirEntry p = data.elementAt(row);
 		return p.isImageFile();
 	}
-	
+
 	public synchronized Object getValueAt(int row, int column) {
 		try {
 			//		{ "Nr", "Bl", "Name", "Ty", "Fl", "Tr", "Se" };
 			DirEntry p = data.elementAt(row);
+			if (p == null) {
+				return "";
+			}
 			switch (mode) {
-				case MODE_CBM:
-					switch (column) {
-						case 0:	return new Integer(p.getNumber());
-						case 1:	return new Integer(p.getBlocks());
-						case 2:	return p.getName();
-						case 3:	return p.getType();
-						case 4:	return p.getFlags();
-						case 5: return new Integer(p.getTrack());
-						case 6: return new Integer(p.getSector());
-						default: return "";
-					}
-				case MODE_CPM:
-					switch (column) {
-					case 0:	return new Integer(p.getNumber());
-					case 1:	return new Integer(p.getBlocks());
-					case 2:	return p.getName();
-					case 3:	return p.getType();
-					case 4:	return p.getFlags();
-					case 5: return new Integer(p.getTrack());
-					case 6: return new Integer(p.getSector());
-					default: return "";
-				}	
-				case MODE_LOCAL:
-					switch (column) {
-					case 0:	return new Integer(p.getNumber());
-					case 1:	return p.getName();
-					case 2:	return p.getFlags();
-					case 3:	return new Integer(p.getBlocks());
-					case 4:	return "";
-					case 5: return "";
-					case 6: return "";
-					default: return "";
+			case MODE_CBM:
+				switch (column) {
+				case 0:	return new Integer(p.getNumber());
+				case 1:	return new Integer(p.getBlocks());
+				case 2:	return p.getName();
+				case 3:	return p.getType();
+				case 4:	return p.getFlags();
+				case 5: return new Integer(p.getTrack());
+				case 6: return new Integer(p.getSector());
+				default: return "";
 				}
-				default:
-					return "";
+			case MODE_CPM:
+				switch (column) {
+				case 0:	return new Integer(p.getNumber());
+				case 1:	return new Integer(p.getBlocks());
+				case 2:	return p.getName();
+				case 3:	return p.getType();
+				case 4:	return p.getFlags();
+				case 5: return new Integer(p.getTrack());
+				case 6: return new Integer(p.getSector());
+				default: return "";
+				}
+			case MODE_LOCAL:
+				switch (column) {
+				case 0:	return new Integer(p.getNumber());
+				case 1:	return p.getName();
+				case 2:	return p.getFlags();
+				case 3:	return new Integer(p.getBlocks());
+				case 4:	return "";
+				case 5: return "";
+				case 6: return "";
+				default: return "";
+				}
+			default:
+				return "";
 			}
 		} catch (ArrayIndexOutOfBoundsException e) {
 			return "";
@@ -144,9 +147,9 @@ class EntryTableModel extends AbstractTableModel {
 		for (int i=0; i<getColumnCount(); i++) {
 			int wdt = 1;
 			switch (mode) {
-				case MODE_CBM: wdt = COLWIDTH_CBM[i]; break;
-				case MODE_CPM: wdt = COLWIDTH_CPM[i]; break;
-				case MODE_LOCAL: wdt = COLWIDTH_LOCAL[i]; break;
+			case MODE_CBM: wdt = COLWIDTH_CBM[i]; break;
+			case MODE_CPM: wdt = COLWIDTH_CPM[i]; break;
+			case MODE_LOCAL: wdt = COLWIDTH_LOCAL[i]; break;
 			}
 			TableColumn col = new TableColumn(i, wdt);
 			col.setHeaderValue(getColumnName(i));
@@ -154,7 +157,7 @@ class EntryTableModel extends AbstractTableModel {
 		}
 		return columnModel;
 	}
-	
+
 	public synchronized void updateDirEntry(DirEntry dirEntry) {
 		data.add(dirEntry);
 		fireTableRowsInserted(data.size()-1, data.size()-1);
@@ -167,7 +170,7 @@ class EntryTableModel extends AbstractTableModel {
 			return null;
 		}
 	}
-	
+
 	public synchronized void clear() {
 		int oldSize = data.size();
 		data.clear();
@@ -177,7 +180,7 @@ class EntryTableModel extends AbstractTableModel {
 	public void setMode(int mode) {
 		this.mode = mode;
 	}
-	
+
 	public int getMode() {
 		return mode;
 	}

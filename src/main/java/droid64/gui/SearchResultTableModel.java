@@ -8,7 +8,7 @@ import droid64.db.SearchResultRow;
 
 /**
  * Table model to handle search results.
- * @see SearchFrame
+ * @see SearchDialog
  * @author Henrik
  */
 public class SearchResultTableModel extends AbstractTableModel {

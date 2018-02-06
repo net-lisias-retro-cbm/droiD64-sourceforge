@@ -45,7 +45,7 @@ import droid64.db.SearchResultRow;
  * 
  * @author Henrik
  */
-public class SearchFrame extends JDialog {
+public class SearchDialog extends JDialog {
 
 	private static final long serialVersionUID = 1L;
 	private MainPanel mainPanel;
@@ -56,7 +56,7 @@ public class SearchFrame extends JDialog {
 	 * @param topText String
 	 * @param mainPanel MainPanel
 	 */
-	public SearchFrame (String topText, MainPanel mainPanel) {
+	public SearchDialog (String topText, MainPanel mainPanel) {
 		setTitle(topText);
 		setModal(true);
 		this.mainPanel = mainPanel;

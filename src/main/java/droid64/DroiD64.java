@@ -1,5 +1,7 @@
 package droid64;
 
+import javax.swing.JFrame;
+
 import droid64.gui.MainPanel;
 import droid64.gui.Settings;
 
@@ -22,7 +24,7 @@ import droid64.gui.Settings;
  *   You should have received a copy of the GNU General Public License
  *   along with this program; if not, write to the Free Software
  *   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
- *   
+ *
  *   eMail: wolfvoz@users.sourceforge.net
  *   http://droid64.sourceforge.net
  *</pre>
@@ -31,15 +33,14 @@ import droid64.gui.Settings;
 public class DroiD64 {
 
 	public static final String PROGNAME = "droiD64";
-	public static final String VERSION = "0.11b";
+	public static final String VERSION = "0.12b";
 	public static final String TITLE = "Beta Version Warning: MAY HAVE ERRORS! USE ONLY ON BACKUPS! LOOK AT \"BUGS AND TO-DO\"!";
-	
+
 	public DroiD64() {
-		new MainPanel();
 	}
-	
+
 	public static void main(String[] args) {
 		Settings.loadSettingsFromFile();
-		new DroiD64();
+		new MainPanel(new JFrame());
 	}
 }

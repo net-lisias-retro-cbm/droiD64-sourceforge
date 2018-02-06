@@ -114,6 +114,8 @@ public class D71 extends DiskImage {
 			new CbmTrack( 17, 1349, 0x54500 ),   // 70
 	};
 
+	/** Name of the image type */
+	public final static String IMAGE_TYPE_NAME = "D71";
 	/** The normal size of a D71 image (1366 * 256) */
 	private final static int D71_SIZE = 349696;
 	/** Track number of directory */
@@ -147,6 +149,12 @@ public class D71 extends DiskImage {
 	private static final int LAST_TRACK = 70;
 
 	public D71() {
+		initCbmFile(FILE_NUMBER_LIMIT);
+	}
+
+	public D71(byte[] imageData) {
+		cbmDisk = imageData;
+		bam = new CbmBam(TRACKS.length, 4);
 		initCbmFile(FILE_NUMBER_LIMIT);
 	}
 
@@ -194,7 +202,7 @@ public class D71 extends DiskImage {
 	/** {@inheritDoc} */
 	protected void readImage(String filename) throws CbmException {
 		bam = new CbmBam(TRACKS.length, 4);
-		readImage(filename, D71_SIZE, "D71");
+		readImage(filename, D71_SIZE, IMAGE_TYPE_NAME);
 	}
 
 	/** {@inheritDoc} */

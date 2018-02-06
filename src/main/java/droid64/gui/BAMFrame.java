@@ -66,7 +66,7 @@ public class BAMFrame extends JFrame {
 	 * @param diskName
 	 * @param bamEntry_
 	 */
-	public BAMFrame(String topText, String diskName, String[][] bamEntry, final String diskFileName, final DiskImage diskImage) {
+	public BAMFrame(String topText, String diskName, String[][] bamEntry, final String diskFileName, final DiskImage diskImage, boolean writable) {
 		super(topText);
 		final JButton saveButton = new JButton("Save");
 		saveButton.setToolTipText("Save changed BAM to disk.");
@@ -87,7 +87,8 @@ public class BAMFrame extends JFrame {
 		editModeButton.setToolTipText("Click blocks to toggle used/free.");
 		viewModeButton.setMargin(new Insets(1, 4, 1, 4));
 		editModeButton.setMargin(new Insets(1, 4, 1, 4));
-
+		editModeButton.setEnabled(writable);
+		viewModeButton.setEnabled(writable);
 		ButtonGroup modeGroup = new ButtonGroup();
 		modeGroup.add(viewModeButton);
 		modeGroup.add(editModeButton);
@@ -164,7 +165,7 @@ public class BAMFrame extends JFrame {
 								byte[] data = diskImage.getBlock(row+1, col-1);
 								if (data != null) {
 									String info = "Track  "+(row+1)+ " Sector "+(col-1) + " (0x" + Integer.toHexString(diskImage.getSectorOffset(row+1,col-1))+")";
-									new HexViewFrame(DroiD64.PROGNAME+" v"+DroiD64.VERSION+" - Block view", info, data, data.length);
+									new HexViewDialog(DroiD64.PROGNAME+" v"+DroiD64.VERSION+" - Block view", info, data, data.length);
 								}
 							} catch (CbmException e) {}
 						}

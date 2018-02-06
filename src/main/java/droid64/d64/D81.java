@@ -34,6 +34,8 @@ public class D81 extends DiskImage {
 
 	/** Max number of directory entries in image : (40 - 3) * 8 = 296 */
 	private static final int FILE_NUMBER_LIMIT = 296;
+	/** Name of the image type */
+	public final static String IMAGE_TYPE_NAME = "D81";
 	/** The normal size of a D81 image (80 * 40  * 256) */
 	private final static int D81_SIZE = 819200;
 	/** Number of sectors per track (40) */
@@ -65,6 +67,12 @@ public class D81 extends DiskImage {
 	
 	/** Constructor */
 	public D81() {
+		initCbmFile(FILE_NUMBER_LIMIT);
+	}
+
+	public D81(byte[] imageData) {
+		cbmDisk = imageData;
+		bam = new CbmBam(TRACK_COUNT, BYTES_PER_BAM_TRACK);
 		initCbmFile(FILE_NUMBER_LIMIT);
 	}
 
@@ -101,7 +109,7 @@ public class D81 extends DiskImage {
 	/** {@inheritDoc} */
 	protected void readImage(String filename) throws CbmException {
 		bam = new CbmBam(TRACK_COUNT, BYTES_PER_BAM_TRACK);
-		readImage(filename, D81_SIZE, "D81");
+		readImage(filename, D81_SIZE, IMAGE_TYPE_NAME);
 	}
 
 	/** {@inheritDoc} */

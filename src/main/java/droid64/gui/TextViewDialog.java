@@ -18,7 +18,7 @@ import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
-import javax.swing.JTextArea;
+import javax.swing.JTextPane;
 import javax.swing.JToggleButton;
 
 import droid64.d64.CbmException;
@@ -42,21 +42,21 @@ import droid64.d64.CbmException;
  *   You should have received a copy of the GNU General Public License
  *   along with this program; if not, write to the Free Software
  *   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
- *   
+ *
  *   http://droid64.sourceforge.net
  *
  * @author Henrik
  * </pre>
  */
-public class TextViewFrame extends JDialog {
+public class TextViewDialog extends JDialog {
 
 	private static final long serialVersionUID = 1L;
-	private JTextArea textArea;
+	private JTextPane textPane;
 
 	private Font normalFont;
 	private Font cbmFont;
-	
-	public TextViewFrame(String windowTitle, String title, byte[] data) {
+
+	public TextViewDialog(String windowTitle, String title, byte[] data) {
 		setModal(false);
 		setModalityType(ModalityType.MODELESS);
 		setTitle(windowTitle);
@@ -73,32 +73,36 @@ public class TextViewFrame extends JDialog {
 				}
 			}
 			String s = new String(Arrays.copyOfRange(filtered, 0, out), "ISO-8859-1");
-			setup(title, s);			
+			setup(title, s, null);
 		} catch (UnsupportedEncodingException e) {
 			e.printStackTrace();
 		}
 	}
 
-	
-	public TextViewFrame(JDialog parent, String windowTitle, String title, String message, boolean isModal) {
+
+	public TextViewDialog(JDialog parent, String windowTitle, String title, String message, boolean isModal, String mimetype) {
 		super(parent, windowTitle);
 		setModal(isModal);
 		setTitle(windowTitle);
-		setup(title, message);
+		setup(title, message, mimetype);
 	}
 
-	public TextViewFrame(JFrame parent, String windowTitle, String title, String message) {
+	public TextViewDialog(JFrame parent, String windowTitle, String title, String message, String mimetype) {
 		super(parent, windowTitle);
 		setModal(true);
 		setTitle(windowTitle);
-		setup(title, message);
+		setup(title, message, mimetype);
 	}
-	
-	
-	private void setup(final String title, final String message) {
-		textArea = new JTextArea(message);
-		textArea.setEditable(false);
-		
+
+	private void setup(final String title, final String message, final String mimetype) {
+		textPane = new JTextPane();
+		if (mimetype != null) {
+			textPane.setContentType(mimetype);
+		} else {
+			textPane.setContentType("text/plain");
+		}
+		textPane.setText(message);
+
 		try {
 			cbmFont = Settings.getCommodoreFont();
 		} catch (CbmException e1) {
@@ -115,8 +119,8 @@ public class TextViewFrame extends JDialog {
 					dispose();
 				}
 			}
-		});		
-		
+		});
+
 		final JToggleButton c64ModeButton = new JToggleButton("C64 mode");
 		c64ModeButton.setMnemonic('c');
 		c64ModeButton.addActionListener(new ActionListener() {
@@ -124,14 +128,14 @@ public class TextViewFrame extends JDialog {
 				if (event.getSource() == c64ModeButton) {
 					boolean c64Mode = c64ModeButton.isSelected();
 					if (c64Mode) {
-						textArea.setFont(cbmFont);
+						textPane.setFont(cbmFont);
 					} else {
-						textArea.setFont(normalFont);
+						textPane.setFont(normalFont);
 					}
 				}
 			}
 		});
-		
+
 		final JButton printButton = new JButton("Print");
 		printButton.setMnemonic('p');
 		printButton.setToolTipText("Print");
@@ -142,17 +146,19 @@ public class TextViewFrame extends JDialog {
 				}
 			}
 		});
-		
-		JPanel buttonPanel = new JPanel();		
+
+		JPanel buttonPanel = new JPanel();
 		buttonPanel.add(printButton);
-		buttonPanel.add(c64ModeButton);
+		if (!"text/html".equals(mimetype)) {
+			buttonPanel.add(c64ModeButton);
+		}
 		buttonPanel.add(okButton);
-		
+
 		Container cp = getContentPane();
 		cp.setLayout(new BorderLayout());
-		cp.add(new JLabel(title), BorderLayout.NORTH);		
-		cp.add(new JScrollPane(textArea), BorderLayout.CENTER);		
-		cp.add(buttonPanel, BorderLayout.SOUTH);		
+		cp.add(new JLabel(title), BorderLayout.NORTH);
+		cp.add(new JScrollPane(textPane), BorderLayout.CENTER);
+		cp.add(buttonPanel, BorderLayout.SOUTH);
 
 		Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
 		setLocation(
@@ -163,18 +169,18 @@ public class TextViewFrame extends JDialog {
 		setVisible(true);
 		this.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
 	}
-	
+
 	private void print(final String text, final String title, boolean useCbmFont) {
-		PrinterJob job = PrinterJob.getPrinterJob();		
+		PrinterJob job = PrinterJob.getPrinterJob();
 		job.setPageable(new PrintPageable(text, title, useCbmFont, false));
 		boolean doPrint = job.printDialog();
 		if (doPrint) {
-		    try {
-		        job.print();
-		    } catch (PrinterException e) {
-		    	e.printStackTrace();
-		    }
+			try {
+				job.print();
+			} catch (PrinterException e) {
+				e.printStackTrace();
+			}
 		}
 	}
-	
+
 }

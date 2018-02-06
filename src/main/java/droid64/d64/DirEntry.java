@@ -1,6 +1,7 @@
 package droid64.d64;
 
 import java.io.File;
+import java.util.zip.ZipEntry;
 
 /**<pre style='font-family:sans-serif;'>
  * Created on 05.07.2004
@@ -40,6 +41,7 @@ public class DirEntry {
 
 	private boolean isFile = true;
 	private boolean isImageFile = false;
+	private File zipFile;
 	
 	public DirEntry() {
 	}
@@ -75,6 +77,20 @@ public class DirEntry {
 		type = file.isDirectory() ? "DIR" : "FILE";
 		flags =	(file.canRead() ? "r" : "-") + (file.canWrite() ? "w" : "-") + (file.canExecute() ? "x" : "-");
 		isImageFile = isFile && DiskImage.isImageFileName(file);
+	}
+
+	public DirEntry(File zipFile, ZipEntry zipEntry, int fileNum) {
+		number = fileNum;
+		name = zipEntry.getName();
+		blocks = (int) zipEntry.getSize();
+		isFile = !zipEntry.isDirectory();
+		isImageFile = isFile && DiskImage.isImageFileName(name);
+		flags = zipEntry.getComment() != null ? zipEntry.getComment() : "";
+		this.zipFile = zipFile;
+	}
+
+	public File getZipFile() {
+		return zipFile;
 	}
 	
 	public boolean isImageFile() {

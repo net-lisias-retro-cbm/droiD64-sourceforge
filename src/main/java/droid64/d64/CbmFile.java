@@ -20,7 +20,7 @@ import java.util.Arrays;
  *   You should have received a copy of the GNU General Public License
  *   along with this program; if not, write to the Free Software
  *   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
- *   
+ *
  *   eMail: wolfvoz@users.sourceforge.net
  *   http://droid64.sourceforge.net
  *</pre>
@@ -45,7 +45,8 @@ public class CbmFile implements Comparable<CbmFile>,Cloneable {
 	private int dirSector;		// next directory sector
 	private int dirPosition;	// position in directory
 	private int offSet;
-		
+	private int lsu;			// last sector usage
+
 	public static final int GEOS_NORMAL    = 0x00;
 	public static final int GEOS_BASIC     = 0x01;
 	public static final int GEOS_ASM       = 0x02;
@@ -62,7 +63,7 @@ public class CbmFile implements Comparable<CbmFile>,Cloneable {
 	public static final int GEOS_TEMP      = 0x0d;
 	public static final int GEOS_AUTOEXEC  = 0x0e;
 	public static final int GEOS_UNDFINED  = 0xff;
-	
+
 	public CbmFile() {
 		fileScratched = true;
 		fileType = 0;
@@ -84,6 +85,7 @@ public class CbmFile implements Comparable<CbmFile>,Cloneable {
 		dirTrack = 0;
 		dirSector = 0;
 		dirPosition = 0;
+		lsu = 0;
 	}
 
 	public CbmFile(
@@ -106,8 +108,9 @@ public class CbmFile implements Comparable<CbmFile>,Cloneable {
 		this.dirTrack = dirTrack;
 		this.dirSector = dirSector;
 		this.dirPosition = dirPosition;
+		this.lsu = 0;
 	}
-	
+
 	public CbmFile(CbmFile that) {
 		this.fileScratched = that.fileScratched;
 		this.fileType = that.fileType;
@@ -129,8 +132,9 @@ public class CbmFile implements Comparable<CbmFile>,Cloneable {
 		this.dirTrack = that.dirTrack;
 		this.dirSector = that.dirSector;
 		this.dirPosition = that.dirPosition;
+		this.lsu = that.lsu;
 	}
-	
+
 	public CbmFile(String name, int fileType, int dirPosition, int track, int sector, int size) {
 		this.name = name;
 		this.fileType = fileType;
@@ -147,7 +151,7 @@ public class CbmFile implements Comparable<CbmFile>,Cloneable {
 	public CbmFile clone() {
 		return new CbmFile(this);
 	}
-	
+
 	/**
 	 * Construct entry from position in disk image.
 	 * @param data byte[]
@@ -159,7 +163,7 @@ public class CbmFile implements Comparable<CbmFile>,Cloneable {
 		fileScratched = (data[position + 0x02] & 0xff) == 0 ? true : false;
 		fileType = data[position + 0x02] & 0x07;
 		fileLocked = (data[position + 0x02] & 0x40) == 0 ? false : true;
-		fileClosed = (data[position + 0x02] & 0x80) == 0 ? false : true;		
+		fileClosed = (data[position + 0x02] & 0x80) == 0 ? false : true;
 		track = data[position + 0x03] & 0xff;
 		sector = data[position + 0x04] & 0xff;
 		StringBuffer buf = new StringBuffer();
@@ -177,7 +181,7 @@ public class CbmFile implements Comparable<CbmFile>,Cloneable {
 		}
 		sizeInBlocks = (data[position + 0x1e] & 0xff) |	((data[position + 0x1f] & 0xff) * 256) ;
 	}
-	
+
 	public String toString() {
 		StringBuilder builder = new StringBuilder();
 		builder.append("CbmFile [");
@@ -185,31 +189,33 @@ public class CbmFile implements Comparable<CbmFile>,Cloneable {
 		builder.append("]");
 		return builder.toString();
 	}
-	
+
 	public String asDirString() {
 		return String.format("%-5s%-18s %s%-3s%s", sizeInBlocks, "\""+name+"\"",
-				fileClosed ? " " : "*", 
-				(fileType < DiskImage.FILE_TYPES.length ? DiskImage.FILE_TYPES[fileType] : "???" ),
-				fileLocked ? "<" : " " );
+				fileClosed ? " " : "*",
+						(fileType < DiskImage.FILE_TYPES.length ? DiskImage.FILE_TYPES[fileType] : "???" ),
+						fileLocked ? "<" : " " );
 	}
-	
+
 	/** {@inheritDoc} */
 	protected void toString(StringBuilder builder) {
+		builder.append(" dirSector=").append(dirSector);
+		builder.append(" dirTrack=").append(dirTrack);
+		builder.append(" fileClosed=").append(fileClosed);
+		builder.append(" fileLocked=").append(fileLocked);
 		builder.append(" fileScratched=").append(fileScratched);
 		builder.append(" fileType=").append(fileType);
-		builder.append(" fileLocked=").append(fileLocked);
-		builder.append(" fileClosed=").append(fileClosed);
-		builder.append(" track=").append(track);
-		builder.append(" sector=").append(sector);
-		builder.append(" name=").append(name);
-		builder.append(" relTrack=").append(relTrack);
-		builder.append(" relSector=").append(relSector);
 		builder.append(" geos=").append(Arrays.toString(geos));
-		builder.append(" sizeInBytes=").append(sizeInBytes);
+		builder.append(" lsu=").append(lsu);
+		builder.append(" name=").append(name);
+		builder.append(" offSet=").append(offSet);
+		builder.append(" relSector=").append(relSector);
+		builder.append(" relTrack=").append(relTrack);
+		builder.append(" sector=").append(sector);
 		builder.append(" sizeInBlocks=").append(sizeInBlocks);
-		builder.append(" dirTrack=").append(dirTrack);
-		builder.append(" dirSector=").append(dirSector);
-		builder.append(" dirPosition=").append(dirPosition);
+		builder.append(" sizeInBytes=").append(sizeInBytes);
+		builder.append(" track=").append(track);
+
 	}
 
 	/**
@@ -430,6 +436,14 @@ public class CbmFile implements Comparable<CbmFile>,Cloneable {
 		this.offSet = offSet;
 	}
 
+	public int getLsu() {
+		return lsu;
+	}
+
+	public void setLsu(int lsu) {
+		this.lsu = lsu;
+	}
+
 	@Override
 	public int compareTo(CbmFile that) {
 		if (this.name == null && that.name == null) {
@@ -440,6 +454,6 @@ public class CbmFile implements Comparable<CbmFile>,Cloneable {
 			return name.compareTo(that.name);
 		}
 	}
-	
+
 
 }

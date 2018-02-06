@@ -31,7 +31,7 @@ import javax.swing.table.TableColumn;
  * 
  * @author Henrik
  */
-public class HexViewFrame extends JDialog {
+public class HexViewDialog extends JDialog {
 
 	private static final long serialVersionUID = 1L;
 	private HexTableModel model;
@@ -43,7 +43,7 @@ public class HexViewFrame extends JDialog {
 	 * @param data a byte array with the data to show
 	 * @param length the length of data to show
 	 */
-	public HexViewFrame (String topText, final String fileName, final byte[] data, int length) {
+	public HexViewDialog (String topText, final String fileName, final byte[] data, int length) {
 		setTitle(topText);
 		setModal(true);
 		Container cp = getContentPane();
