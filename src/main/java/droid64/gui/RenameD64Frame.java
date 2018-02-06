@@ -2,16 +2,23 @@ package droid64.gui;
 import java.awt.BorderLayout;
 import java.awt.Container;
 import java.awt.Dimension;
+import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
 import java.awt.Toolkit;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 
 import javax.swing.JButton;
+import javax.swing.JCheckBox;
+import javax.swing.JComboBox;
+import javax.swing.JComponent;
 import javax.swing.JDialog;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JTextField;
+
+import droid64.d64.DiskImage;
 
 /*
  * Created on 25.06.2004
@@ -43,82 +50,159 @@ import javax.swing.JTextField;
 public class RenameD64Frame extends JDialog {
 
 	private static final long serialVersionUID = 1L;
+
+	private JTextField nameTextField;
+	private JTextField idTextField;
+	private JCheckBox compressedBox;
+	private JCheckBox cpmBox;
+	private JComboBox<Object>  diskTypeBox;
 	
-	public RenameD64Frame (String topText, DiskPanel diskPanel_, String oldDiskName, String oldDiskID) {		
+	public RenameD64Frame (String topText, final DiskPanel diskPanel, String oldDiskName, String oldDiskID, final boolean create) {		
 		setTitle(topText);
-		final DiskPanel diskPanel = diskPanel_;
-		setModal(true);
-		Container cp = getContentPane();
-		cp.setLayout( new BorderLayout());
-		
-		JPanel namePanel = new JPanel();
-		JPanel idPanel = new JPanel();
-		JPanel buttonPanel = new JPanel();
-		
-		JLabel diskNameLabel = new JLabel("Diskname:");
-		final JTextField nameTextField = new JTextField(oldDiskName, 16);
-		nameTextField.setToolTipText("Enter the new label of your D64 here.");
-	
-		JLabel idNameLabel = new JLabel("Disk-ID:");
-		final JTextField idTextField = new JTextField(oldDiskID, 5);
-		idTextField.setToolTipText("Enter the new ID of your D64 here.");
-	
+
 		final JButton exitButton = new JButton("Cancel");
 		exitButton.setMnemonic('c');
 		exitButton.setToolTipText("Cancel and return.");
 		exitButton.addActionListener(new ActionListener(){
 			public void actionPerformed(ActionEvent event){
 				if ( event.getSource() == exitButton ) {
-						diskPanel.setNewDiskNameSuccess(false);
-						dispose();
+					diskPanel.setNewDiskNameSuccess(false);
+					dispose();
 				}
 			}
 		});
-		
-		final JButton okButton = new JButton("Ok");
+
+		final JButton okButton = new JButton("OK");
 		okButton.setMnemonic('o');
 		okButton.setToolTipText("Proceed.");
 		okButton.addActionListener(new ActionListener(){
 			public void actionPerformed(ActionEvent event){
 				if ( event.getSource() == okButton ) {
-						diskPanel.setNewDiskNameSuccess(true);
-
-						String diskName = nameTextField.getText();
-						if (diskName.length() > 16) {
-							diskName = diskName.substring(0,16);
+					diskPanel.setNewDiskNameSuccess(true);
+					String diskName = nameTextField.getText();
+					if (diskName.length() > 16) {
+						diskName = diskName.substring(0,16);
+					}
+					diskPanel.setNewDiskName(diskName);
+					String diskID = idTextField.getText();
+					int diskIdLen = diskID.length();
+					int chosenType = diskTypeBox.getSelectedIndex();
+					if (diskIdLen > 5) {
+						diskID = diskID.substring(0, 5);
+					} else if (diskIdLen <= 2) {
+						diskID = (diskID + "  ").substring(0,2) + (chosenType == 2 ? " 3D" : " 2A");
+					}
+					diskPanel.setNewDiskID(diskID);
+					if (create) {
+						if (chosenType == 0) {
+							diskPanel.setNewDiskType(DiskImage.D64_IMAGE_TYPE);
+						} else if (chosenType == 1) {
+							diskPanel.setNewDiskType(DiskImage.D71_IMAGE_TYPE);
+						} else if (chosenType == 2) {
+							diskPanel.setNewDiskType(DiskImage.D81_IMAGE_TYPE);
 						}
-						diskPanel.setNewDiskName(diskName);
-						String diskID = idTextField.getText();
-						if (diskID.length() > 5) {
-							diskID = diskID.substring(0,5);
-						}
-						diskPanel.setNewDiskID(diskID);
-						dispose();
+						diskPanel.setNewCompressedDisk(compressedBox.isSelected());
+						diskPanel.setNewCpmDisk(cpmBox.isSelected());
+					}
+					dispose();
 				}
 			}
 		});
-		
-		namePanel.add(diskNameLabel);
-		namePanel.add(nameTextField);
-		idPanel.add(idNameLabel);
-		idPanel.add(idTextField);
+
+		JPanel buttonPanel = new JPanel();
 		buttonPanel.add(exitButton);
 		buttonPanel.add(okButton);
 
-		cp.add(namePanel, BorderLayout.NORTH);		
-		cp.add(idPanel, BorderLayout.CENTER);		
+		JPanel mainPanel = setupMainPanel(oldDiskName, oldDiskID, create);
+
+		
+		setModal(true);
+		Container cp = getContentPane();
+		cp.setLayout(new BorderLayout());		
+		cp.add(mainPanel, BorderLayout.CENTER);
 		cp.add(buttonPanel, BorderLayout.SOUTH);		
 
 		Dimension dim = Toolkit.getDefaultToolkit().getScreenSize();
 		setLocation(
-			(int)((dim.width - getSize().getWidth()) / 3),
-			(int)((dim.height - getSize().getHeight()) / 3)
-		);
-//		setLocation(300,200);
+				(int)((dim.width - getSize().getWidth()) / 3),
+				(int)((dim.height - getSize().getHeight()) / 3)
+				);
+		//		setLocation(300,200);
 		pack();
 		setVisible(true);
 
 		setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+	}
+
+	private JPanel setupMainPanel(String diskName, String diskId, boolean create) {
+				
+		nameTextField = new JTextField("", 16);
+		nameTextField.setToolTipText("The label of your image (max 16 characters)");
+		nameTextField.setDocument(new LimitLengthDocument(16, diskName));
+
+		idTextField = new JTextField("", 5);
+		idTextField.setToolTipText("The disk ID of your image.");
+		idTextField.setDocument(new LimitLengthDocument(5, diskId));
+		idTextField.setToolTipText("The disk ID (max 5 characters)");
+		
+		final String[] diskTypes = { "D64", "D71", "D81" };
+		diskTypeBox = new JComboBox<Object>(diskTypes);
+		diskTypeBox.setToolTipText("Select a disktype.");
+		diskTypeBox.setEditable(false);
+		diskTypeBox.setSelectedIndex(0);
+
+		compressedBox = new JCheckBox("Compressed image", false);
+		compressedBox.setToolTipText("GZIP new image.");
+		cpmBox = new JCheckBox("CP/M formatted", false);
+		cpmBox.setToolTipText("Format for CP/M.");
+		
+		JPanel mainPanel = new JPanel();
+
+		GridBagConstraints gbc = new GridBagConstraints();
+		mainPanel.setLayout(new GridBagLayout());				
+		gbc.fill = GridBagConstraints.HORIZONTAL;
+		int row = 0;
+		if (create) {
+			JPanel createPanel = new JPanel();
+			createPanel.add(diskTypeBox);
+			createPanel.add(compressedBox);
+			createPanel.add(cpmBox);
+
+			addToGridBag(0, row, 0.0, 0.0, gbc, mainPanel, new JLabel("Image Type:"));
+			addToGridBag(1, row, 0.0, 0.0, gbc, mainPanel, createPanel);
+			addToGridBag(2, row, 1.0, 0.0, gbc, mainPanel, new JPanel());
+			row++;
+		}
+		addToGridBag(0, row, 0.0, 0.0, gbc, mainPanel, new JLabel("Disk Name:"));
+		addToGridBag(1, row, 0.0, 0.0, gbc, mainPanel, nameTextField);
+		addToGridBag(2, row, 1.0, 0.0, gbc, mainPanel, new JPanel());
+		row++;
+		addToGridBag(0, row, 0.0, 0.0, gbc, mainPanel, new JLabel("Disk ID:"));
+		addToGridBag(1, row, 0.0, 0.0, gbc, mainPanel, idTextField);
+		addToGridBag(2, row, 1.0, 0.0, gbc, mainPanel, new JPanel());
+		row++;		
+		addToGridBag(0, row, 1.0, 1.0, gbc, mainPanel, new JPanel());
+		addToGridBag(1, row, 1.0, 1.0, gbc, mainPanel, new JPanel());
+		addToGridBag(2, row, 1.0, 1.0, gbc, mainPanel, new JPanel());
+		return mainPanel;
+	}
+	
+	/**
+	 * Wrapper to add a JComponent to a GridBagConstraints.
+	 * @param x column
+	 * @param y row
+	 * @param weightx column weight
+	 * @param weighty row weight
+	 * @param gbc GridBagConstaints
+	 * @param parent Parent JComponent to which to add a component
+	 * @param component the new component to add
+	 */
+	private void addToGridBag(int x, int y, double weightx, double weighty, GridBagConstraints gbc, JComponent parent, JComponent component) {
+		gbc.weightx = weightx;
+		gbc.weighty = weighty;
+		gbc.gridx = x;
+		gbc.gridy = y;
+		parent.add(component, gbc);
 	}
 
 }

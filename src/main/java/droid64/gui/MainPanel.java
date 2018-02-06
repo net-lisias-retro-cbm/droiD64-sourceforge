@@ -1,8 +1,8 @@
 package droid64.gui;
 import java.awt.BorderLayout;
-import java.awt.Color;
 import java.awt.Container;
 import java.awt.Dimension;
+import java.awt.FlowLayout;
 import java.awt.Font;
 import java.awt.GridLayout;
 import java.awt.Toolkit;
@@ -25,6 +25,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
+import javax.swing.BorderFactory;
 import javax.swing.BoxLayout;
 import javax.swing.JButton;
 import javax.swing.JFileChooser;
@@ -35,18 +36,21 @@ import javax.swing.JMenuBar;
 import javax.swing.JMenuItem;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
+import javax.swing.JScrollPane;
 import javax.swing.JTextArea;
 import javax.swing.SwingConstants;
 import javax.swing.SwingUtilities;
 import javax.swing.UIManager;
 import javax.swing.UnsupportedLookAndFeelException;
 import javax.swing.border.BevelBorder;
+import javax.swing.border.Border;
+import javax.swing.border.EtchedBorder;
 import javax.swing.plaf.ColorUIResource;
 import javax.swing.plaf.FontUIResource;
 
 import droid64.DroiD64;
 import droid64.d64.CbmException;
-import droid64.d64.D64;
+import droid64.d64.DiskImage;
 import droid64.db.DaoFactory;
 import droid64.db.DaoFactoryImpl;
 import droid64.db.DatabaseException;
@@ -91,10 +95,11 @@ public class MainPanel extends JFrame {
 	private JLabel statusBar;
 	
 	private int colourChoice = 0;
-	private int colourPower = 5;
-	private int colourPower2 = 35;
+	private final static int COLOUR_POWER_1 = 5;
+	private final static int COLOUR_POWER_2 = 35;
 	private int lookAndFeelChoice = 1;
 	private boolean isExitQuestion = true;
+	private boolean showViewButtons = true;
 	private int rowHeight = 8;
 	private String settingsFileName="";
 	private String defaultImageDir = null;
@@ -130,6 +135,7 @@ public class MainPanel extends JFrame {
 	private final static String SETTING_JDBC_USER = "jdbc_user";
 	private final static String SETTING_JDBC_PASSWORD = "jdbc_password";
 	private final static String SETTING_MAX_ROWS = "max_rows";
+	private static final String SETTING_SHOW_VIEW_BUTTONS = "show_view_buttons";
 	
 	private JMenu searchMenu;
 	private boolean scannerActive = false;
@@ -138,7 +144,7 @@ public class MainPanel extends JFrame {
 	 * Constructor
 	 */
 	public MainPanel() {
-		super( DroiD64.PROGNAME+" v"+DroiD64.VERSION + " - Beta-Version-Warning: MAY HAVE ERRORS! USE ONLY ON BACKUPS! LOOK AT \"BUGS AND TO-DO\"!" );
+		super( DroiD64.PROGNAME+" v"+DroiD64.VERSION + " - " + DroiD64.TITLE );
 		externalProgram[0] = new ExternalProgram();
 		externalProgram[1] = new ExternalProgram();
 		// Set correct settingsFileName for loadSettings and storeSettings
@@ -156,8 +162,8 @@ public class MainPanel extends JFrame {
 		loadSettings(settingsFileName);
 		diskPanel1 = new DiskPanel(externalProgram, fontSize, this);
 		diskPanel2 = new DiskPanel(externalProgram, fontSize, this);
-		diskPanel1.setDirectory(defaultImageDir == null ?"." : defaultImageDir);
-		diskPanel2.setDirectory(defaultImageDir == null ?"." : defaultImageDir);
+		diskPanel1.setDirectory(defaultImageDir == null ? "." : defaultImageDir);
+		diskPanel2.setDirectory(defaultImageDir == null ? "." : defaultImageDir);
 		diskPanel1.setExternalProgram(externalProgram);
 		diskPanel2.setExternalProgram(externalProgram);
 		diskPanel1.setOtherDiskPanelObject(diskPanel2);
@@ -190,8 +196,8 @@ public class MainPanel extends JFrame {
 	public void setupMenuBar() {
 		JMenuBar menubar = new JMenuBar();
 		menubar.add(createProgramMenu());
-		menubar.add(diskPanel1.createD64Menu("Disk 1", "1"));
-		menubar.add(diskPanel2.createD64Menu("Disk 2", "2"));
+		menubar.add(diskPanel1.createDiskImageMenu("Disk 1", "1"));
+		menubar.add(diskPanel2.createDiskImageMenu("Disk 2", "2"));
 		menubar.add(createSearchMenu());		
 		menubar.add(createHelpMenu());
 		setJMenuBar(menubar);
@@ -225,22 +231,19 @@ public class MainPanel extends JFrame {
 		statusBar = new JLabel("Welcome to "+DroiD64.PROGNAME+" "+DroiD64.VERSION);
 		statusBar.setHorizontalAlignment(SwingConstants.LEFT);
 		statusBar.setFont(new Font("Verdana", Font.PLAIN, statusBar.getFont().getSize()));
-
-		JPanel statusPanel = new JPanel();
+		
+		JPanel statusPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 2, 2));
 		statusPanel.setBorder(new BevelBorder(BevelBorder.LOWERED));
 		statusPanel.setPreferredSize(new Dimension(getWidth(), statusBar.getHeight()+4));
 		statusPanel.setLayout(new BoxLayout(statusPanel, BoxLayout.X_AXIS));
 		statusPanel.add(statusBar);
 				
-		JPanel buttonPanel = new JPanel();
-		
 		infoButton = new JButton("About");
 		infoButton.setMnemonic('a');
 		infoButton.setToolTipText("Shows some information about this program.");
 		infoButton.addActionListener(new ActionListener(){
 			public void actionPerformed(ActionEvent event){
-				if ( event.getSource()==infoButton )
-				{
+				if (event.getSource()==infoButton ) {
 					showHelp();
 				};
 			}
@@ -251,26 +254,51 @@ public class MainPanel extends JFrame {
 		exitButton.setToolTipText("Leave this program.");
 		exitButton.addActionListener(new ActionListener(){
 			public void actionPerformed(ActionEvent event){
-				if ( event.getSource()==exitButton ) {
+				if (event.getSource() == exitButton ) {
 					exitThisProgram();
 				}
 			}
 		});
 
+		JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 2, 2));
 		buttonPanel.add(infoButton);
 		buttonPanel.add(exitButton);
-				
-		JPanel globalChoicePanel = new JPanel();
-		//globalChoicePanel.setLayout(new BoxLayout(statusPanel, BoxLayout.Y_AXIS));
-		globalChoicePanel.setLayout(new GridLayout(2,1));
+
+		JPanel globalChoicePanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 2, 2));
+		globalChoicePanel.setLayout(new GridLayout(2, 1, 1, 1));
 		globalChoicePanel.add(buttonPanel);
 		globalChoicePanel.add(statusPanel);
-
-		globalChoicePanel.setBackground(Color.RED);
 		
-		return globalChoicePanel;
+		JPanel bottomPanel = new JPanel(new BorderLayout());
+		bottomPanel.add(drawConsolePanel(), BorderLayout.CENTER);
+		bottomPanel.add(globalChoicePanel, BorderLayout.SOUTH);
+		
+		return bottomPanel;
 	}
 
+	
+	private JTextArea consoleTextArea = null;
+	private static final int FEEDBACK_PANEL_ROWS = 10;
+	private static final int FEEDBACK_PANEL_COLS = 80;
+	
+	private JPanel drawConsolePanel() {
+		JPanel feedBackPanel = new JPanel();
+		Border border = BorderFactory.createEtchedBorder(EtchedBorder.LOWERED);
+		feedBackPanel.setBorder(BorderFactory.createTitledBorder(border, "Output"));
+		feedBackPanel.setLayout(new BorderLayout());
+		consoleTextArea = new JTextArea(FEEDBACK_PANEL_ROWS, FEEDBACK_PANEL_COLS);
+		consoleTextArea.setToolTipText("The status report is displayed here.");
+		consoleTextArea.setEditable(false);
+		feedBackPanel.add(new JScrollPane(consoleTextArea), BorderLayout.CENTER);
+		return feedBackPanel;
+	}
+	
+	public void appendConsole(String message) {
+		if (!"".equals(message)) {
+			consoleTextArea.setText(consoleTextArea.getText()+"\n"+message);
+		}
+	}
+	
 
 	/**
 	 * Create a help drag-down menu (just for testing)
@@ -289,7 +317,7 @@ public class MainPanel extends JFrame {
 				}
 			}
 		});
-		menu.addSeparator();
+
 		menuItem = new JMenuItem("Bugs and To-Do", 'b');
 		menu.add (menuItem);
 		menuItem.addActionListener(new ActionListener(){
@@ -299,6 +327,35 @@ public class MainPanel extends JFrame {
 				}
 			}
 		});
+		
+		menuItem = new JMenuItem("Release notes", 'r');
+		menu.add (menuItem);
+		menuItem.addActionListener(new ActionListener(){
+			final static String msg = 
+					"Version 0.05b:" +
+							"\n\t- Refactored code." +
+							"\n\t- New look & feel." +
+							"\n\t- Gzipped images." +
+							"\n\t- Database support.\n" +
+					"Version 0.065b:" +
+							"\n\t- D71, D81 and T64 read support." +
+							"\n\t- CP/M read support (D64, D71, D81)." +
+							"\n\t- Click sector in BAM to see hex dump." +
+							"\n\t- View text, hexdump and BASIC from files." +
+							"\n\t- Unload image." +
+							"\n\t- View Koala images." +
+							"\n\t- Bug fix for insert prg into D64." +
+							"\n\t- Merged the two consoles into one shared." +
+							"\n\t- Clear console menu option." +
+							"\n\t- Implemented delete files from D64"
+							;
+			public void actionPerformed(ActionEvent event){
+				if ( event.getActionCommand()== "Release notes"){
+					new TextViewFrame("Release Notes", msg);
+				}				
+			}
+		});
+		
 		menuItem = new JMenuItem("Contact", 'c');
 		menu.add (menuItem);
 		menuItem.addActionListener(new ActionListener(){
@@ -332,6 +389,16 @@ public class MainPanel extends JFrame {
 			public void actionPerformed(ActionEvent event){
 				if ( event.getActionCommand()== "Settings"){
 					showSettings();
+				}
+			}
+		});
+		menu.addSeparator();
+		menuItem = new JMenuItem("Clear console", 'c');
+		menu.add (menuItem);
+		menuItem.addActionListener(new ActionListener(){
+			public void actionPerformed(ActionEvent event){
+				if ( event.getActionCommand()== "Clear console"){
+					consoleTextArea.setText("");
 				}
 			}
 		});
@@ -395,6 +462,7 @@ public class MainPanel extends JFrame {
 	 * Good bye?
 	 */
 	private void exitThisProgram(){
+		//System.out.println(diskPanel1.getFeedback());
 		if (isExitQuestion) {
 			if (JOptionPane.showConfirmDialog(
 						null,
@@ -517,40 +585,63 @@ public class MainPanel extends JFrame {
 					String line_key = line.substring( 0, line.indexOf("=") ) .trim();
 					String line_value = line.substring(line.indexOf("=")+1).trim();
 					settingsData.put(line_key, line_value);
-					if (SETTING_ASK_QUIT.equalsIgnoreCase(line_key)) {						
-						setExitQuestion("yes".equalsIgnoreCase(line_value));
-					} else if (SETTING_ROW_HEIGHT.equalsIgnoreCase(line_key)) {
-						setRowHeight(stringToInt(line_value));
-					} else if (SETTING_COLOUR.equalsIgnoreCase(line_key)) {
-						setColourChoice(stringToInt(line_value));
-					} else if (SETTING_DEFAULT_IMAGE_DIR.equalsIgnoreCase(line_key)) {
-						setDefaultImageDir(line_value);
-					} else if (SETTING_FONT_SIZE.equalsIgnoreCase(line_key)) {
-						setFontSize(stringToInt(line_value));
-					} else if (SETTING_USE_DB.equalsIgnoreCase(line_key)) {
-						setUseDatabase("yes".equalsIgnoreCase(line_value));
-					} else if (SETTING_JDBC_DRIVER.equalsIgnoreCase(line_key)) {
-						setJdbcDriver(line_value);			
-					} else if (SETTING_JDBC_URL.equalsIgnoreCase(line_key)) {
-						setJdbcUrl(line_value);			
-					} else if (SETTING_JDBC_USER.equalsIgnoreCase(line_key)) {
-						setJdbcUser(line_value);			
-					} else if (SETTING_JDBC_PASSWORD.equalsIgnoreCase(line_key)) {
-						setJdbcPassword(line_value);
-					} else if (SETTING_MAX_ROWS.equalsIgnoreCase(line_key)) {
-						setMaxRows(line_value);
-					} else if (line_key.startsWith(SETTING_PLUGIN)) {						
-						for (int i = 0; i < externalProgram.length; i++) {
-							String x = Integer.toString(i)+"_";
-							if ((SETTING_PLUGIN+x+SETTING_LABEL).equalsIgnoreCase(line_key)) {
-								setExternalProgram(i, externalProgram[i].getCommand(), externalProgram[i].getDescription(), line_value);
-							} else if ((SETTING_PLUGIN+x+SETTING_COMMAND).equalsIgnoreCase(line_key)) {
-								setExternalProgram(i, line_value, externalProgram[i].getDescription(), externalProgram[i].getLabel());
-							} else if ((SETTING_PLUGIN+x+SETTING_DESCRIPTION).equalsIgnoreCase(line_key)) {								
-								setExternalProgram(i, externalProgram[i].getCommand(), line_value, externalProgram[i].getLabel() );
+					
+					
+					
+					switch (line_key.toLowerCase()) {
+						case SETTING_ASK_QUIT:
+							setExitQuestion("yes".equalsIgnoreCase(line_value));
+							break;
+						case SETTING_SHOW_VIEW_BUTTONS:
+							setShowViewButtons("yes".equalsIgnoreCase(line_value));
+							break;
+						case SETTING_ROW_HEIGHT:
+							setRowHeight(stringToInt(line_value));
+							break;
+						case SETTING_COLOUR:
+							setColourChoice(stringToInt(line_value));
+							break;
+						case SETTING_DEFAULT_IMAGE_DIR:
+							setDefaultImageDir(line_value);
+							break;
+						case SETTING_FONT_SIZE:
+							setFontSize(stringToInt(line_value));
+							break;
+						case SETTING_USE_DB:
+							setUseDatabase("yes".equalsIgnoreCase(line_value));
+							break;
+						case SETTING_JDBC_DRIVER:
+							setJdbcDriver(line_value);			
+							break;
+						case SETTING_JDBC_URL:
+							setJdbcUrl(line_value);			
+							break;
+						case SETTING_JDBC_USER:
+							setJdbcUser(line_value);
+							break;
+						case SETTING_JDBC_PASSWORD:
+							setJdbcPassword(line_value);
+							break;
+						case SETTING_MAX_ROWS:
+							setMaxRows(line_value);
+							break;
+						default:
+							if (line_key.startsWith(SETTING_PLUGIN)) {						
+								for (int i = 0; i < externalProgram.length; i++) {
+									String x = Integer.toString(i)+"_";
+									if ((SETTING_PLUGIN+x+SETTING_LABEL).equalsIgnoreCase(line_key)) {
+										setExternalProgram(i, externalProgram[i].getCommand(), externalProgram[i].getDescription(), line_value);
+									} else if ((SETTING_PLUGIN+x+SETTING_COMMAND).equalsIgnoreCase(line_key)) {
+										setExternalProgram(i, line_value, externalProgram[i].getDescription(), externalProgram[i].getLabel());
+									} else if ((SETTING_PLUGIN+x+SETTING_DESCRIPTION).equalsIgnoreCase(line_key)) {								
+										setExternalProgram(i, externalProgram[i].getCommand(), line_value, externalProgram[i].getLabel() );
+									}
+								}
 							}
-						}
+							break;
 					}
+					
+
 
 				}
 			}
@@ -603,6 +694,7 @@ public class MainPanel extends JFrame {
 		UIManager.put("TextArea.font",          new FontUIResource(plainFont)); 
 		UIManager.put("TextField.font",         new FontUIResource(plainFont)); 
 		UIManager.put("ToolTip.font",           new FontUIResource(plainFont));
+		UIManager.put("TitledBorder.font",      new FontUIResource(plainFont));
 		
 		if (diskPanel1 != null) {
 			diskPanel1.setupFont(fontSize);
@@ -697,59 +789,29 @@ public class MainPanel extends JFrame {
 			Object key = entry.getKey();
 			Object value = entry.getValue();
 			if (value instanceof javax.swing.plaf.ColorUIResource) {
-				int valueR, valueG, valueB;
 				ColorUIResource cr = (ColorUIResource) value;
 				switch (colourChoice) {
 				// gray (normal, no change to default values)
-				case 0 : {
+				case 0 :
 					UIManager.put(key, value);
 					break;
-				}
 				// red
-				case 1 : {
-					valueR = cr.getRed()+colourPower;
-					if (valueR > 255) valueR = 255;
-					valueG = cr.getGreen()-colourPower;
-					if (valueG < 0) valueG = 0;
-					valueB = cr.getBlue()-colourPower;
-					if (valueB < 0) valueB = 0;
-					UIManager.put(key, new ColorUIResource(valueR, valueG,  valueB));
+				case 1 :
+					putColor(key, cr.getRed()+COLOUR_POWER_1, cr.getGreen()-COLOUR_POWER_1, cr.getBlue()-COLOUR_POWER_1);
 					break;
-				}
 				// green
-				case 2 : {
-					valueR = cr.getRed()-colourPower;
-					if (valueR < 0) valueR = 0;
-					valueG = cr.getGreen()+colourPower;
-					if (valueG > 255) valueG = 255;
-					valueB = cr.getBlue()-colourPower;
-					if (valueB < 0) valueB = 0;
-					UIManager.put(key, new ColorUIResource(valueR, valueG,  valueB));
+				case 2 :
+					putColor(key, cr.getRed()-COLOUR_POWER_1, cr.getGreen()+COLOUR_POWER_1, cr.getBlue()-COLOUR_POWER_1);
 					break;
-				}
 				// blue
-				case 3 : {
-					valueR = cr.getRed()-colourPower;
-					if (valueR < 0) valueR = 0;
-					valueG = cr.getGreen()-colourPower;
-					if (valueG < 0) valueG = 0;
-					valueB = cr.getBlue()+colourPower;
-					if (valueB > 255) valueB = 255;
-					UIManager.put(key, new ColorUIResource(valueR, valueG,  valueB));
+				case 3 :
+					putColor(key, cr.getRed()-COLOUR_POWER_1, cr.getGreen()-COLOUR_POWER_1, cr.getBlue()+COLOUR_POWER_1);
 					break;
-				}
 				// gray-light
-				case 4 : {
-					valueR = cr.getRed()+colourPower2;
-					if (valueR > 255) valueR = 255;
-					valueG = cr.getGreen()+colourPower2;
-					if (valueG > 255) valueG = 255;
-					valueB = cr.getBlue()+colourPower2 +10;
-					if (valueB > 255) valueB = 255;
-					UIManager.put(key, new ColorUIResource(valueR, valueG,  valueB));
+				case 4 : 
+					putColor(key, cr.getRed()+COLOUR_POWER_2, cr.getGreen()+COLOUR_POWER_2, cr.getBlue()+COLOUR_POWER_2 + 10);
 					break;
-				}	
-				}	// switch
+				} // switch
 			} // if
 		} //while
 		setDefaultFonts();
@@ -759,7 +821,17 @@ public class MainPanel extends JFrame {
 		repaint();
 	}
 
-
+	private void putColor(Object key, int red, int green, int blue) {
+		
+		red = red < 0 ? 0 : red;
+		red = red > 255 ? 255 : red;
+		green = green < 0 ? 0 : green;
+		green = green > 255 ? 255 : green;
+		blue = blue < 0 ? 0 : blue;
+		blue = blue > 255 ? 255 : blue;		
+		UIManager.put(key, new ColorUIResource(red > 255 ? 255 : red, green > 255 ? 255 : green,  blue > 255 ? 255 : blue));		
+	}
+	
 	private void saveDefaultValues(){
 		hashMap.clear();
 		Enumeration<Object> keys = UIManager.getDefaults().keys();
@@ -933,8 +1005,11 @@ public class MainPanel extends JFrame {
 				if (name.endsWith(".d64") || name.endsWith(".d64.gz")) {
 					String fileName = dirName + File.separator + name;
 					try {
-						D64 d64 = new D64();
-						d64.readD64(fileName);
+//						D64 d64 = new D64();
+//						d64.readImage(fileName);
+						
+						DiskImage d64 =  DiskImage.getDiskImage(fileName);
+						
 						d64.readBAM();
 					    d64.readDirectory();
 					    Disk disk = d64.getDisk();
@@ -971,6 +1046,19 @@ public class MainPanel extends JFrame {
 		settingsData.put(SETTING_PLUGIN +which+ SETTING_COMMAND, command);
 		settingsData.put(SETTING_PLUGIN +which+ SETTING_DESCRIPTION, description);
 		externalProgram[whichOne].setValues(command, description, label);
+	}
+
+	public boolean isShowViewButtons() {
+		return showViewButtons;
+	}
+
+	public void setShowViewButtons(boolean b) {
+		if (b) { 
+			settingsData.put(SETTING_SHOW_VIEW_BUTTONS, SETTING_YES);
+		} else {
+			settingsData.put(SETTING_SHOW_VIEW_BUTTONS, SETTING_NO);
+		}
+		showViewButtons = b;
 	}
 
 }

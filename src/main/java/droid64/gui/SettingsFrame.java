@@ -67,6 +67,7 @@ public class SettingsFrame extends JDialog {
 	private MainPanel mainPanel;
 	private JComboBox<Object> colourBox;
 	private JCheckBox exitConfirmCheckBox;
+	private JCheckBox showViewButtonsCheckBox;
 	private JSlider distSlider;
 	// Plugin settings
 	private static final int MAX_PLUGINS = 2;
@@ -84,8 +85,6 @@ public class SettingsFrame extends JDialog {
 	private static final String[] COLORS = { "gray", "red", "green", "blue", "light-blue" };
 	/** Height of one table row */
 	private int rowHeight;
-	/** String array of DiskTypes */
-	private static final String[] DISK_TYPES = { "D64", "D71", "D81" };
 
 	private JLabel status = new JLabel();
 	
@@ -104,7 +103,6 @@ public class SettingsFrame extends JDialog {
 		cp.setLayout(new BorderLayout());
 		JTabbedPane tabPane = new JTabbedPane();
 		tabPane.addTab("GUI",      drawGuiPanel());	
-		tabPane.addTab("D64",      drawD64Panel());
 		tabPane.addTab("Database", drawDatabasePanel());
 
 		JPanel generalPanel = drawGeneralPanel();
@@ -137,6 +135,7 @@ public class SettingsFrame extends JDialog {
 			public void actionPerformed(ActionEvent event){
 				if ( event.getSource()==okButton ) {
 					mainPanel.setExitQuestion(exitConfirmCheckBox.isSelected());
+					mainPanel.setShowViewButtons(showViewButtonsCheckBox.isSelected());
 					mainPanel.setColourChoice(colourBox.getSelectedIndex());
 					mainPanel.setRowHeight(distSlider.getValue());
 					mainPanel.setUseDatabase(useJdbcCheckBox.isSelected());
@@ -187,10 +186,15 @@ public class SettingsFrame extends JDialog {
 		exitConfirmCheckBox.setToolTipText("Whether to confirm quitting the program or not.");
 		exitConfirmCheckBox.setSelected(mainPanel.isExitQuestion());
 
+		showViewButtonsCheckBox = new JCheckBox("Show view buttons");
+		showViewButtonsCheckBox.setToolTipText("Show view button row.");
+		showViewButtonsCheckBox.setSelected(mainPanel.isShowViewButtons());
+		
+		
 		colourBox = new JComboBox<Object>(COLORS);
-		colourBox.setToolTipText("Select a colour-sceme here.");
+		colourBox.setToolTipText("Select a colour scheme.");
 		colourBox.setEditable(false);
-		colourBox.setSelectedIndex(mainPanel.getColourChoice());
+		colourBox.setSelectedIndex(mainPanel.getColourChoice()<COLORS.length ? mainPanel.getColourChoice() : 0);
 		
 		rowHeight = mainPanel.getRowHeight();
 		distSlider = new JSlider(JSlider.HORIZONTAL, 8, 20, rowHeight);
@@ -235,45 +239,20 @@ public class SettingsFrame extends JDialog {
 		
 		addToGridBag(0, 0, 0.0, 0.0, gbc, guiPanel, new JPanel());
 		addToGridBag(1, 0, 0.5, 0.0, gbc, guiPanel, exitConfirmCheckBox);
-		addToGridBag(0, 1, 0.0, 0.0, gbc, guiPanel, new JLabel("Color:"));
-		addToGridBag(1, 1, 0.0, 0.0, gbc, guiPanel, colourBox);
-		addToGridBag(2, 1, 0.5, 0.0, gbc, guiPanel, new JPanel());
-		addToGridBag(0, 2, 0.0, 0.0, gbc, guiPanel, new JLabel("Grid distance:"));		
-		addToGridBag(1, 2, 0.0, 0.0, gbc, guiPanel, distSlider);
-		addToGridBag(0, 3, 0.0, 0.0, gbc, guiPanel, new JLabel("Default image dir:"));		
-		addToGridBag(1, 3, 0.5, 0.0, gbc, guiPanel, imgDirPanel);
-		addToGridBag(0, 4, 0.0, 0.0, gbc, guiPanel, new JLabel("Font size:"));		
-		addToGridBag(1, 4, 0.0, 0.0, gbc, guiPanel, fontSizeSpinner);
-		addToGridBag(2, 4, 0.5, 0.0, gbc, guiPanel, new JPanel());
-		addToGridBag(0, 5, 0.5, 0.8, gbc, guiPanel, new JPanel());
+		addToGridBag(0, 1, 0.0, 0.0, gbc, guiPanel, new JPanel());
+		addToGridBag(1, 1, 0.5, 0.0, gbc, guiPanel, showViewButtonsCheckBox);
+		addToGridBag(0, 2, 0.0, 0.0, gbc, guiPanel, new JLabel("Color:"));
+		addToGridBag(1, 2, 0.0, 0.0, gbc, guiPanel, colourBox);
+		addToGridBag(2, 2, 0.5, 0.0, gbc, guiPanel, new JPanel());
+		addToGridBag(0, 3, 0.0, 0.0, gbc, guiPanel, new JLabel("Grid distance:"));		
+		addToGridBag(1, 3, 0.0, 0.0, gbc, guiPanel, distSlider);
+		addToGridBag(0, 4, 0.0, 0.0, gbc, guiPanel, new JLabel("Default image dir:"));		
+		addToGridBag(1, 4, 0.5, 0.0, gbc, guiPanel, imgDirPanel);
+		addToGridBag(0, 5, 0.0, 0.0, gbc, guiPanel, new JLabel("Font size:"));		
+		addToGridBag(1, 5, 0.0, 0.0, gbc, guiPanel, fontSizeSpinner);
+		addToGridBag(2, 5, 0.5, 0.0, gbc, guiPanel, new JPanel());
+		addToGridBag(0, 6, 0.5, 0.8, gbc, guiPanel, new JPanel());
 		return guiPanel;
-	}
-	
-	/**
-	 * Setup panel with D64 settings
-	 * @return JPanel
-	 */
-	private JPanel drawD64Panel() {
-		JPanel d64Panel = new JPanel();
-
-		GridBagConstraints gbc = new GridBagConstraints();		
-		d64Panel.setLayout(new GridBagLayout());		
-		gbc.fill = GridBagConstraints.HORIZONTAL;
-		
-		JComboBox<Object>  diskTypeBox = new JComboBox<Object>(DISK_TYPES);
-		diskTypeBox.setToolTipText("Select a disktype here.");
-		diskTypeBox.setEditable(false);
-		diskTypeBox.setSelectedIndex(0);
-
-		addToGridBag(0, 0, 0.0, 0.0, gbc, d64Panel, new JLabel("DiskTypes:"));
-		addToGridBag(1, 0, 0.5, 0.0, gbc, d64Panel, diskTypeBox);
-		addToGridBag(0, 1, 0.0, 0.0, gbc, d64Panel, new JPanel());
-		addToGridBag(1, 1, 0.5, 0.0, gbc, d64Panel, new JLabel("Not implemented yet."));
-
-		addToGridBag(0, 2, 0.5, 0.8, gbc, d64Panel, new JPanel());
-
-		
-		return d64Panel;
 	}
 
 	/**

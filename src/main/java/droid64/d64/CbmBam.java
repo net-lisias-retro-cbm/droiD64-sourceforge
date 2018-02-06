@@ -4,7 +4,7 @@ import java.util.Arrays;
 /**<pre style='font-family:sans-serif;'>
  * Created on 21.06.2004
  *
- *   droiD64 - A graphical filemanager for D64 files
+ *   droiD64 - A graphical file manager for D64 files
  *   Copyright (C) 2004 Wolfram Heyer
  *
  *   This program is free software; you can redistribute it and/or modify
@@ -29,12 +29,20 @@ import java.util.Arrays;
 public class CbmBam {
 
 	private int diskDosType;
-	private int[] freeSectors = new int[40]; // array[1..40] of int
-	private int[][] trackBits = new int[40][3]; // array[1..40, 1..3] of int
+	private int[] freeSectors = null;
+	private int[][] trackBits = null;
 	private String diskName;	//string[16]
 	private String diskId;	//string[5]
 
-	public CbmBam() {
+	public static final String USED = "x";
+	public static final String FREE = "-";
+	public static final String INVALID = " ";
+	public static final String RESERVED = "X";
+	
+	
+	public CbmBam(int numTracks, int numTrackBytes) {
+		freeSectors = new int[numTracks];
+		trackBits =  new int[numTracks][numTrackBytes - 1];
 	}
 	
 	public CbmBam(int diskDosType, int[] freeSectors, int[][] trackBits, String diskName, String diskId) {
@@ -67,21 +75,19 @@ public class CbmBam {
 	}
 
 	/**
-	 * @param track_number the track number (1..40)
+	 * @param trackNumber the track number (1..LastTrack)
 	 * @return int
 	 */
-	public int getFreeSectors(int track_number) {
-		//subtract 1, because we are counting Track from 1 to 40, arrays are 0 to 39
-		return freeSectors[track_number-1];
+	public int getFreeSectors(int trackNumber) {
+		return freeSectors[trackNumber-1];
 	}
 
 	/**
-	 * @param trackNumber the track number (1..40)
+	 * @param trackNumber the track number (1..LastTrack)
 	 * @param byteNumber the byte number (1..3)
 	 * @return int
 	 */
 	public int getTrackBits(int trackNumber, int byteNumber) {
-		//subtract 1, because we are counting Track from 1 to 40, arrays are 0 to 39
 		return trackBits[trackNumber-1][byteNumber-1];
 	}
 
@@ -107,22 +113,20 @@ public class CbmBam {
 	}
 
 	/**
-	 * @param where
+	 * @param track the track, starting at 1 until last track number.
 	 * @param value
 	 */
-	public void setFreeSectors(int where, int value) {
-		//substract 1, because we are counting Track from 1 to 40, arrays are 0 to 39
-		freeSectors[where-1] = value;
+	public void setFreeSectors(int track, int value) {
+		freeSectors[track-1] = value;
 	}
 
 	/**
-	 * @param which_track
-	 * @param which_byte
+	 * @param track track which is a number between 1 and last track.
+	 * @param byteNum a number starting 1 and is the number of bytes per track.
 	 * @param value
 	 */
-	public void setTrack_bits(int whichTrack, int whichByte, int value) {
-		//substract 1, because we are counting Track from 1 to 40, arrays are 0 to 39
-		trackBits[whichTrack-1][whichByte-1] = value;
+	public void setTrackBits(int track, int byteNum, int value) {
+		trackBits[track-1][byteNum-1] = value;
 	}
 
 	/** {@inheritDoc} */

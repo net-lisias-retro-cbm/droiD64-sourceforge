@@ -32,8 +32,9 @@ import javax.swing.BorderFactory;
 import javax.swing.JLabel;
 import javax.swing.JTable;
 import javax.swing.SwingConstants;
-import javax.swing.border.Border;
 import javax.swing.table.DefaultTableCellRenderer;
+
+import droid64.d64.CbmBam;
 
 public class ColoredTableCellRenderer extends DefaultTableCellRenderer {
 
@@ -41,39 +42,25 @@ public class ColoredTableCellRenderer extends DefaultTableCellRenderer {
 	private static final Color USED_COLOR = new Color(255,200,200);	// red
 	private static final Color FREE_COLOR = new Color(200,255,200);	// green
 	private static final Color INVALID_COLOR = new Color(100,100,100);	// grey
-	private static final String USED = "x";
-	private static final String FREE = "-";
+	private static final Color RESERVED_COLOR = new Color(100,100,255);	// blue
 	
 	public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
 		super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
 		setHorizontalAlignment(SwingConstants.CENTER);
-		
-		//Label erzeugen
-		JLabel label = new JLabel(value.toString());
+		JLabel label = new JLabel(column > 0 ? "" : value.toString());
 		label.setOpaque(true);
-		Border b = BorderFactory.createEmptyBorder(1, 1, 1, 1);
-		label.setBorder(b);
+		label.setBorder(BorderFactory.createEmptyBorder(1, 1, 1, 1));
 		label.setFont(table.getFont());
 		label.setForeground(table.getForeground());
 		label.setBackground(table.getBackground());
-		//Angezeigte Spalte in Modellspalte umwandeln
 		column = table.convertColumnIndexToModel(column);    
-//      if (column == 1) {
-//        int numpages = Integer.parseInt((String)value);
-//        if (numpages >= 250) {
-//          label.setBackground(Color.red);
-//        } else if (numpages >= 200) {
-//          label.setBackground(Color.orange);
-//        } else {
-//          label.setBackground(Color.yellow);
-//        }
-//      }
-		
 		if (value instanceof String) {
-			if (USED.equals(value)) {
+			if (CbmBam.USED.equals(value)) {
 				label.setBackground(USED_COLOR);
-			} else if (FREE.equals(value)) {
+			} else if (CbmBam.FREE.equals(value)) {
 				label.setBackground(FREE_COLOR);
+			} else if (CbmBam.RESERVED.equals(value)) {
+				label.setBackground(RESERVED_COLOR);
 			} else if (column > 0) {
 				label.setBackground(INVALID_COLOR);				
 			}

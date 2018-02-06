@@ -80,7 +80,7 @@ public class SearchFrame extends JDialog {
 			String path = (String) tableModel.getValueAt(row, 0);
 			String file = (String) tableModel.getValueAt(row, 1);
 			String f = path + File.separator + file;
-			diskPanel.openD64(f, true);
+			diskPanel.openDiskImage(f, true);
 		}
 	}
 	

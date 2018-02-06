@@ -39,14 +39,17 @@ class EntryTableModel extends AbstractTableModel {
 	protected int numRows = 0;
 
 	private static final String[] COLHEADS = { "Nr", "Bl", "Name", "Ty", "Fl", "Tr", "Se" };
+	private static final String[] COLHEADS_CPM = { "Nr", "Rec", "Name", "Ext", "Attr", "Tr", "Se" };
 
+	private boolean cpmMode = false;
+	
 	protected Vector<DirEntry> data = new Vector<DirEntry>();
 
 	public EntryTableModel() {
 	}
 
 	public String getColumnName(int column) {
-		return COLHEADS[column];
+		return cpmMode ? COLHEADS_CPM[column] : COLHEADS[column];
 	}
 
 	public int getColumnCount() {
@@ -85,6 +88,10 @@ class EntryTableModel extends AbstractTableModel {
 		int oldSize = data.size();
 		data.clear();
 		fireTableRowsDeleted(0, oldSize);
+	}
+
+	public void setCpmMode(boolean cpmMode) {
+		this.cpmMode = cpmMode;
 	}
 
 }

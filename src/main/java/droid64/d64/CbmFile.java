@@ -28,32 +28,51 @@ import java.util.Arrays;
  */
 public class CbmFile {
 
-	private boolean file_scratched;
-	private int file_type;
-	private boolean file_locked;
-	private boolean file_closed;
+	private boolean fileScratched;
+	private int fileType;
+	private boolean fileLocked;
+	private boolean fileClosed;
 	private int track;
 	private int sector;
-	private String name;	//string[16]
-	private int rel_track;
-	private int rel_sector;
-	private int[] geos = new int[6];	// array[0..5] of int
+	private String name;		//string[16]
+	private int relTrack;
+	private int relSector;
+	/** FileStructure, FileType, Year, Month, Day. Hour, Minute */
+	private int[] geos = new int[7];
 	private int sizeInBytes;
 	private int sizeInBlocks;
-	private int dirTrack;	// next directory track
-	private int dirSector;	// next directory sector
+	private int dirTrack;		// next directory track
+	private int dirSector;		// next directory sector
 	private int dirPosition;	// position in directory
+	private int offSet;
+		
+	public static final int GEOS_NORMAL    = 0x00;
+	public static final int GEOS_BASIC     = 0x01;
+	public static final int GEOS_ASM       = 0x02;
+	public static final int GEOS_DATA      = 0x03;
+	public static final int GEOS_SYS       = 0x04;
+	public static final int GEOS_DESK_ACC  = 0x05;
+	public static final int GEOS_APPL      = 0x06;
+	public static final int GEOS_APPL_DATA = 0x07;
+	public static final int GEOS_FONT      = 0x08;
+	public static final int GEOS_PRT_DRV   = 0x09;
+	public static final int GEOS_INPUT_DRV = 0x0a;
+	public static final int GEOS_DISK_DRV  = 0x0b;
+	public static final int GEOS_SYS_BOOT  = 0x0c;
+	public static final int GEOS_TEMP      = 0x0d;
+	public static final int GEOS_AUTOEXEC  = 0x0e;
+	public static final int GEOS_UNDFINED  = 0xff;
 	
 	public CbmFile() {
-		file_scratched = true;
-		file_type = 0;
-		file_locked = false;
-		file_closed = false;
+		fileScratched = true;
+		fileType = 0;
+		fileLocked = false;
+		fileClosed = false;
 		track = 0;
 		sector = 0;
 		name = "";
-		rel_track = 0;
-		rel_sector = 0;
+		relTrack = 0;
+		relSector = 0;
 		geos[0] = 0;
 		geos[1] = 0;
 		geos[2] = 0;
@@ -68,19 +87,19 @@ public class CbmFile {
 	}
 
 	public CbmFile(
-			boolean file_scratched, int file_type, boolean file_locked, boolean file_closed, int track, int sector,
-			String name, int rel_track, int rel_sector,	int[] geos,	int sizeInBytes, int sizeInBlocks, int dirTrack,
+			boolean fileScratched, int fileType, boolean fileLocked, boolean fileClosed, int track, int sector,
+			String name, int relTrack, int relSector,	int[] geos,	int sizeInBytes, int sizeInBlocks, int dirTrack,
 			int dirSector, int dirPosition)
 	{
-		this.file_scratched = file_scratched;
-		this.file_type = file_type;
-		this.file_locked = file_locked;
-		this.file_closed = file_closed;
+		this.fileScratched = fileScratched;
+		this.fileType = fileType;
+		this.fileLocked = fileLocked;
+		this.fileClosed = fileClosed;
 		this.track = track;
 		this.sector = sector;
 		this.name = name;
-		this.rel_track = rel_track;
-		this.rel_sector = rel_sector;
+		this.relTrack = relTrack;
+		this.relSector = relSector;
 		this.geos = geos;
 		this.sizeInBytes = sizeInBytes;
 		this.sizeInBlocks = sizeInBlocks;
@@ -89,55 +108,149 @@ public class CbmFile {
 		this.dirPosition = dirPosition;
 	}
 	
-	/** {@inheritDoc} */
+	public CbmFile(CbmFile that) {
+		this.fileScratched = that.fileScratched;
+		this.fileType = that.fileType;
+		this.fileLocked = that.fileLocked;
+		this.fileClosed = that.fileClosed;
+		this.track = that.track;
+		this.sector = that.sector;
+		this.name = that.name;
+		this.relTrack = that.relTrack;
+		this.relSector = that.relSector;
+		this.geos[0] = that.geos[0];
+		this.geos[1] = that.geos[1];
+		this.geos[2] = that.geos[2];
+		this.geos[3] = that.geos[3];
+		this.geos[4] = that.geos[4];
+		this.geos[5] = that.geos[5];
+		this.sizeInBytes = that.sizeInBytes;
+		this.sizeInBlocks = that.sizeInBlocks;
+		this.dirTrack = that.dirTrack;
+		this.dirSector = that.dirSector;
+		this.dirPosition = that.dirPosition;
+	}
+	
+	public CbmFile(String name, int fileType, int dirPosition, int track, int sector, int size) {
+		this.name = name;
+		this.fileType = fileType;
+		this.dirPosition = dirPosition;
+		this.track = track;
+		this.sector = sector;
+		this.sizeInBytes = size;
+		fileScratched = false;
+		fileLocked = false;
+		fileClosed = false;
+	}
+
+	/**
+	 * Copies all attributes from source CbmFile to this CbmFile.<BR>
+	 * @param source the source cbmFile
+	 */
+	public void copy(CbmFile source) {
+		this.fileScratched = source.fileScratched;
+		this.fileType = source.fileType;
+		this.fileLocked = source.fileLocked;
+		this.fileClosed = source.fileClosed;
+		this.track = source.track;
+		this.sector = source.sector;
+		this.name = source.name;
+		this.relTrack = source.relTrack;
+		this.relSector = source.relSector;
+		for (int i=0; i<this.geos.length && i<source.geos.length; i++) {
+			this.geos[i] = source.geos[i];
+			
+		}
+		this.sizeInBytes = source.sizeInBytes;
+		this.sizeInBlocks = source.sizeInBlocks;
+		this.dirTrack = source.dirTrack;
+		this.dirSector = source.dirSector;
+		this.dirPosition = source.dirPosition;
+	}
+	
+	/**
+	 * Construct entry from position in disk image.
+	 * @param data byte[]
+	 * @param position int
+	 */
+	public CbmFile(byte[] data, int position) {
+		dirTrack = data[position + 0x00] & 0xff;
+		dirSector = data[position + 0x01] & 0xff;
+		fileScratched = (data[position + 0x02] & 0xff) == 0 ? true : false;
+		fileType = data[position + 0x02] & 0x07;
+		fileLocked = (data[position + 0x02] & 0x40) == 0 ? false : true;
+		fileClosed = (data[position + 0x02] & 0x80) == 0 ? false : true;		
+		track = data[position + 0x03] & 0xff;
+		sector = data[position + 0x04] & 0xff;
+		StringBuffer buf = new StringBuffer();
+		for (int i = 0; i < 16; i++){
+			int c = data[position + 0x05 + i] & 0xff;
+			if (c != (DiskImage.BLANK & 0xff)) {
+				buf.append((char)(DiskImage.PETSCII_TABLE[c]));
+			}
+		}
+		name = buf.toString();
+		relTrack = data[position + 0x15] & 0xff;
+		relSector = data[position + 0x16] & 0xff;
+		for (int i = 0; i < geos.length; i++) {
+			geos[i] = data[position + 0x17 +i] & 0xff;
+		}
+		sizeInBlocks = (data[position + 0x1e] & 0xff) |	((data[position + 0x1f] & 0xff) * 256) ;
+	}
+	
 	public String toString() {
 		StringBuilder builder = new StringBuilder();
 		builder.append("CbmFile [");
-		builder.append(" file_scratched=").append(file_scratched);
-		builder.append(" file_type=").append(file_type);
-		builder.append(" file_locked=").append(file_locked);
-		builder.append(" file_closed=").append(file_closed);
+		toString(builder);
+		builder.append("]");
+		return builder.toString();
+	}
+	
+	/** {@inheritDoc} */
+	protected void toString(StringBuilder builder) {
+		builder.append(" fileScratched=").append(fileScratched);
+		builder.append(" fileType=").append(fileType);
+		builder.append(" fileLocked=").append(fileLocked);
+		builder.append(" fileClosed=").append(fileClosed);
 		builder.append(" track=").append(track);
 		builder.append(" sector=").append(sector);
 		builder.append(" name=").append(name);
-		builder.append(" rel_track=").append(rel_track);
-		builder.append(" rel_sector=").append(rel_sector);
+		builder.append(" relTrack=").append(relTrack);
+		builder.append(" relSector=").append(relSector);
 		builder.append(" geos=").append(Arrays.toString(geos));
 		builder.append(" sizeInBytes=").append(sizeInBytes);
 		builder.append(" sizeInBlocks=").append(sizeInBlocks);
 		builder.append(" dirTrack=").append(dirTrack);
 		builder.append(" dirSector=").append(dirSector);
 		builder.append(" dirPosition=").append(dirPosition);
-		builder.append("]");
-		return builder.toString();
 	}
 
 	/**
 	 * @return
 	 */
-	public boolean isFile_closed() {
-		return file_closed;
+	public boolean isFileClosed() {
+		return fileClosed;
 	}
 
 	/**
 	 * @return
 	 */
-	public boolean isFile_locked() {
-		return file_locked;
+	public boolean isFileLocked() {
+		return fileLocked;
 	}
 
 	/**
 	 * @return
 	 */
-	public boolean isFile_scratched() {
-		return file_scratched;
+	public boolean isFileScratched() {
+		return fileScratched;
 	}
 
 	/**
 	 * @return
 	 */
-	public int getFile_type() {
-		return file_type;
+	public int getFileType() {
+		return fileType;
 	}
 
 	/**
@@ -157,15 +270,15 @@ public class CbmFile {
 	/**
 	 * @return
 	 */
-	public int getRel_sector() {
-		return rel_sector;
+	public int getRelSector() {
+		return relSector;
 	}
 
 	/**
 	 * @return
 	 */
-	public int getRel_track() {
-		return rel_track;
+	public int getRelTrack() {
+		return relTrack;
 	}
 
 	/**
@@ -192,29 +305,29 @@ public class CbmFile {
 	/**
 	 * @param b
 	 */
-	public void setFile_closed(boolean b) {
-		file_closed = b;
+	public void setFileClosed(boolean b) {
+		fileClosed = b;
 	}
 
 	/**
 	 * @param b
 	 */
-	public void setFile_locked(boolean b) {
-		file_locked = b;
+	public void setFileLocked(boolean b) {
+		fileLocked = b;
 	}
 
 	/**
 	 * @param b
 	 */
-	public void setFile_scratched(boolean b) {
-		file_scratched = b;
+	public void setFileScratched(boolean b) {
+		fileScratched = b;
 	}
 
 	/**
 	 * @param b
 	 */
-	public void setFile_type(int b) {
-		file_type = b;
+	public void setFileType(int b) {
+		fileType = b;
 	}
 
 	/**
@@ -234,15 +347,15 @@ public class CbmFile {
 	/**
 	 * @param b
 	 */
-	public void setRel_sector(int b) {
-		rel_sector = b;
+	public void setRelSector(int b) {
+		relSector = b;
 	}
 
 	/**
 	 * @param b
 	 */
-	public void setRel_track(int b) {
-		rel_track = b;
+	public void setRelTrack(int b) {
+		relTrack = b;
 	}
 
 	/**
@@ -321,5 +434,14 @@ public class CbmFile {
 	public void setDirPosition(int i) {
 		dirPosition = i;
 	}
+
+	public int getOffSet() {
+		return offSet;
+	}
+
+	public void setOffSet(int offSet) {
+		this.offSet = offSet;
+	}
+	
 
 }

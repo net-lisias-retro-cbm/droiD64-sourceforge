@@ -38,6 +38,27 @@ public class DirEntry {
 	public DirEntry() {
 	}
 
+	public DirEntry(CbmFile cbmFile, int fileNum) {
+		number = fileNum;
+		if (cbmFile instanceof CpmFile) {
+			CpmFile cpm = (CpmFile) cbmFile;
+			blocks = cpm.getRecordCount();
+			name = cpm.getCpmName();
+			type = cpm.getCpmNameExt();			
+			flags =  (cpm.isReadOnly() ? "R" : "-") + (cpm.isHidden() ? "H" : "-") + (cpm.isArchived() ? "A" : "-");
+			track = cbmFile.getTrack();
+			sector = cbmFile.getSector();
+		} else {
+			blocks = cbmFile.getSizeInBlocks();
+			type = DiskImage.getFileType(cbmFile.getFileType());
+			name= " \"" + cbmFile.getName() + "\"";
+
+			flags = (cbmFile.isFileLocked() ? "<" : "") + (cbmFile.isFileClosed() ? "" : "*");
+			track = cbmFile.getTrack();
+			sector = cbmFile.getSector();
+		}		
+	}
+	
 	/** {@inheritDoc} */
 	public String toString() {
 		return String.format("%3d %3d \"%16s\" %3s%3s %2d %2d", number, blocks, name!=null ? name : "", type!=null?type:"", flags!=null?flags:"", track, sector);

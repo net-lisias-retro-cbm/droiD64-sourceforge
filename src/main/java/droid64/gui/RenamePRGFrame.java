@@ -68,9 +68,10 @@ public class RenamePRGFrame extends JDialog {
 		JPanel buttonPanel = new JPanel();
 		
 		JLabel fileNameLabel = new JLabel("Filename:");
-		final JTextField nameTextField = new JTextField(oldFileName, 16);
+		final JTextField nameTextField = new JTextField("", 16);
 		nameTextField.setToolTipText("Enter the new filename here.");
-	
+		nameTextField.setDocument(new LimitLengthDocument(16, oldFileName));
+
 		JLabel fileTypeLabel = new JLabel("FileType:");
 		final JComboBox<String> fileTypeBox = new JComboBox<String>(FILE_TYPE);
 		fileTypeBox.setToolTipText("Select a filetype here.");

@@ -30,13 +30,14 @@ import droid64.gui.MainPanel;
 public class DroiD64 {
 
 	public static final String PROGNAME = "droiD64";
-	public static final String VERSION = "0.05b";
+	public static final String VERSION = "0.065b";
+	public static final String TITLE = "Beta Version Warning: MAY HAVE ERRORS! USE ONLY ON BACKUPS! LOOK AT \"BUGS AND TO-DO\"!";
 	
 	public DroiD64() {
 		new MainPanel();
 	}
 	
 	public static void main(String[] args) {
-		new DroiD64();		
+		new DroiD64();
 	}
 }

@@ -3,9 +3,12 @@ import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Container;
 import java.awt.Dimension;
+import java.awt.Point;
 import java.awt.Toolkit;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 
 import javax.swing.JButton;
 import javax.swing.JFrame;
@@ -17,6 +20,10 @@ import javax.swing.table.AbstractTableModel;
 import javax.swing.table.DefaultTableColumnModel;
 import javax.swing.table.TableColumn;
 import javax.swing.table.TableModel;
+
+import droid64.DroiD64;
+import droid64.d64.CbmException;
+import droid64.d64.DiskImage;
 
 /**<pre style='font-family:sans-serif;'>
  * Created on 25.06.2004
@@ -46,11 +53,6 @@ import javax.swing.table.TableModel;
 public class BAMFrame extends JFrame {
 
 	private static final long serialVersionUID = 1L;
-	private static final String[] COLHEADS = {
-		"Track",
-		"1", "2", "3", "4", "5", "6","7","8","9","10",
-		"11","12","13","14","15","16","17","18","19","20",
-		"21" };
 
 	/**
 	 * Constructor
@@ -58,20 +60,19 @@ public class BAMFrame extends JFrame {
 	 * @param diskName
 	 * @param bamEntry_
 	 */
-	public BAMFrame(String topText, String diskName, String[][] bamEntry_) {
+	public BAMFrame(String topText, String diskName, final String[][] bamEntry, final DiskImage diskImage) {
 		super(topText);
-		final String[][] bamEntry = bamEntry_;
 		
 		//Table Column-Width		
-		DefaultTableColumnModel cm = new DefaultTableColumnModel();
-		for (int i = 0; i < COLHEADS.length; ++i) {
-			TableColumn col = new TableColumn(i, i == 0 ? 50 : 10);
-			col.setHeaderValue(COLHEADS[i]);
-			cm.addColumn(col);
+		DefaultTableColumnModel columnModel = new DefaultTableColumnModel();
+		for (int i = 0; i <= diskImage.getMaxSectorCount(); ++i) {
+			TableColumn col = new TableColumn(i, i == 0 ? 40 : 10);
+			col.setHeaderValue( i > 0 ? Integer.toString(i - 1) : "Track");
+			columnModel.addColumn(col);
 		}
 
 		//Show table model 
-		TableModel tm = new AbstractTableModel() {
+		TableModel tableModel = new AbstractTableModel() {
 			private static final long serialVersionUID = 1L;
 			public int getRowCount() {
 				return bamEntry.length;
@@ -80,18 +81,42 @@ public class BAMFrame extends JFrame {
 				return bamEntry[0].length;
 			}
 			public Object getValueAt(int row, int column) {
-				return bamEntry[row][column];
+				if (row < bamEntry.length && column < bamEntry[0].length) {
+					return bamEntry[row][column];
+				} else {
+					return "";
+				}
 			}
 		};
 
-		JTable bamTable = new JTable(tm, cm);
-		bamTable.setToolTipText("the BAM of the disk");
+		ColoredTableCellRenderer cellRenderer = new ColoredTableCellRenderer();
+		JTable bamTable = new JTable(tableModel, columnModel);
+		//bamTable.setToolTipText("the BAM of the disk");
 		//		table.setAutoResizeMode(JTable.AUTO_RESIZE_ALL_COLUMNS);
 		//		table.setAlignmentX(JTable.RIGHT_ALIGNMENT);
 		bamTable.setGridColor(new Color(230, 230, 255));
-		bamTable.setDefaultRenderer( Object.class, new ColoredTableCellRenderer() );
-
-		JPanel buttonPanel = new JPanel();
+		bamTable.setDefaultRenderer( Object.class, cellRenderer );
+		bamTable.addMouseListener(new MouseAdapter() {
+		    public void mousePressed(MouseEvent me) {
+		        JTable table = (JTable) me.getSource();
+		        Point p = me.getPoint();
+		        int col = table.columnAtPoint(p);
+		        int row = table.rowAtPoint(p);
+		        if (row >= 0 && col > 0) {
+		        	int clickCount = me.getClickCount(); 
+		        	if (clickCount == 2 ) {		        		
+						try {
+							byte[] data = diskImage.getBlock(row+1, col-1);
+							if (data != null) {
+								String info = "Track  "+(row+1)+ " Sector "+(col-1) + " (0x" + Integer.toHexString(diskImage.getSectorOffset(row+1,col-1))+")";
+								new HexViewFrame(DroiD64.PROGNAME+" v"+DroiD64.VERSION+" - Block view", info, data, data.length);
+							}
+						} catch (CbmException e) {}
+		        	}
+		        }
+		    }
+		});
+		
 		final JButton okButton = new JButton("OK");
 		okButton.setMnemonic('o');
 		okButton.setToolTipText("Leave BAM view.");
@@ -102,23 +127,23 @@ public class BAMFrame extends JFrame {
 				}
 			}
 		});
+		JPanel buttonPanel = new JPanel();
 		buttonPanel.add(okButton);
 		
 		Container cp = getContentPane();
 		cp.setLayout(new BorderLayout());
-
-		JLabel diskNameLabel = new JLabel(diskName);
-		cp.add(diskNameLabel, BorderLayout.NORTH);		
+		cp.add(new JLabel(diskName), BorderLayout.NORTH);		
 		cp.add(new JScrollPane(bamTable), BorderLayout.CENTER);		
 		cp.add(buttonPanel, BorderLayout.SOUTH);		
 
-		Dimension dim = Toolkit.getDefaultToolkit().getScreenSize();
+		Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
 		setLocation(
-				(int)((dim.width - getSize().getWidth()) / 3),
-				(int)((dim.height - getSize().getHeight()) / 3)
+				(int)((screenSize.width - getSize().getWidth()) / 3),
+				(int)((screenSize.height - getSize().getHeight()) / 3)
 				);
 		// setLocation(300,200);
 		pack();
+		setSize(screenSize.width/4,screenSize.height/2);
 		setVisible(true);
 		this.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
 	}

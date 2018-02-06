@@ -2,16 +2,21 @@ package droid64.gui;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Dimension;
+import java.awt.FlowLayout;
 import java.awt.Font;
 import java.awt.FontFormatException;
 import java.awt.GridLayout;
+import java.awt.Insets;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.util.ArrayList;
+import java.util.List;
 
 import javax.swing.BorderFactory;
 import javax.swing.JButton;
@@ -24,18 +29,21 @@ import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTable;
-import javax.swing.JTextArea;
 import javax.swing.event.TableModelEvent;
 import javax.swing.event.TableModelListener;
 import javax.swing.filechooser.FileFilter;
 import javax.swing.table.DefaultTableColumnModel;
 import javax.swing.table.TableColumn;
+import javax.swing.table.TableColumnModel;
 import javax.swing.table.TableModel;
 
 import droid64.DroiD64;
 import droid64.d64.CbmException;
 import droid64.d64.D64;
+import droid64.d64.D71;
+import droid64.d64.D81;
 import droid64.d64.DirEntry;
+import droid64.d64.DiskImage;
 import droid64.db.DaoFactory;
 import droid64.db.DatabaseException;
 import droid64.db.Disk;
@@ -64,6 +72,7 @@ import droid64.db.Disk;
  *   http://droid64.sourceforge.net
  *
  * @author wolf
+ * @author henrik
  */
 
 /*
@@ -75,73 +84,91 @@ public class DiskPanel extends JPanel implements TableModelListener {
 	private static final long serialVersionUID = 1L;
 	private static final String DIR_FONT_NAME = "droiD64_cbm.ttf";
 
-	private static final int FEEDBACK_PANEL_ROWS = 10;
-	private static final int FEEDBACK_PANEL_COLS = 40;
+	private static final Color DIR_BG_COLOR = new Color( 64, 64, 224);
+	private static final Color DIR_FG_COLOR = new Color(160,160, 255);	
 
-	private static final Color DIR_BG_COLOR = new Color(64,64,224);
-	private static final Color DIR_FG_COLOR = new Color(160,160,255);	
-
+	private static final Color CPM_DIR_BG_COLOR = new Color( 16,  16,  16);
+	private static final Color CPM_DIR_FG_COLOR = new Color(192, 255, 192);
+	
 	private static int MAX_PLUGINS = 2;
 
+	private static Insets BUTTON_MARGINS = new Insets(1, 8, 1, 8);
+
+	
 	private DiskPanel otherDiskPanel;
-	public D64 d64 = new D64();
-	private DirEntry dirEntry;
+	public DiskImage diskImage = null;
 	private ExternalProgram[] externalProgram = new ExternalProgram[2];
-	private EntryTableModel tm = new EntryTableModel();
+	private EntryTableModel tableModel = new EntryTableModel();
 
 	private JLabel diskLabel, diskName;
 	private JTable table;
-	private JTextArea textArea;
 	JButton[] miscButton = new JButton[MAX_PLUGINS];
-
+	/** File dialog for selecting image file to open */
+	private JFileChooser chooser = null;
+	
 	private String newPRGName;
 	private boolean newPRGNameSuccess;
 	private int newPRGType;
 	private String newDiskName;
 	private String newDiskID;
+	private int newDiskType;
 	private boolean newDiskNameSuccess;
 	private boolean isSetD64 = false;	//indicates whether a D64 was selected or not
 	private String thisD64Name = "";
 	private String loadName = "";
 	private String saveName = "";
 	private String directory = ".";
-	private String feedBackMessage = "";
 	private int rowHeight = 12;
 	private boolean useDatabase = false;
 	private MainPanel mainPanel;
-
+	private JPanel diskLabelPane;
+	private boolean newCompressedDisk = false;
+	private boolean newCpmDisk = false;
+		
 	public DiskPanel(ExternalProgram[] externalProgram, int fontSize, MainPanel mainPanel) {
 		this.externalProgram = externalProgram;
 		this.mainPanel = mainPanel;
 		rowHeight = fontSize + 2;
 		JPanel dirPanel = drawDirPanel();
 		JPanel choicePanel = drawChoicePanel();
-		JPanel feedBackPanel = drawFeedBackPanel();
 		setupFont(fontSize);
 		setLayout(new BorderLayout());
 
 		JPanel feedbackChoicePanel = new JPanel();
 		feedbackChoicePanel.setLayout(new BorderLayout());
 		feedbackChoicePanel.add(choicePanel, BorderLayout.NORTH);
-		feedbackChoicePanel.add(feedBackPanel, BorderLayout.CENTER);
 		
 		add(dirPanel, BorderLayout.CENTER);
 		add(feedbackChoicePanel, BorderLayout.SOUTH);
 		setBorder(BorderFactory.createRaisedBevelBorder());
 	}
 
+//	private static Color ACTIVE_COLOR = Color.RED;
+//	private static Color INACTIVE_COLOR = Color.GRAY;
+	
+	public void setActive(boolean active) {
+// TODO: use this once buttons have been moved into one shared panel
+//		if (active) {
+//			setBackground(ACTIVE_COLOR);
+//			if (otherDiskPanel != null) {
+//				otherDiskPanel.setBackground(INACTIVE_COLOR);
+//			}
+//		} else {
+//			setBackground(INACTIVE_COLOR);			
+//			if (otherDiskPanel != null) {
+//				otherDiskPanel.setBackground(ACTIVE_COLOR);
+//			}
+//		}
+	}
+	
 	public void setupFont(int fontSize) {
 		try {
 			Font ttfFont = Font.createFont(Font.TRUETYPE_FONT,	getClass().getResourceAsStream("resources/"+DIR_FONT_NAME));
 			Font scaledFont = ttfFont.deriveFont( new Float(fontSize).floatValue() );
 			table.setFont(scaledFont);
 			diskLabel.setFont(scaledFont);
-		} catch (FileNotFoundException e) {
-			feedBackMessage += "\n" + e + "\n";
-		} catch (FontFormatException e) {
-			feedBackMessage += "\n" + e + "\n";
-		} catch (IOException e) {
-			feedBackMessage += "\n" + e + "\n";
+		} catch (FontFormatException | IOException e) {
+			mainPanel.appendConsole("\n"+e.getMessage());
 		}
 	}
 
@@ -150,18 +177,15 @@ public class DiskPanel extends JPanel implements TableModelListener {
 		JPanel dirPanel = new JPanel();
 		dirPanel.setLayout(new BorderLayout());
 
-		//Table Column-Width		
-		DefaultTableColumnModel cm = new DefaultTableColumnModel();
-
-		for (int i=0; i<tm.getColumnCount(); i++) {
+		DefaultTableColumnModel columnModel = new DefaultTableColumnModel();
+		for (int i=0; i<tableModel.getColumnCount(); i++) {
 			TableColumn col = new TableColumn(i, i == 2 ? 220 : 1);
-			col.setHeaderValue(tm.getColumnName(i));
-			cm.addColumn(col);
+			col.setHeaderValue(tableModel.getColumnName(i));
+			columnModel.addColumn(col);
 		}
 
-		tm.addTableModelListener(this);
-
-		table = new JTable(tm, cm);
+		tableModel.addTableModelListener(this);
+		table = new JTable(tableModel, columnModel);
 		table.setToolTipText("The content of the disk");
 		table.setGridColor(new Color(64, 64, 224));
 		table.setRowHeight(rowHeight);
@@ -173,7 +197,7 @@ public class DiskPanel extends JPanel implements TableModelListener {
 		diskLabel.setBackground(DIR_BG_COLOR);
 		diskLabel.setForeground(DIR_FG_COLOR);
 
-		JPanel diskLabelPane = new JPanel();		
+		diskLabelPane = new JPanel();		
 		diskLabelPane.setBackground(DIR_BG_COLOR);
 		diskLabelPane.setForeground(DIR_FG_COLOR);
 		diskLabelPane.add(diskLabel);
@@ -182,8 +206,15 @@ public class DiskPanel extends JPanel implements TableModelListener {
 		diskName.setToolTipText("The name of the file");
 		diskName.setFont(new Font("Verdana", Font.PLAIN, diskName.getFont().getSize()));
 
+		JScrollPane scrollPane = new JScrollPane(table);
+		scrollPane.addMouseListener(new MouseAdapter() {
+		    public void mousePressed(MouseEvent me) {
+		    	setActive(true);
+		    }
+		});
+		
 		dirPanel.add(new JScrollPane(diskLabelPane), BorderLayout.NORTH);
-		dirPanel.add(new JScrollPane(table), BorderLayout.CENTER);
+		dirPanel.add(scrollPane, BorderLayout.CENTER);
 		dirPanel.add(new JScrollPane(diskName), BorderLayout.SOUTH);
 		dirPanel.setPreferredSize(new Dimension(50, 300));
 		return dirPanel;
@@ -191,26 +222,20 @@ public class DiskPanel extends JPanel implements TableModelListener {
 
 	private void showErrorMessage(String error){
 		if (error == "noDisk"){
-			feedBackMessage += "\nNo D64 file selected. Aborting...\n\n";
-			textArea.setText(feedBackMessage);
-			JOptionPane.showMessageDialog(
-					null,
+			mainPanel.appendConsole("\nNo disk image file selected. Aborting.");
+			JOptionPane.showMessageDialog(mainPanel,
 					"No disk loaded.\n"+
-							"Open a D64 image first.",
-							DroiD64.PROGNAME+" v"+ DroiD64.VERSION+" - No disk",
-							JOptionPane.ERROR_MESSAGE
-					);
+							"Open a disk image file first.",
+							DroiD64.PROGNAME + " v" + DroiD64.VERSION + " - No disk",
+							JOptionPane.ERROR_MESSAGE);
 		}
 		if (error == "insertError"){
-			feedBackMessage += "\nInserting error. Aborting...\n\n";
-			textArea.setText(feedBackMessage);
-			JOptionPane.showMessageDialog(
-					null,
+			mainPanel.appendConsole("\nInserting error. Aborting.\n");
+			JOptionPane.showMessageDialog(mainPanel,
 					"An error occurred while inserting file into disk.\n"+
-							"Look up console report message for further information.",
-							DroiD64.PROGNAME+" v"+ DroiD64.PROGNAME+" - Failure while inserting file",
-							JOptionPane.ERROR_MESSAGE
-					);
+					"Look up console report message for further information.",
+					DroiD64.PROGNAME + " v" + DroiD64.PROGNAME + " - Failure while inserting file",
+					JOptionPane.ERROR_MESSAGE );
 		}
 	}
 
@@ -222,168 +247,11 @@ public class DiskPanel extends JPanel implements TableModelListener {
 	};
 
 	private JPanel drawChoicePanel() {
-		JPanel choice1Panel = new JPanel();
-		JPanel choice2Panel = new JPanel();
-		JPanel choice3Panel = new JPanel();
-
-		final JButton newButton = new JButton("New");
-		newButton.setToolTipText("Create a new blank disk.");
-		newButton.addActionListener(new ActionListener() {
-			public void actionPerformed(ActionEvent event) {
-				if (event.getSource() == newButton) {
-					newD64();
-				}
-			}
-		});
-
-		final JButton loadButton =new JButton("Load");
-		loadButton.setToolTipText("Open a disk.");
-		loadButton.addActionListener(new ActionListener() {
-			public void actionPerformed(ActionEvent event) {
-				if (event.getSource() == loadButton) {
-					openD64(openD64FileDialog(directory), true);
-				}
-			}
-		});
-
-		final JButton showBamButton = new JButton("BAM");
-		showBamButton.setToolTipText("Show the BAM of this disk.");
-		showBamButton.addActionListener(new ActionListener() {
-			public void actionPerformed(ActionEvent event) {
-				if (event.getSource() == showBamButton) {
-					if (isSetD64 == false){
-						showErrorMessage("noDisk");
-						return;
-					}
-					showBAM();
-				}
-			}
-		});
-
-		final JButton renameDiskButton = new JButton("Rename");
-		renameDiskButton.setToolTipText("Modify the label of the disk.");
-		renameDiskButton.addActionListener(new ActionListener() {
-			public void actionPerformed(ActionEvent event) {
-				if (event.getSource() == renameDiskButton) {
-					if (isSetD64 == false){
-						showErrorMessage("noDisk");
-						return;
-					}	
-					renameDisk();
-				}
-			}
-		});
-		
-		JLabel diskTxtLabel = new JLabel("Disk");
-		choice1Panel.add(diskTxtLabel);
-
-		choice1Panel.add(newButton);
-		choice1Panel.add(loadButton);
-		choice1Panel.add(showBamButton);
-		choice1Panel.add(renameDiskButton);
-
-		final JButton insertButton = new JButton("In");
-		insertButton.setToolTipText("Insert a PRG file into this disk.");
-		insertButton.addActionListener(new ActionListener() {
-			public void actionPerformed(ActionEvent event) {
-				if (event.getSource() == insertButton) {
-					if (isSetD64 == false){
-						showErrorMessage("noDisk");
-						return;
-					}
-					insertPRG();
-				}
-			}
-		});
-
-		final JButton extractButton = new JButton("Out");
-		extractButton.setToolTipText("Extract a PRG file from this disk.");
-		extractButton.addActionListener(new ActionListener() {
-			public void actionPerformed(ActionEvent event) {
-				if (event.getSource() == extractButton) {
-					if (isSetD64 == false){
-						showErrorMessage("noDisk");
-						return;
-					}
-					extractPRG();
-				}
-			}
-		});
-
-		final JButton copyButton = new JButton("Copy");
-		copyButton.setToolTipText("Copy a PRG file to the other disk.");
-		copyButton.addActionListener(new ActionListener() {
-			public void actionPerformed(ActionEvent event) {
-				if (event.getSource() == copyButton) {
-					if (isSetD64 == false){
-						showErrorMessage("noDisk");
-						return;
-					}
-					copyPRG();
-				}
-			}
-		});
-
-		final JButton renamePRGButton = new JButton("Rename");
-		renamePRGButton.setToolTipText("Modify a PRG file in this disk.");
-		renamePRGButton.addActionListener(new ActionListener() {
-			public void actionPerformed(ActionEvent event) {
-				if (event.getSource() == renamePRGButton) {
-					if (isSetD64 == false){
-						showErrorMessage("noDisk");
-						return;
-					}
-					renamePRG();
-				}
-			}
-		});
-
-		final JButton delPRGButton = new JButton("Delete");
-		delPRGButton.setToolTipText("Delete a PRG file in this disk.");
-		delPRGButton.addActionListener(new ActionListener() {
-			public void actionPerformed(ActionEvent event) {
-				if (event.getSource() == delPRGButton) {
-					if (isSetD64 == false){
-						showErrorMessage("noDisk");
-						return;
-					}
-					delPRG();
-				}
-			}
-		});
-
-
-
-		final JButton hexViewButton = new JButton("Hex view");
-		hexViewButton.setToolTipText("Show hex dump of selected file.");
-		hexViewButton.addActionListener(new ActionListener() {
-			public void actionPerformed(ActionEvent event) {
-				if (event.getSource() == hexViewButton) {
-					if (isSetD64 == false){
-						showErrorMessage("noDisk");
-						return;
-					}
-					hexViewFile();
-				}
-			}
-		});
-
-		JLabel fileLabel = new JLabel("File"); 
-		choice2Panel.add(fileLabel);
-
-		choice2Panel.add(insertButton);
-		choice2Panel.add(extractButton);
-		choice2Panel.add(renamePRGButton);
-		choice2Panel.add(delPRGButton);
-		choice2Panel.add(copyButton);
-		choice2Panel.add(hexViewButton);
-
-		JLabel miscLabel = new JLabel("Misc"); 
-		choice3Panel.add(miscLabel);
-
-
+		JPanel pluginButtonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 2, 2));
+		pluginButtonPanel.add(new JLabel("Misc "));
 		for (int i = 0; i < externalProgram.length; i++) {
 			miscButton[i] = new JButton(externalProgram[i].getLabel());
+			miscButton[i].setMargin(BUTTON_MARGINS);
 			miscButton[i].setToolTipText(externalProgram[i].getDescription());
 			miscButton[i].addActionListener(new ActionListener() {
 				public void actionPerformed(ActionEvent event) {
@@ -398,45 +266,270 @@ public class DiskPanel extends JPanel implements TableModelListener {
 					}
 				}
 			});
-			choice3Panel.add(miscButton[i]);
+			pluginButtonPanel.add(miscButton[i]);
 		}
 		
-		JPanel choicePanel = new JPanel();
-		choicePanel.setLayout(new GridLayout(3,1));		
-		choicePanel.add(choice1Panel);
-		choicePanel.add(choice2Panel);
-		choicePanel.add(choice3Panel);
-		return choicePanel;
+		JPanel panel = new JPanel();
+		if (mainPanel.isShowViewButtons()) {
+			panel.setLayout(new GridLayout(4, 1, 0, 0));		
+			panel.add(drawDiskButtonPanel());
+			panel.add(drawFileOperationButtonPanel());
+			panel.add(drawOpenFileButtonPanel());
+			panel.add(pluginButtonPanel);
+		} else {
+			panel.setLayout(new GridLayout(3, 1, 0, 0));		
+			panel.add(drawDiskButtonPanel());
+			panel.add(drawFileOperationButtonPanel());
+			panel.add(pluginButtonPanel);
+		}
+		return panel;
 	}
 	
-	private JPanel drawFeedBackPanel() {
-		JPanel feedBackPanel = new JPanel();
-		feedBackPanel.setLayout(new BorderLayout());
-		JLabel feedBackLabel = new JLabel("Output:");
-		feedBackLabel.setToolTipText("The status-report is displayed here.");
-		textArea = new JTextArea(FEEDBACK_PANEL_ROWS, FEEDBACK_PANEL_COLS);
-		textArea.setToolTipText("The status-report is displayed here.");
-		textArea.setEditable(false);
-		feedBackPanel.add(feedBackLabel, BorderLayout.NORTH);
-		feedBackPanel.add(new JScrollPane(textArea), BorderLayout.SOUTH);
-		return feedBackPanel;
-	}
-
-	private String openD64FileDialog(String directory) {		
-		FileFilter fileFilter = new FileFilter() {
-			public boolean accept(File f) {
-				if (f.isDirectory()) {
-					return true;
-				} else {
-					return f.getName().toLowerCase().endsWith(".d64") || f.getName().toLowerCase().endsWith(".d64.gz");
+	private JPanel drawDiskButtonPanel() {
+		final JButton newButton = new JButton("New");
+		newButton.setToolTipText("Create a new blank disk.");
+		newButton.setMargin(BUTTON_MARGINS);
+		newButton.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent event) {
+				if (event.getSource() == newButton) {
+					newDiskImage();
 				}
 			}
-			public String getDescription () { return "D64 images"; }  
-		};
-		JFileChooser chooser = new JFileChooser(directory);
-		chooser.addChoosableFileFilter(fileFilter);
-		chooser.setFileFilter(fileFilter);
-		chooser.setMultiSelectionEnabled(false);
+		});
+		final JButton loadButton =new JButton("Load");
+		loadButton.setToolTipText("Open a disk.");
+		loadButton.setMargin(BUTTON_MARGINS);
+		loadButton.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent event) {
+				if (event.getSource() == loadButton) {
+					openDiskImage(openDiskImageFileDialog(directory), true);
+				}
+			}
+		});
+		final JButton unloadDiskButton = new JButton("Unload");
+		unloadDiskButton.setToolTipText("Unload a loaded disk image.");
+		unloadDiskButton.setMargin(BUTTON_MARGINS);
+		unloadDiskButton.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent event) {
+				if (isSetD64 && event.getSource() == unloadDiskButton) {
+					unloadDisk();
+				}
+			}
+		});
+		final JButton showBamButton = new JButton("BAM");
+		showBamButton.setToolTipText("Show the BAM of this disk.");
+		showBamButton.setMargin(BUTTON_MARGINS);
+		showBamButton.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent event) {
+				if (event.getSource() == showBamButton) {
+					if (isSetD64 == false){
+						showErrorMessage("noDisk");
+						return;
+					} else {
+						showBAM();
+					}
+				}
+			}
+		});
+		final JButton renameDiskButton = new JButton("Rename");
+		renameDiskButton.setToolTipText("Modify the label of the disk.");
+		renameDiskButton.setMargin(BUTTON_MARGINS);
+		renameDiskButton.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent event) {
+				if (event.getSource() == renameDiskButton) {
+					if (isSetD64 == false){
+						showErrorMessage("noDisk");
+						return;
+					} else {
+						renameDisk();
+					}
+				}
+			}
+		});
+
+		JPanel panel = new JPanel(new FlowLayout(FlowLayout.CENTER, 2, 2));
+		panel.add(new JLabel("Disk "));
+		panel.add(newButton);
+		panel.add(loadButton);
+		panel.add(unloadDiskButton);
+		panel.add(showBamButton);
+		panel.add(renameDiskButton);
+		return panel;
+	}
+	
+	private JPanel drawOpenFileButtonPanel() {
+		final JButton viewButton = new JButton("Text");
+		viewButton.setToolTipText("Show text from selected file.");
+		viewButton.setMargin(BUTTON_MARGINS);
+		viewButton.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent event) {
+				if (event.getSource() == viewButton) {
+					if (isSetD64 == false){
+						showErrorMessage("noDisk");
+						return;
+					}
+					showFile();
+				}
+			}
+		});		
+		final JButton hexViewButton = new JButton("Hex");
+		hexViewButton.setToolTipText("Show hex dump of selected file.");
+		hexViewButton.setMargin(BUTTON_MARGINS);
+		hexViewButton.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent event) {
+				if (event.getSource() == hexViewButton) {
+					if (isSetD64 == false){
+						showErrorMessage("noDisk");
+						return;
+					}
+					hexViewFile();
+				}
+			}
+		});
+
+		final JButton basicViewButton = new JButton("Basic");
+		basicViewButton.setToolTipText("Show BASIC listing from selected file.");
+		basicViewButton.setMargin(BUTTON_MARGINS);
+		basicViewButton.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent event) {
+				if (event.getSource() == basicViewButton) {
+					if (isSetD64 == false){
+						showErrorMessage("noDisk");
+						return;
+					}
+					basicViewFile();
+				}
+			}
+		});
+		
+		final JButton imageViewButton = new JButton("Image");
+		imageViewButton.setToolTipText("Show image from selected file.");
+		imageViewButton.setMargin(BUTTON_MARGINS);
+		imageViewButton.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent event) {
+				if (event.getSource() == imageViewButton) {
+					if (isSetD64 == false){
+						showErrorMessage("noDisk");
+						return;
+					}
+					imageViewFile();
+				}
+			}
+		});
+		
+		JPanel panel = new JPanel(new FlowLayout(FlowLayout.CENTER, 2, 2));
+		panel.add(new JLabel("View "));
+		panel.add(viewButton);
+		panel.add(hexViewButton);
+		panel.add(basicViewButton);
+		panel.add(imageViewButton);
+		return panel;
+	}
+	
+	private JPanel drawFileOperationButtonPanel() {
+		final JButton insertButton = new JButton("In");
+		insertButton.setToolTipText("Insert a PRG file into this disk.");
+		insertButton.setMargin(BUTTON_MARGINS);
+		insertButton.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent event) {
+				if (event.getSource() == insertButton) {
+					if (isSetD64 == false){
+						showErrorMessage("noDisk");
+						return;
+					}
+					importPRG();
+				}
+			}
+		});
+		final JButton extractButton = new JButton("Out");
+		extractButton.setToolTipText("Extract a PRG file from this disk.");
+		extractButton.setMargin(BUTTON_MARGINS);
+		extractButton.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent event) {
+				if (event.getSource() == extractButton) {
+					if (isSetD64 == false){
+						showErrorMessage("noDisk");
+						return;
+					}
+					exportPRG();
+				}
+			}
+		});
+		final JButton copyButton = new JButton("Copy");
+		copyButton.setToolTipText("Copy a PRG file to the other disk.");
+		copyButton.setMargin(BUTTON_MARGINS);
+		copyButton.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent event) {
+				if (event.getSource() == copyButton) {
+					if (isSetD64 == false){
+						showErrorMessage("noDisk");
+						return;
+					}
+					copyPRG();
+				}
+			}
+		});
+		final JButton renamePRGButton = new JButton("Rename");
+		renamePRGButton.setToolTipText("Modify a PRG file in this disk.");
+		renamePRGButton.setMargin(BUTTON_MARGINS);
+		renamePRGButton.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent event) {
+				if (event.getSource() == renamePRGButton) {
+					if (isSetD64 == false){
+						showErrorMessage("noDisk");
+						return;
+					}
+					renamePRG();
+				}
+			}
+		});
+		final JButton delPRGButton = new JButton("Delete");
+		delPRGButton.setToolTipText("Delete a PRG file in this disk.");
+		delPRGButton.setMargin(BUTTON_MARGINS);
+		delPRGButton.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent event) {
+				if (event.getSource() == delPRGButton) {
+					if (isSetD64 == false){
+						showErrorMessage("noDisk");
+						return;
+					}
+					delPRG();
+				}
+			}
+		});
+
+		JPanel panel = new JPanel(new FlowLayout(FlowLayout.CENTER, 2, 2));
+		panel.add(new JLabel("File "));
+		panel.add(insertButton);
+		panel.add(extractButton);
+		panel.add(copyButton);
+		panel.add(renamePRGButton);
+		panel.add(delPRGButton);
+		return panel;
+	}
+	
+	private String openDiskImageFileDialog(String directory) {		
+		if (chooser == null) {
+			chooser = new JFileChooser(directory);
+			FileFilter fileFilter = new FileFilter() {			
+				public boolean accept(File f) {
+					if (f.isDirectory()) {
+						return true;
+					} else {
+						for (int i=0; i<DiskImage.VALID_IMAGE_FILE_EXTENSTIONS.length; i++) {
+							if (f.getName().toLowerCase().endsWith(DiskImage.VALID_IMAGE_FILE_EXTENSTIONS[i])) {
+								return true;
+							}
+						}
+						return false;
+					}
+				}
+				public String getDescription () { return "Disk images"; }  
+			};
+			chooser.addChoosableFileFilter(fileFilter);
+			chooser.setFileFilter(fileFilter);
+			chooser.setMultiSelectionEnabled(false);
+		}
 		if (chooser.showOpenDialog(new JFrame()) == JFileChooser.APPROVE_OPTION) {
 			directory = chooser.getSelectedFile().getParent();
 			return chooser.getSelectedFile()+"";
@@ -466,16 +559,21 @@ public class DiskPanel extends JPanel implements TableModelListener {
 		return null;
 	}							
 
-	private String saveD64FileDialog(String directory) {
+	private String saveDiskImageFileDialog(String directory) {
 		FileFilter fileFilter = new FileFilter() {
 			public boolean accept(File f) {
 				if (f.isDirectory()) {
 					return true;
 				} else {
-					return f.getName().toLowerCase().endsWith(".d64") || f.getName().toLowerCase().endsWith(".d64.gz");
+					for (int i=0; i<DiskImage.VALID_IMAGE_FILE_EXTENSTIONS.length; i++) {
+						if (f.getName().toLowerCase().endsWith(DiskImage.VALID_IMAGE_FILE_EXTENSTIONS[i])) {
+							return true;
+						}
+					}
+					return false;					
 				}
 			}
-			public String getDescription () { return "D64 images"; }  
+			public String getDescription () { return "Disk images"; }  
 		};
 		JFileChooser chooser = new JFileChooser(directory);
 		chooser.addChoosableFileFilter(fileFilter);
@@ -502,22 +600,22 @@ public class DiskPanel extends JPanel implements TableModelListener {
 		return null;
 	}
 
-	public void openD64(String fileName, boolean updateList) {
+	public void openDiskImage(String fileName, boolean updateList) {
 		if (fileName != null) {
 			loadName = fileName;
 			isSetD64 = true;
 			thisD64Name = loadName;
-			reloadD64(updateList);
+			reloadDiskImage(updateList);
 		}
 	}
 
 	private void doExternalProgram(int which_one){
-		feedBackMessage += "Executing \"" + externalProgram[which_one].getCommand() + "\" on disk " + loadName + "\n";
-		
+		mainPanel.appendConsole("Executing \"" + externalProgram[which_one].getCommand() + "\" on disk " + loadName);
+
 		String selectedFile = null;
-		for (int i = 0; i < d64.getFilenumber_max(); i++) {
+		for (int i = 0; i < diskImage.getFilenumberMax(); i++) {
 			if (table.isRowSelected(i)) {
-				selectedFile = d64.getCbmFile(i).getName();
+				selectedFile = diskImage.getCbmFile(i).getName();
 				break;
 			}
 		}
@@ -537,94 +635,56 @@ public class DiskPanel extends JPanel implements TableModelListener {
 						BufferedReader procout = new BufferedReader(new InputStreamReader(pr.getInputStream()));
 						String line;
 						while ((line = procout.readLine()) != null)	{
-							feedBackMessage += line + "\n";
+							mainPanel.appendConsole(line);
 						}						
 					} catch (Exception e) {
-						feedBackMessage += "\n" + e.getMessage() + "\n";
-						textArea.setText(feedBackMessage);
+						mainPanel.appendConsole("\n"+e.getMessage());
 					}
 				}
 			};
 			runner.start();
 		} catch (Exception e) {
-			feedBackMessage += "\n" + e.getMessage() + "\n";
-			textArea.setText(feedBackMessage);
+			mainPanel.appendConsole("\n"+e.getMessage());
 		}
 	}
 
 	private void showDirectory() {
-
-		feedBackMessage += "There are "	+ d64.getFilenumber_max() + " files in this D64 file.\n\n";
-
-		for (int filenumber = 0; filenumber <= d64.getFilenumber_max() - 1;	filenumber++) {
-			boolean isLocked = d64.getCbmFile(filenumber).isFile_locked();
-			boolean isClosed = d64.getCbmFile(filenumber).isFile_closed();
-			String flags = (isLocked ? "<" : "") + (isClosed ? "" : "*");
-			dirEntry = new DirEntry();
-			dirEntry.setNumber(filenumber + 1);
-			dirEntry.setBlocks(d64.getCbmFile(filenumber).getSizeInBlocks());
-			dirEntry.setName( " \"" + d64.getCbmFile(filenumber).getName() + "\"" );
-			dirEntry.setType( d64.getFileType(d64.getCbmFile(filenumber).getFile_type()) );
-			dirEntry.setFlags( flags );
-			dirEntry.setTrack( d64.getCbmFile(filenumber).getTrack() );
-			dirEntry.setSector( d64.getCbmFile(filenumber).getSector() );
-			tm.updateDirEntry(dirEntry);
+		mainPanel.appendConsole("There are "	+ diskImage.getFilenumberMax() + " files in this image file.");		
+		for (int fileNum = 0; fileNum <= diskImage.getFilenumberMax() - 1;	fileNum++) {
+			tableModel.updateDirEntry(new DirEntry(diskImage.getCbmFile(fileNum), fileNum + 1));
 		}
-
 		diskLabel.setText(
-				d64.getBam().getDiskDosType()
-				+ " \""	+ d64.getBam().getDiskName() + ","
-				+ d64.getBam().getDiskId()
-				+ "\" "+d64.getBlocksFree()
-				+ " BLOCKS FREE [" + d64.getFilenumber_max() + "]"
+				diskImage.getBam().getDiskDosType()
+				+ " \""	+ diskImage.getBam().getDiskName() + ","
+				+ diskImage.getBam().getDiskId()
+				+ "\" "+diskImage.getBlocksFree()
+				+ " BLOCKS FREE [" + diskImage.getFilenumberMax() + "]"
 				);
+		tableModel.setCpmMode(diskImage.getCpmFormat() != DiskImage.CPM_TYPE_UNKNOWN );
+		setTableColors(diskImage.getCpmFormat());
+		TableColumnModel tcm = table.getTableHeader().getColumnModel();
+		for (int i=0; i< tcm.getColumnCount(); i++) {
+			tcm.getColumn(i).setHeaderValue(tableModel.getColumnName(i));
+		}
 		table.revalidate();
-		textArea.setText(feedBackMessage);
 		repaint();
 	}
-
+	
 	private void showBAM() {
-		final int[] preAND = { 1, 2, 4, 8, 16, 32, 64, 128 };
-		final int myLastTrack = 35; // 40
-		String[][] bamEntry = new String[35][22];
-		for (int i = 0; i <= (myLastTrack-1); i++) {
-			for (int j = 1; j <= 21; j++) {
-				bamEntry[i][j] = " ";
-			}
-		}
 		String diskName =
-				d64.getBam().getDiskDosType()
-				+ " \""
-				+ d64.getBam().getDiskName()
-				+ ","
-				+ d64.getBam().getDiskId()
-				+ "\"";
-		for (int track_number = 1; track_number <= myLastTrack; track_number++) {
-			int bit_counter = 0;
-			bamEntry[track_number-1][0] = track_number+"";
-			for (int cnt = 1; cnt <= 3; cnt++) {
-				for (int bit = 0; bit <= 7; bit++) {
-					bit_counter++;
-					if (bit_counter <= d64.getMaxSectors(track_number)) {
-						if ((d64.getBam().getTrackBits(track_number, cnt) & preAND[bit]) == 0) {
-							bamEntry[track_number-1][bit_counter] = "x";
-						} else {
-							bamEntry[track_number-1][bit_counter] = "-";
-						}
-					}
-				}
-			}
-		}
-		new BAMFrame(DroiD64.PROGNAME+" v"+DroiD64.VERSION+" - BAM of this D64-image", diskName, bamEntry);
+				diskImage.getBam().getDiskDosType() + " \"" +
+				diskImage.getBam().getDiskName() + "," +
+				diskImage.getBam().getDiskId() + "\"";
+		new BAMFrame(DroiD64.PROGNAME+" v"+DroiD64.VERSION+" - BAM of this disk image", diskName, diskImage.getBamTable(), diskImage);
 	}
 
 	private void updateD64File() {
-		d64.readBAM();
-		d64.readDirectory();
-		feedBackMessage += d64.getFeedbackMessage();
+		diskImage.readBAM();
+		diskImage.readDirectory();
+		mainPanel.appendConsole(diskImage.getFeedbackMessage());
 
 		if (useDatabase) {
-			Disk disk = d64.getDisk();
+			Disk disk = diskImage.getDisk();
 			File f = new File(thisD64Name);
 			File p = f.getAbsoluteFile().getParentFile();
 			String d = p != null ? p.getAbsolutePath() : null;
@@ -633,65 +693,54 @@ public class DiskPanel extends JPanel implements TableModelListener {
 			try {
 				DaoFactory.getDaoFactory().getDiskDao().save(disk);
 			} catch (DatabaseException e) {
-				System.out.println(e);
-				feedBackMessage += e;
+				mainPanel.appendConsole("\n"+e.getMessage());
 			}
 		}
-
 	}
 
 	private void copyPRG() {
 		int thisCbmFile;
-
-		feedBackMessage = "";
-		d64.setFeedbackMessage("");
+		diskImage.setFeedbackMessage("");
 		boolean success = false;
 		boolean writeD64File = false;
-
-		feedBackMessage += "CopyPRG:\n";
-
+		mainPanel.appendConsole("CopyPRG;");
 		if (otherDiskPanel.isSetD64 == false){
 			showErrorMessage("noDisk");
 			return;
 		}
-
-		feedBackMessage += "The other D64 is \""+otherDiskPanel.getThisD64Name()+"\"\n";
-
+		mainPanel.appendConsole("The other D64 is \""+otherDiskPanel.getThisD64Name()+"\"");
 		//TODO: copyPRG: what to do if filename exists?
-		feedBackMessage += "Selected PRGs: \n";
-		for (int i = 0; i < d64.getFilenumber_max(); i++) {
+		mainPanel.appendConsole("Selected files;");
+		for (int i = 0; i < diskImage.getFilenumberMax(); i++) {
 			if (table.isRowSelected(i)) {
 				try {
 					//thisCbmFile = d64.getCbmFile(i).getDirPosition();
 					thisCbmFile = i;
-					feedBackMessage += "[" + i + "] " + tm.getValueAt(i,2) + " DirPosition = "+thisCbmFile+"\n";
-
+					mainPanel.appendConsole("[" + i + "] " + tableModel.getValueAt(i,2) + " DirPosition = "+thisCbmFile);					
 					// load the PRG file and write its data into d64.saveData, write its size into d64.saveDataSize
-					d64.writeSaveData(thisCbmFile);
-					feedBackMessage += d64.getFeedbackMessage();
+					byte[] saveData = diskImage.writeSaveData(thisCbmFile);
+					mainPanel.appendConsole(diskImage.getFeedbackMessage());
 
-					d64.setFeedbackMessage("");
+					diskImage.setFeedbackMessage("");
 
 					//make d64.saveData and d64.saveDataSize known to the other DiskPanel
-					otherDiskPanel.d64.setSaveData(d64.getSaveData());
-					otherDiskPanel.d64.setSaveDataSize(d64.getSaveDataSize());
+					//otherDiskPanel.d64.setSaveData(d64.getSaveData());
+					//otherDiskPanel.d64.setSaveDataSize(saveData.length);
 
 					/*
 					 * Make d64.cbmFile known to the other DiskPanel and write it to the D64 of the other DiskPanel
 					 * Keep in mind: We cannot just copy the object "cbmFile", but we have to copy its values!
 					 */
-					otherDiskPanel.d64.copyCbmFile(d64.getCbmFile(thisCbmFile), otherDiskPanel.d64.getBufferCbmFile() );
-
-					success = otherDiskPanel.d64.saveFile(
-							d64.getCbmFile(thisCbmFile).getName(),
-							d64.getCbmFile(thisCbmFile).getFile_type(),
-							true
+					
+					otherDiskPanel.diskImage.getBufferCbmFile().copy(diskImage.getCbmFile(thisCbmFile));
+					success = otherDiskPanel.diskImage.saveFile(
+							diskImage.getCbmFile(thisCbmFile).getName(),
+							diskImage.getCbmFile(thisCbmFile).getFileType(),
+							true, saveData
 							);
-
-					otherDiskPanel.feedBackMessage = otherDiskPanel.feedBackMessage + otherDiskPanel.d64.getFeedbackMessage();
-					otherDiskPanel.textArea.setText(otherDiskPanel.feedBackMessage);
+					mainPanel.appendConsole(otherDiskPanel.diskImage.getFeedbackMessage());
 				} catch (CbmException e) {
-					feedBackMessage += "Failure while copying PRG file. "+e.getMessage();
+					mainPanel.appendConsole("Failure while copying file. \n" + e.getMessage());
 					success = false;
 				}
 
@@ -699,202 +748,264 @@ public class DiskPanel extends JPanel implements TableModelListener {
 					writeD64File = true;
 				}
 				else {
-					feedBackMessage += "Failure while copying PRG file.\n";
+					mainPanel.appendConsole("\nFailure while copying file.");
 				}
 
 			}
 		}
 		if (writeD64File){
 			// write the D64 of the other Diskpanel to disk
-			success = otherDiskPanel.d64.writeD64(otherDiskPanel.getThisD64Name());
-			otherDiskPanel.feedBackMessage = otherDiskPanel.feedBackMessage + otherDiskPanel.d64.getFeedbackMessage();
-			otherDiskPanel.textArea.setText(otherDiskPanel.feedBackMessage);
+			success = otherDiskPanel.diskImage.writeImage(otherDiskPanel.getThisD64Name());
+			mainPanel.appendConsole(otherDiskPanel.diskImage.getFeedbackMessage());
 			if (success == false) {
-				feedBackMessage += "Failure while writing D64 file.\n";
+				mainPanel.appendConsole("Failure while writing D64 file.");				
 				showErrorMessage("insertError");
 			}
 		}
 		else {
 			showErrorMessage("insertError");
 		}
-		otherDiskPanel.reloadD64(true);
-		otherDiskPanel.textArea.setText(otherDiskPanel.feedBackMessage);
+		otherDiskPanel.reloadDiskImage(true);
 
 		// we have to reload the current D64, because the selection will mess up otherwise (exceptions...)
 		clearDirTable();
 		updateD64File();
 		showDirectory();
 		//		reloadD64();
-		textArea.setText(feedBackMessage);
-
 	}
 
-	//TODO
 	private void hexViewFile() {
-		for (int i = 0; i < d64.getFilenumber_max(); i++) {
+		for (int i = 0; i < diskImage.getFilenumberMax(); i++) {
 			if (table.isRowSelected(i)) {
 				try {
-					feedBackMessage += "Hex view " + tm.getValueAt(i,2) + "\n";
-					d64.writeSaveData(i);
-					byte[] data = d64.getSaveData();
-					new HexViewFrame(DroiD64.PROGNAME+" v"+DroiD64.VERSION+" - Hex view", d64.getCbmFile(i).getName(), data, d64.getSaveDataSize());
+					mainPanel.appendConsole("Hex view " + tableModel.getValueAt(i,2));
+					byte[] data = diskImage.writeSaveData(i);
+					new HexViewFrame(DroiD64.PROGNAME+" v"+DroiD64.VERSION+" - Hex view", diskImage.getCbmFile(i).getName(), data, data.length);
 				} catch (CbmException e) {
-					feedBackMessage += "Hex view failed. " + e.getMessage();
+					mainPanel.appendConsole("Hex view failed " + e.getMessage());
 				}
 			}
 		}
 	}
-
-	private void extractPRG() {
-		feedBackMessage += "\nTesting-Status!.\n\n";
+	
+	private void basicViewFile() {
+		for (int i = 0; i < diskImage.getFilenumberMax(); i++) {
+			if (table.isRowSelected(i)) {
+				try {
+					mainPanel.appendConsole("BASIC view " + tableModel.getValueAt(i,2));
+					String basic = diskImage.parseCbmBasicPrg(diskImage.writeSaveData(i));
+					if (basic != null && !basic.isEmpty()) {
+						new TextViewFrame(DroiD64.PROGNAME+" v"+DroiD64.VERSION+" - BASIC view", basic);
+					} else {
+						mainPanel.appendConsole("\nFailed to parse BASIC.");
+					}
+				} catch (CbmException e) {
+					mainPanel.appendConsole("BASIC view failed " + e.getMessage());
+				}
+			}
+		}
+	}
+	
+	private void imageViewFile() {
+		List<byte[]> imgList = new ArrayList<byte[]>();
+		try {
+			for (int i = 0; i < diskImage.getFilenumberMax(); i++) {
+				if (table.isRowSelected(i)) {
+					mainPanel.appendConsole("\nImage view " + tableModel.getValueAt(i,2));
+					byte[] data = diskImage.writeSaveData(i);
+					if (data != null && data.length > 0) {
+						imgList.add(data);
+					}
+				}
+			}
+			if (!imgList.isEmpty()) {
+				new ViewImageFrame(DroiD64.PROGNAME+" v"+DroiD64.VERSION+" - Image view", imgList);
+			}
+		} catch (CbmException | IOException e) {
+			mainPanel.appendConsole("\nImage view failed " + e.getMessage());
+		}
+	}
+	
+	private void showFile() {
+		for (int i = 0; i < diskImage.getFilenumberMax(); i++) {
+			if (table.isRowSelected(i)) {
+				try {
+					mainPanel.appendConsole("\nView " + tableModel.getValueAt(i,2));
+					byte[] data = diskImage.writeSaveData(i);
+					new TextViewFrame("View - "+diskImage.getCbmFile(i).getName(), data);
+				} catch (CbmException e) {
+					mainPanel.appendConsole("\nView failed " + e.getMessage());
+				}
+			}
+		}
+	}
+	
+	private void exportPRG() {
 		saveName = savePRGFileDialog(directory);
 		if (saveName != null) {
-			feedBackMessage += "\nSelected file: \""+saveName+"\".\n\n";
-			feedBackMessage += "ExtractPRG:\n";
-			feedBackMessage += "Selected PRGs: \n";
-			for (int i = 0; i < d64.getFilenumber_max(); i++) {
+			mainPanel.appendConsole("\nExportPRG: Selected folder: '"+saveName+"'.");
+			for (int i = 0; i < diskImage.getFilenumberMax(); i++) {
 				if (table.isRowSelected(i)) {
 					try {
-						feedBackMessage += "[" + i + "] " + tm.getValueAt(i,2) + "\n";
-						//test
-						d64.extractPRG(i, directory);
-						feedBackMessage += d64.getFeedbackMessage();
+						diskImage.exportPRG(i, directory);
+						mainPanel.appendConsole(diskImage.getFeedbackMessage());
 					} catch (CbmException e) {
-						feedBackMessage += "Extract file failed. " + e.getMessage();
+						mainPanel.appendConsole("Export file failed " + e.getMessage());
 					}
 				}
 			}
 		}
-		textArea.setText(feedBackMessage);
 	}
 
-	private void insertPRG() {
-		boolean success = false;
-		feedBackMessage += "InsertPRG:\n";
-		feedBackMessage += "\nTesting-Status!.\n\n";
+	private void importPRG() {
+		boolean success = true;
+		mainPanel.appendConsole("InsertPRG.");
 		File[] loadNames = openPRGFileDialog(directory);
 		//TODO: insertPRG: what to do if filename exists?
-		if ( loadNames != null) {
-			for (int i = 0; i < loadNames.length; i++) {
-				try {
+		if (loadNames != null) {
+			try {
+				for (int i = 0; success && i < loadNames.length; i++) {
 					//filename with path
 					loadName = loadNames[i].getAbsolutePath();
-					feedBackMessage += "\nSelected file: \""+loadName+"\".\n";
-					d64.readPRG(loadName);
-					feedBackMessage += d64.getFeedbackMessage();
+					mainPanel.appendConsole("\nSelected file: \""+loadName+"\".");
+					byte[] saveData = diskImage.readPRG(loadName);
+					mainPanel.appendConsole(diskImage.getFeedbackMessage());
 					//filename without path
 					loadName = loadNames[i].getName();
-					success = d64.saveFile(
+					success = diskImage.saveFile(
 							loadName,
 							D64.TYPE_PRG, 	//TODO: this always sets new FileType = PRG
-							false
+							false, saveData
 							);	
-					feedBackMessage += d64.getFeedbackMessage();	
-					if (success){
-						success = d64.writeD64(thisD64Name);
-						feedBackMessage += d64.getFeedbackMessage();
-		
-					}
-					if (success == false){
-						feedBackMessage += "Failure.\n";
-						showErrorMessage("insertError");
-					}
-					reloadD64(true);
-					otherDiskPanel.reloadD64(true);
-					textArea.setText(feedBackMessage);
-				} catch (CbmException e) {
-					feedBackMessage += "Error: "+e.getMessage();
+					mainPanel.appendConsole(diskImage.getFeedbackMessage());
 				}
+			} catch (CbmException e) {
+				mainPanel.appendConsole(diskImage.getFeedbackMessage());
+				mainPanel.appendConsole("\nFailure.\n"+e.getMessage());
+				success = false;
 			}
+			if (success){
+				success = diskImage.writeImage(thisD64Name);
+				mainPanel.appendConsole(diskImage.getFeedbackMessage());
+
+			} else {
+				mainPanel.appendConsole("\nFailure.");
+				showErrorMessage("insertError");
+			}
+			reloadDiskImage(true);
+			otherDiskPanel.reloadDiskImage(true);
 		}
 	}
 
-	private void newD64() {
-		feedBackMessage += "-------\nNewD64:\n";
+	private void newDiskImage() {
+		mainPanel.appendConsole("New disk image.");
 		newDiskName = "";
-		new RenameD64Frame(DroiD64.PROGNAME+" v"+DroiD64.VERSION+" - New disk",	this, "", "" );
+		new RenameD64Frame(DroiD64.PROGNAME+" v"+DroiD64.VERSION+" - New disk",	this, "", "", true );
 		if (newDiskNameSuccess) {
-			feedBackMessage += "New Diskname is: \""+newDiskName+", "+newDiskID+"\".\n";
-			textArea.setText(feedBackMessage);
-			String saveName = saveD64FileDialog(directory);
+			mainPanel.appendConsole("\nNew Diskname is: \""+newDiskName+", "+newDiskID+"\".");
+			String saveName = DiskImage.checkFileNameExtension(newDiskType, newCompressedDisk, saveDiskImageFileDialog(directory));
 			if ( saveName != null) {
-				feedBackMessage += "\nSelected file: \""+saveName+"\".\n";
-				d64.saveNewD64(saveName, newDiskName, newDiskID);
-				feedBackMessage += d64.getFeedbackMessage();
+				mainPanel.appendConsole("Selected file: \""+saveName+"\".");
+				if (newDiskType == DiskImage.D64_IMAGE_TYPE) {
+					diskImage = new D64();					
+					diskImage.setCpmFormat(newCpmDisk ? DiskImage.CPM_TYPE_D64_C128 : DiskImage.CPM_TYPE_UNKNOWN);
+				} else if (newDiskType == DiskImage.D81_IMAGE_TYPE) {
+					diskImage = new D81();
+					diskImage.setCpmFormat(newCpmDisk ? DiskImage.CPM_TYPE_D71 : DiskImage.CPM_TYPE_UNKNOWN);
+				} else if (newDiskType == DiskImage.D71_IMAGE_TYPE) {
+					diskImage = new D71();
+					diskImage.setCpmFormat(newCpmDisk ? DiskImage.CPM_TYPE_D81 : DiskImage.CPM_TYPE_UNKNOWN);
+				} else {
+					mainPanel.appendConsole("Filename with unknown file extension. Can't detect format.\n");
+					return;
+				}
+				diskImage.setCompressed(newCompressedDisk);
+				diskImage.saveNewImage(saveName, newDiskName, newDiskID);
+				mainPanel.appendConsole(diskImage.getFeedbackMessage());
 				isSetD64 = true;
 				thisD64Name = saveName;
-				reloadD64(true);
+				reloadDiskImage(true);
 			}
 		}
-		textArea.setText(feedBackMessage);
 	}
-
+	
 	private void renameDisk() {
-		feedBackMessage += "-------\nRenameDisk:\n";
+		mainPanel.appendConsole("Rename disk.");
 		newDiskName = "";
 		new RenameD64Frame(
 				DroiD64.PROGNAME+" v"+DroiD64.VERSION+" - Rename disk",
 				this,
-				d64.getBam().getDiskName(),
-				d64.getBam().getDiskId()
+				diskImage.getBam().getDiskName(),
+				diskImage.getBam().getDiskId(), false
 				);
 		if (newDiskNameSuccess) {
-			feedBackMessage += "New Diskname is: \""+newDiskName+", "+newDiskID+"\".\n";
-			textArea.setText(feedBackMessage);
+			mainPanel.appendConsole("New diskname is: \""+newDiskName+", "+newDiskID+"\".");
 			saveName = thisD64Name;
-			d64.renameD64(saveName, newDiskName, newDiskID);
-			feedBackMessage = feedBackMessage + d64.getFeedbackMessage();
-			reloadD64(true);
+			diskImage.renameImage(saveName, newDiskName, newDiskID);
+			mainPanel.appendConsole(diskImage.getFeedbackMessage());
+			reloadDiskImage(true);
 		}
-
-		textArea.setText(feedBackMessage);
 	}
 
+	private void unloadDisk() {
+		mainPanel.appendConsole("Unload disk.");
+		diskImage = null;
+		diskName.setText("");
+		isSetD64 = false;
+		diskName.setText("No file");
+		diskLabel.setText("NO DISK");
+		clearDirTable();
+		table.revalidate();
+	}
+	
 	private void renamePRG() {
-		feedBackMessage += "\nRenamePRG:\n\n";
-		for (int i = 0; i < d64.getFilenumber_max(); i++) {
+		mainPanel.appendConsole("RenamePRG:");
+		for (int i = 0; i < diskImage.getFilenumberMax(); i++) {
 			if (table.isRowSelected(i)) {
 				newPRGName = "";
 				new RenamePRGFrame(
 						DroiD64.PROGNAME+" v"+DroiD64.VERSION+" - Rename file ",
 						this,
-						d64.getCbmFile(i).getName(),
-						d64.getCbmFile(i).getFile_type()
+						diskImage.getCbmFile(i).getName(),
+						diskImage.getCbmFile(i).getFileType()
 						);
 
 				if (newPRGNameSuccess) {
-					feedBackMessage += "New filename is: \""+newPRGName+", "+newPRGType+"\".\n" +
+					mainPanel.appendConsole("\nNew filename is: \""+newPRGName+", "+newPRGType+"\".\n" +
 							"Information about file number "+i+":\n" +
-							"Name: "+d64.getCbmFile(i).getName()+"\n" +
-							"DirPosition: "+d64.getCbmFile(i).getDirPosition()+"\n" +
-							"DirTrack: "+d64.getCbmFile(i).getDirTrack()+"\n" +
-							"DirSector: "+d64.getCbmFile(i).getDirSector()+"\n" +
-							"SizeInBytes: "+d64.getCbmFile(i).getSizeInBytes()+"\n";
-					d64.renamePRG(i,newPRGName, newPRGType);
-					feedBackMessage += d64.getFeedbackMessage();
-
-					d64.writeD64(thisD64Name);
-					feedBackMessage += d64.getFeedbackMessage();
+							"Name: "+diskImage.getCbmFile(i).getName()+"\n" +
+							"DirPosition: "+diskImage.getCbmFile(i).getDirPosition()+"\n" +
+							"DirTrack: "+diskImage.getCbmFile(i).getDirTrack()+"\n" +
+							"DirSector: "+diskImage.getCbmFile(i).getDirSector()+"\n" +
+							"SizeInBytes: "+diskImage.getCbmFile(i).getSizeInBytes());
+					diskImage.renamePRG(i,newPRGName, newPRGType);
+					mainPanel.appendConsole(diskImage.getFeedbackMessage());
+					diskImage.writeImage(thisD64Name);
+					mainPanel.appendConsole(diskImage.getFeedbackMessage());
 				}
 			}
 		}
-		textArea.setText(feedBackMessage);
-		reloadD64(true);
+		reloadDiskImage(true);
 	}
 
 	private void delPRG() {
-		feedBackMessage += "Selected PRGs: \n";
-		for (int i = 0; i < d64.getFilenumber_max(); i++) {
-			if (table.isRowSelected(i)) {
-				feedBackMessage += "[" + i + "] " + tm.getValueAt(i,2) + "\n";
+		try {
+			for (int i = 0; i < diskImage.getFilenumberMax(); i++) {
+				if (table.isRowSelected(i)) {
+					mainPanel.appendConsole("Delete [" + i + "] " + tableModel.getValueAt(i, 2));				
+					diskImage.deleteFile(diskImage.getCbmFile(i));
+					mainPanel.appendConsole(diskImage.getFeedbackMessage());
+				}
 			}
+			diskImage.writeImage(thisD64Name);
+			reloadDiskImage(true);
+		} catch (CbmException e) {
+			mainPanel.appendConsole("\nError: "+e.getMessage());
 		}
-		feedBackMessage += "\nNot implemented yet.\n\n";
-		textArea.setText(feedBackMessage);
 	}
 
 	private void clearDirTable(){
-		tm.clear();
+		tableModel.clear();
 	}
 
 	public void setOtherDiskPanelObject ( DiskPanel otherOne ) {
@@ -908,11 +1019,11 @@ public class DiskPanel extends JPanel implements TableModelListener {
 		return thisD64Name;
 	}
 
-	public void reloadD64(boolean updateList){
+	public void reloadDiskImage(boolean updateList){
 		if (isSetD64){
 			try {
-				diskName.setText(thisD64Name);
-				d64.readD64(thisD64Name);
+				diskImage = DiskImage.getDiskImage(thisD64Name);
+				diskName.setText(thisD64Name);				
 				clearDirTable();
 				updateD64File();
 				if (updateList) {
@@ -920,7 +1031,7 @@ public class DiskPanel extends JPanel implements TableModelListener {
 				}
 				mainPanel.setStatusBar("Loaded "+thisD64Name);
 			} catch (CbmException e) {
-				textArea.setText(feedBackMessage+"\nError: " + e.getMessage()+"\n");
+				mainPanel.appendConsole("\nError: "+e.getMessage());
 				diskName.setText("No file");
 				diskLabel.setText("NO DISK");
 				isSetD64 = false;
@@ -929,11 +1040,31 @@ public class DiskPanel extends JPanel implements TableModelListener {
 		}
 	}
 
+	private void setTableColors(int cpmMode) {
+		if (cpmMode == DiskImage.CPM_TYPE_UNKNOWN) {
+			table.setGridColor(new Color(64, 64, 224));
+			table.setBackground(DIR_BG_COLOR);
+			table.setForeground(DIR_FG_COLOR);
+			diskLabel.setBackground(DIR_BG_COLOR);
+			diskLabel.setForeground(DIR_FG_COLOR);
+			diskLabelPane.setBackground(DIR_BG_COLOR);
+			diskLabelPane.setForeground(DIR_FG_COLOR);
+		} else {
+			table.setGridColor(CPM_DIR_BG_COLOR);
+			table.setBackground(CPM_DIR_BG_COLOR);
+			table.setForeground(CPM_DIR_FG_COLOR);
+			diskLabel.setBackground(CPM_DIR_BG_COLOR);
+			diskLabel.setForeground(CPM_DIR_FG_COLOR);						
+			diskLabelPane.setBackground(CPM_DIR_BG_COLOR);
+			diskLabelPane.setForeground(CPM_DIR_FG_COLOR);
+		}
+	}
+	
 	/**
 	 * create a help drag-down menu (just for testing)
 	 * @return
 	 */
-	public JMenu createD64Menu(String title, String mnemonic) {
+	public JMenu createDiskImageMenu(String title, String mnemonic) {
 
 		JMenu menu = new JMenu(title);
 		menu.setMnemonic(mnemonic.charAt(0));
@@ -944,7 +1075,7 @@ public class DiskPanel extends JPanel implements TableModelListener {
 		menuItem.addActionListener(new ActionListener(){
 			public void actionPerformed(ActionEvent event){
 				if ( event.getActionCommand()== "New Disk"){
-					newD64();
+					newDiskImage();
 				}
 			}
 		});
@@ -953,8 +1084,7 @@ public class DiskPanel extends JPanel implements TableModelListener {
 		menuItem.addActionListener(new ActionListener(){
 			public void actionPerformed(ActionEvent event){
 				if ( event.getActionCommand()== "Load Disk"){
-					//loadD64();
-					openD64(openD64FileDialog(directory), true);
+					openDiskImage(openDiskImageFileDialog(directory), true);
 
 				}
 			}
@@ -972,14 +1102,22 @@ public class DiskPanel extends JPanel implements TableModelListener {
 				}
 			}
 		});
-
+		menuItem = new JMenuItem("Unload Disk", 'u');
+		menu.add (menuItem);
+		menuItem.addActionListener(new ActionListener(){
+			public void actionPerformed(ActionEvent event){
+				if ( event.getActionCommand()== "Unload Disk"){
+					unloadDisk();
+				}
+			}
+		});
 		menu.addSeparator();
 		menuItem = new JMenuItem("Insert File", 'i');
 		menu.add (menuItem);
 		menuItem.addActionListener(new ActionListener(){
 			public void actionPerformed(ActionEvent event){
 				if ( event.getActionCommand()== "Insert File"){
-					insertPRG();
+					importPRG();
 				}
 			}
 		});
@@ -988,7 +1126,7 @@ public class DiskPanel extends JPanel implements TableModelListener {
 		menuItem.addActionListener(new ActionListener(){
 			public void actionPerformed(ActionEvent event){
 				if ( event.getActionCommand()== "Extract File"){
-					extractPRG();
+					exportPRG();
 				}
 			}
 		});
@@ -1030,7 +1168,45 @@ public class DiskPanel extends JPanel implements TableModelListener {
 				}
 			}
 		});
+		menu.addSeparator();
 
+		
+		menuItem = new JMenuItem("View Text File", 't');
+		menu.add (menuItem);
+		menuItem.addActionListener(new ActionListener(){
+			public void actionPerformed(ActionEvent event){
+				if ( event.getActionCommand()== "View Text File"){
+					showFile();
+				}
+			}
+		});
+		menuItem = new JMenuItem("View Hex File", 'h');
+		menu.add (menuItem);
+		menuItem.addActionListener(new ActionListener(){
+			public void actionPerformed(ActionEvent event){
+				if ( event.getActionCommand()== "View Hex File"){
+					hexViewFile();
+				}
+			}
+		});
+		menuItem = new JMenuItem("View BASIC File", 'h');
+		menu.add (menuItem);
+		menuItem.addActionListener(new ActionListener(){
+			public void actionPerformed(ActionEvent event){
+				if ( event.getActionCommand()== "View BASIC File"){
+					basicViewFile();
+				}
+			}
+		});		
+		menuItem = new JMenuItem("View Image File", 'h');
+		menu.add (menuItem);
+		menuItem.addActionListener(new ActionListener(){
+			public void actionPerformed(ActionEvent event){
+				if ( event.getActionCommand()== "View Image File"){
+					imageViewFile();
+				}
+			}
+		});	
 		return menu;
 	}
 
@@ -1118,4 +1294,16 @@ public class DiskPanel extends JPanel implements TableModelListener {
 		this.useDatabase = useDatabase;
 	}
 
+	public void setNewDiskType(int diskType) {
+		this.newDiskType = diskType;
+	}
+	
+	public void setNewCompressedDisk(boolean isCompressed) {
+		this.newCompressedDisk = isCompressed;
+	}
+
+	public void setNewCpmDisk(boolean isCpm) {
+		this.newCpmDisk = isCpm;
+	}
+	
 }
