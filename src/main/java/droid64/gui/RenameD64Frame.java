@@ -1,4 +1,4 @@
-package GUI;
+package droid64.gui;
 import java.awt.BorderLayout;
 import java.awt.Container;
 import java.awt.Dimension;
@@ -7,7 +7,6 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 
 import javax.swing.JButton;
-import javax.swing.JComboBox;
 import javax.swing.JDialog;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
@@ -15,7 +14,7 @@ import javax.swing.JPanel;
 import javax.swing.JTextField;
 
 /*
- * Created on 26.06.2004
+ * Created on 25.06.2004
  *
  *   droiD64 - A graphical filemanager for D64 files
  *   Copyright (C) 2004 Wolfram Heyer
@@ -41,91 +40,68 @@ import javax.swing.JTextField;
 /**
  * @author wolf
  */
-public class RenamePRGFrame extends JDialog {
+public class RenameD64Frame extends JDialog {
 
-	private Container cp;
-	private JButton exitButton, okButton;
-	private DiskPanel diskPanel;
-	private JTextField nameTextField;
-	private JComboBox fileTypeBox;
-
-	private static final String[] FileType = { 
-		"DEL",
-		"SEQ",
-		"PRG",
-		"USR",
-		"REL"
-	};
+	private static final long serialVersionUID = 1L;
 	
-	public RenamePRGFrame (String topText, DiskPanel diskPanel_, String oldFileName, int oldFileType)
-	{
-		//super(topText, true);
-		
+	public RenameD64Frame (String topText, DiskPanel diskPanel_, String oldDiskName, String oldDiskID) {		
 		setTitle(topText);
-		
-		diskPanel = diskPanel_;
-
-		diskPanel.setNewPRGType(oldFileType);
-		
+		final DiskPanel diskPanel = diskPanel_;
 		setModal(true);
-
-		cp = getContentPane();
+		Container cp = getContentPane();
 		cp.setLayout( new BorderLayout());
 		
 		JPanel namePanel = new JPanel();
 		JPanel idPanel = new JPanel();
 		JPanel buttonPanel = new JPanel();
 		
-		JLabel fileNameLabel = new JLabel("Filename:");
-		nameTextField = new JTextField(oldFileName, 16);
-		nameTextField.setToolTipText("Enter the new filename here.");
+		JLabel diskNameLabel = new JLabel("Diskname:");
+		final JTextField nameTextField = new JTextField(oldDiskName, 16);
+		nameTextField.setToolTipText("Enter the new label of your D64 here.");
 	
-		JLabel fileTypeLabel = new JLabel("FileType:");
-		fileTypeBox = new JComboBox(FileType);
-		fileTypeBox.setToolTipText("Select a filetype here.");
-		fileTypeBox.setEditable(false);
-		fileTypeBox.setSelectedIndex(oldFileType);
+		JLabel idNameLabel = new JLabel("Disk-ID:");
+		final JTextField idTextField = new JTextField(oldDiskID, 5);
+		idTextField.setToolTipText("Enter the new ID of your D64 here.");
 	
-		exitButton = new JButton("Cancel");
+		final JButton exitButton = new JButton("Cancel");
 		exitButton.setMnemonic('c');
 		exitButton.setToolTipText("Cancel and return.");
 		exitButton.addActionListener(new ActionListener(){
 			public void actionPerformed(ActionEvent event){
-				if ( event.getSource()==exitButton )
-				{
+				if ( event.getSource() == exitButton ) {
 						diskPanel.setNewDiskNameSuccess(false);
 						dispose();
 				}
 			}
 		});
 		
-		okButton = new JButton("Ok");
+		final JButton okButton = new JButton("Ok");
 		okButton.setMnemonic('o');
 		okButton.setToolTipText("Proceed.");
 		okButton.addActionListener(new ActionListener(){
 			public void actionPerformed(ActionEvent event){
-				if ( event.getSource()==okButton )
-				{
-						diskPanel.setNewPRGNameSuccess(true);
-	
-						String diskName = nameTextField.getText();
-						if (diskName.length() > 16) diskName = diskName.substring(0,16);
-						diskPanel.setNewPRGName(diskName);
-						
-						if (fileTypeBox.getSelectedIndex() != -1)
-							diskPanel.setNewPRGType(fileTypeBox.getSelectedIndex());
+				if ( event.getSource() == okButton ) {
+						diskPanel.setNewDiskNameSuccess(true);
 
+						String diskName = nameTextField.getText();
+						if (diskName.length() > 16) {
+							diskName = diskName.substring(0,16);
+						}
+						diskPanel.setNewDiskName(diskName);
+						String diskID = idTextField.getText();
+						if (diskID.length() > 5) {
+							diskID = diskID.substring(0,5);
+						}
+						diskPanel.setNewDiskID(diskID);
 						dispose();
 				}
 			}
 		});
 		
-		namePanel.add(fileNameLabel);
+		namePanel.add(diskNameLabel);
 		namePanel.add(nameTextField);
-		
-		idPanel.add(fileTypeLabel);
-		idPanel.add(fileTypeBox);
-		
+		idPanel.add(idNameLabel);
+		idPanel.add(idTextField);
 		buttonPanel.add(exitButton);
 		buttonPanel.add(okButton);
 

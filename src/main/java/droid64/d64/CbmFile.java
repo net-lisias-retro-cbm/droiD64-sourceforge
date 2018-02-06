@@ -1,5 +1,7 @@
-package D64;
-/*
+package droid64.d64;
+
+import java.util.Arrays;
+/**<pre style='font-family:sans-serif;'>
  * Created on 21.06.2004
  *
  *   droiD64 - A graphical filemanager for D64 files
@@ -21,9 +23,7 @@ package D64;
  *   
  *   eMail: wolfvoz@users.sourceforge.net
  *   http://droid64.sourceforge.net
- */
-
-/**
+ *</pre>
  * @author wolf
  */
 public class CbmFile {
@@ -44,14 +44,14 @@ public class CbmFile {
 	private int dirSector;	// next directory sector
 	private int dirPosition;	// position in directory
 	
-	public CbmFile(){
+	public CbmFile() {
 		file_scratched = true;
 		file_type = 0;
 		file_locked = false;
 		file_closed = false;
 		track = 0;
 		sector = 0;
-		String name = "";
+		name = "";
 		rel_track = 0;
 		rel_sector = 0;
 		geos[0] = 0;
@@ -68,39 +68,50 @@ public class CbmFile {
 	}
 
 	public CbmFile(
-		boolean file_scratched_,
-		int file_type_,
-		boolean file_locked_,
-		boolean file_closed_,
-		int track_,
-		int sector_,
-		String name_,
-		int rel_track_,
-		int rel_sector_,
-		int[] geos_,
-		int sizeInBytes_,
-		int sizeInBlocks_,
-		int dirTrack_,
-		int dirSector_,
-		int dirPosition_
-	){
-		file_scratched = file_scratched_;
-		file_type = file_type_;
-		file_locked = file_locked_;
-		file_closed = file_closed_;
-		track = track_;
-		sector = sector_;
-		String name = name_;
-		rel_track = rel_track_;
-		rel_sector = rel_sector_;
-		geos = geos_;
-		sizeInBytes = sizeInBytes_;
-		sizeInBlocks = sizeInBlocks_;
-		dirTrack = dirTrack_;
-		dirSector = dirSector_;
-		dirPosition = dirPosition_;
+			boolean file_scratched, int file_type, boolean file_locked, boolean file_closed, int track, int sector,
+			String name, int rel_track, int rel_sector,	int[] geos,	int sizeInBytes, int sizeInBlocks, int dirTrack,
+			int dirSector, int dirPosition)
+	{
+		this.file_scratched = file_scratched;
+		this.file_type = file_type;
+		this.file_locked = file_locked;
+		this.file_closed = file_closed;
+		this.track = track;
+		this.sector = sector;
+		this.name = name;
+		this.rel_track = rel_track;
+		this.rel_sector = rel_sector;
+		this.geos = geos;
+		this.sizeInBytes = sizeInBytes;
+		this.sizeInBlocks = sizeInBlocks;
+		this.dirTrack = dirTrack;
+		this.dirSector = dirSector;
+		this.dirPosition = dirPosition;
 	}
 	
+	/** {@inheritDoc} */
+	public String toString() {
+		StringBuilder builder = new StringBuilder();
+		builder.append("CbmFile [");
+		builder.append(" file_scratched=").append(file_scratched);
+		builder.append(" file_type=").append(file_type);
+		builder.append(" file_locked=").append(file_locked);
+		builder.append(" file_closed=").append(file_closed);
+		builder.append(" track=").append(track);
+		builder.append(" sector=").append(sector);
+		builder.append(" name=").append(name);
+		builder.append(" rel_track=").append(rel_track);
+		builder.append(" rel_sector=").append(rel_sector);
+		builder.append(" geos=").append(Arrays.toString(geos));
+		builder.append(" sizeInBytes=").append(sizeInBytes);
+		builder.append(" sizeInBlocks=").append(sizeInBlocks);
+		builder.append(" dirTrack=").append(dirTrack);
+		builder.append(" dirSector=").append(dirSector);
+		builder.append(" dirPosition=").append(dirPosition);
+		builder.append("]");
+		return builder.toString();
+	}
+
 	/**
 	 * @return
 	 */

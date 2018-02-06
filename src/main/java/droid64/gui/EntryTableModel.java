@@ -25,35 +25,32 @@
 /**
  * @author wolf
  */
-package GUI;
+package droid64.gui;
 import java.util.Vector;
 
 import javax.swing.table.AbstractTableModel;
 
-import D64.DirEntry;
+import droid64.d64.DirEntry;
 
 class EntryTableModel extends AbstractTableModel {
-	protected static int NUM_COLUMNS = 7;
-	protected static int START_NUM_ROWS = 8;
+
+	private static final long serialVersionUID = 1L;
 	protected int nextEmptyRow = 0;
 	protected int numRows = 0;
 
-	private String[] COLHEADS =
-		{ "Nr", "Bl", "Name", "Ty", "Fl", "Tr", "Se" };
+	private static final String[] COLHEADS = { "Nr", "Bl", "Name", "Ty", "Fl", "Tr", "Se" };
 
-	protected Vector data = null;
+	protected Vector<DirEntry> data = new Vector<DirEntry>();
 
 	public EntryTableModel() {
-		data = new Vector();
 	}
 
 	public String getColumnName(int column) {
 		return COLHEADS[column];
 	}
 
-	//XXX Should this really be synchronized?
-	public synchronized int getColumnCount() {
-		return NUM_COLUMNS;
+	public int getColumnCount() {
+		return COLHEADS.length;
 	}
 
 	public synchronized int getRowCount() {
@@ -62,32 +59,25 @@ class EntryTableModel extends AbstractTableModel {
 
 	public synchronized Object getValueAt(int row, int column) {
 		try {
-	//		{ "Nr", "Bl", "Name", "Ty", "Fl", "Tr", "Se" };
-				DirEntry p = (DirEntry)data.elementAt(row);
-				switch (column) {
-					case 0:
-						return new Integer(p.getNumber());
-					case 1:
-						return new Integer(p.getBlocks());
-					case 2:
-						return p.getName();
-					case 3:
-				  		return p.getType();
-					case 4:
-				  		return p.getFlags();
-					case 5:
-						  return new Integer(p.getTrack());
-					case 6:
-						  return new Integer(p.getSector());
-				}
-			} catch (Exception e) {
+			//		{ "Nr", "Bl", "Name", "Ty", "Fl", "Tr", "Se" };
+			DirEntry p = data.elementAt(row);
+			switch (column) {
+				case 0:	return new Integer(p.getNumber());
+				case 1:	return new Integer(p.getBlocks());
+				case 2:	return p.getName();
+				case 3:	return p.getType();
+				case 4:	return p.getFlags();
+				case 5: return new Integer(p.getTrack());
+				case 6: return new Integer(p.getSector());
+				default: return "";
+			}
+		} catch (ArrayIndexOutOfBoundsException e) {
+			return "";
 		}
-		return "";
 	}
 
 	public synchronized void updateDirEntry(DirEntry dirEntry) {
 		data.add(dirEntry);
-
 		fireTableRowsInserted(data.size()-1, data.size()-1);
 	}
 
@@ -95,13 +85,6 @@ class EntryTableModel extends AbstractTableModel {
 		int oldSize = data.size();
 		data.clear();
 		fireTableRowsDeleted(0, oldSize);
-	}
-
-	/**
-	 * @return
-	 */
-	public String[] getCOLHEADS() {
-		return COLHEADS;
 	}
 
 }

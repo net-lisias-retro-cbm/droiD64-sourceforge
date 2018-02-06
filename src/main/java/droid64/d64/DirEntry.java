@@ -1,5 +1,5 @@
-package D64;
-/*
+package droid64.d64;
+/**<pre style='font-family:sans-serif;'>
  * Created on 05.07.2004
  *
  *   droiD64 - A graphical filemanager for D64 files
@@ -21,9 +21,7 @@ package D64;
  *   
  *   eMail: wolfvoz@users.sourceforge.net
  *   http://droid64.sourceforge.net
- */
-
-/**
+ *</pre>
  * @author wolf
  */
 public class DirEntry {
@@ -40,6 +38,11 @@ public class DirEntry {
 	public DirEntry() {
 	}
 
+	/** {@inheritDoc} */
+	public String toString() {
+		return String.format("%3d %3d \"%16s\" %3s%3s %2d %2d", number, blocks, name!=null ? name : "", type!=null?type:"", flags!=null?flags:"", track, sector);
+	}
+	
 	/**
 	 * @return
 	 */

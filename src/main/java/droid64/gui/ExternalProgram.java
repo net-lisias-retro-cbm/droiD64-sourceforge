@@ -1,7 +1,9 @@
-/*
+package droid64.gui;
+
+/**<pre style='font-family:Sans,Arial,Helvetica'>
  * Created on 27.07.2004
  *
- *   NAME - WHAT IT DOES
+ *   droiD64 - A graphical filemanager for D64 files
  *   Copyright (C) 2004 Wolfram Heyer
  *
  *   This program is free software; you can redistribute it and/or modify
@@ -19,14 +21,8 @@
  *   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *   
  *   eMail: the@BigBadWolF.de
- */
-package GUI;
-
-/**
+ *   </pre>
  * @author wolf
- *
- * To change the template for this generated type comment go to
- * Window>Preferences>Java>Code Generation>Code and Comments
  */
 public class ExternalProgram {
 
@@ -34,9 +30,23 @@ public class ExternalProgram {
 	private String description;
 	private String label;
 	
+	/**
+	 * Constructor
+	 */
 	public ExternalProgram() {
 	}
 
+	/** {@inheritDoc} */
+	public String toString() {
+		StringBuilder builder = new StringBuilder();
+		builder.append("ExternalProgram[");
+		builder.append(" .command=").append(command);
+		builder.append(" .description=").append(description);
+		builder.append(" .label=").append(label);
+		builder.append("]");
+		return builder.toString();
+	}
+		
 	/**
 	 * @param command_
 	 * @param description_

@@ -1,9 +1,8 @@
-package GUI;
+package droid64.gui;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Container;
 import java.awt.Dimension;
-import java.awt.Font;
 import java.awt.Toolkit;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -19,7 +18,7 @@ import javax.swing.table.DefaultTableColumnModel;
 import javax.swing.table.TableColumn;
 import javax.swing.table.TableModel;
 
-/*
+/**<pre style='font-family:sans-serif;'>
  * Created on 25.06.2004
  *
  *   droiD64 - A graphical filemanager for D64 files
@@ -41,48 +40,39 @@ import javax.swing.table.TableModel;
  *   
  *   eMail: wolfvoz@users.sourceforge.net
  *   http://droid64.sourceforge.net
- */
-
-/**
+ *</pre>
  * @author wolf
  */
 public class BAMFrame extends JFrame {
-	private Container cp;
-	
-	private JTable bamTable;
-	private JButton exitButton;
-	private JLabel diskNameLabel;
-	private String[][] bamEntry = new String[40][22];
 
+	private static final long serialVersionUID = 1L;
 	private static final String[] COLHEADS = {
-		 "Track",
-		 "1", "2", "3", "4", "5", "6","7","8","9","10",
+		"Track",
+		"1", "2", "3", "4", "5", "6","7","8","9","10",
 		"11","12","13","14","15","16","17","18","19","20",
-		"21"
-		  };
+		"21" };
 
-	public BAMFrame(String topText, String diskName, String[][] bamEntry_)
-	{
+	/**
+	 * Constructor
+	 * @param topText
+	 * @param diskName
+	 * @param bamEntry_
+	 */
+	public BAMFrame(String topText, String diskName, String[][] bamEntry_) {
 		super(topText);
-		
-		bamEntry = bamEntry_;
-		
-		cp = getContentPane();
-		cp.setLayout( new BorderLayout());
-		
-		diskNameLabel = new JLabel(diskName);
+		final String[][] bamEntry = bamEntry_;
 		
 		//Table Column-Width		
 		DefaultTableColumnModel cm = new DefaultTableColumnModel();
 		for (int i = 0; i < COLHEADS.length; ++i) {
-			//			TableColumn col = new TableColumn(i, i == 2 ? 150 : 60);
 			TableColumn col = new TableColumn(i, i == 0 ? 50 : 10);
 			col.setHeaderValue(COLHEADS[i]);
 			cm.addColumn(col);
 		}
 
-		//Tabellenmodell erzeugen
+		//Show table model 
 		TableModel tm = new AbstractTableModel() {
+			private static final long serialVersionUID = 1L;
 			public int getRowCount() {
 				return bamEntry.length;
 			}
@@ -94,43 +84,42 @@ public class BAMFrame extends JFrame {
 			}
 		};
 
-		bamTable = new JTable(tm, cm);
+		JTable bamTable = new JTable(tm, cm);
 		bamTable.setToolTipText("the BAM of the disk");
 		//		table.setAutoResizeMode(JTable.AUTO_RESIZE_ALL_COLUMNS);
 		//		table.setAlignmentX(JTable.RIGHT_ALIGNMENT);
 		bamTable.setGridColor(new Color(230, 230, 255));
-		bamTable.setFont(new Font("Monospaced", Font.BOLD, 14));
 		bamTable.setDefaultRenderer( Object.class, new ColoredTableCellRenderer() );
-		
+
 		JPanel buttonPanel = new JPanel();
-		exitButton = new JButton("Ok");
-		exitButton.setMnemonic('o');
-		exitButton.setToolTipText("Leave BAM view.");
-		exitButton.addActionListener(new ActionListener(){
-			public void actionPerformed(ActionEvent event){
-				if ( event.getSource()==exitButton )
-				{
-						dispose();
+		final JButton okButton = new JButton("OK");
+		okButton.setMnemonic('o');
+		okButton.setToolTipText("Leave BAM view.");
+		okButton.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent event) {
+				if ( event.getSource() == okButton ) {
+					dispose();
 				}
 			}
 		});
-		buttonPanel.add(exitButton);
+		buttonPanel.add(okButton);
 		
+		Container cp = getContentPane();
+		cp.setLayout(new BorderLayout());
 
-
+		JLabel diskNameLabel = new JLabel(diskName);
 		cp.add(diskNameLabel, BorderLayout.NORTH);		
 		cp.add(new JScrollPane(bamTable), BorderLayout.CENTER);		
 		cp.add(buttonPanel, BorderLayout.SOUTH);		
 
 		Dimension dim = Toolkit.getDefaultToolkit().getScreenSize();
 		setLocation(
-			(int)((dim.width - getSize().getWidth()) / 3),
-			(int)((dim.height - getSize().getHeight()) / 3)
-		);
-//		setLocation(300,200);
+				(int)((dim.width - getSize().getWidth()) / 3),
+				(int)((dim.height - getSize().getHeight()) / 3)
+				);
+		// setLocation(300,200);
 		pack();
 		setVisible(true);
-
 		this.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
 	}
 

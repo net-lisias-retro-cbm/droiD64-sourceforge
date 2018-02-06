@@ -1,5 +1,8 @@
-package D64;
-/*
+package droid64;
+
+import droid64.gui.MainPanel;
+
+/**<pre style='font-family:sans-serif;'>
  * Created on 21.06.2004
  *
  *   droiD64 - A graphical filemanager for D64 files
@@ -21,72 +24,19 @@ package D64;
  *   
  *   eMail: wolfvoz@users.sourceforge.net
  *   http://droid64.sourceforge.net
- */
-
-/**
+ *</pre>
  * @author wolf
  */
-public class CbmTrack {
+public class DroiD64 {
 
-	private int sectors;
-	private int sectors_in;
-	private int offset;
+	public static final String PROGNAME = "droiD64";
+	public static final String VERSION = "0.05b";
 	
-	public CbmTrack(){
-	}
-	
-	public CbmTrack(int sectors_, int sectors_in_, int offset_){
-		sectors = sectors_;
-		sectors_in = sectors_in_;
-		offset = offset_;
+	public DroiD64() {
+		new MainPanel();
 	}
 	
-	public void setAllValues(int sectors_, int sectors_in_, int offset_){
-		sectors = sectors_;
-		sectors_in = sectors_in_;
-		offset = offset_;
+	public static void main(String[] args) {
+		new DroiD64();		
 	}
-
-	/**
-	 * @return
-	 */
-	public int getOffset() {
-		return offset;
-	}
-
-	/**
-	 * @return
-	 */
-	public int getSectors() {
-		return sectors;
-	}
-
-	/**
-	 * @return
-	 */
-	public int getSectors_in() {
-		return sectors_in;
-	}
-
-	/**
-	 * @param d
-	 */
-	public void setOffset(int d) {
-		offset = d;
-	}
-
-	/**
-	 * @param b
-	 */
-	public void setSectors(int b) {
-		sectors = b;
-	}
-
-	/**
-	 * @param b
-	 */
-	public void setSectors_in(int b) {
-		sectors_in = b;
-	}
-
 }

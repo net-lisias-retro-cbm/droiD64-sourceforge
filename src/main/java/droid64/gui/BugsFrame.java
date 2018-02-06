@@ -1,13 +1,11 @@
-package GUI;
+package droid64.gui;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Container;
 import java.awt.Dimension;
-import java.awt.Font;
 import java.awt.Toolkit;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.util.GregorianCalendar;
 
 import javax.swing.JButton;
 import javax.swing.JFrame;
@@ -16,7 +14,7 @@ import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTextArea;
 
-/*
+/**<pre style='font-family:sans-serif;'>
  * Created on 30.06.2004
  *
  *   droiD64 - A graphical filemanager for D64 files
@@ -38,22 +36,16 @@ import javax.swing.JTextArea;
  *   
  *   eMail: wolfvoz@users.sourceforge.net
  *   http://droid64.sourceforge.net
- */
-
-/**
+ *</pre>
  * @author wolf
  */
 public class BugsFrame extends JFrame {
-	private Container cp;
-	private JButton okButton;
+
+	private static final long serialVersionUID = 1L;	
+	private static final String myDate = "2.08.2004";
+	private static final String bugsMessage = "None known. Do intensive testing, find some and mail them to me please.\n\n";
 	
-	final static private String myDate = "2.08.2004";
-	
-	final static private String bugsMessage = 
-		"None known. Do intensive testing, find some and mail them to me please.\n"+
-		"\n";
-	
-	final static private String todoMessage = 
+	private static final String todoMessage = 
 		"general: do intensive testing\n"+
 		"\n" +
 		"DiskPanel:\n" +
@@ -82,26 +74,21 @@ public class BugsFrame extends JFrame {
 		"d64.setNewDirectoryEntry: GEOS files\n" +
 		"\n";
 	
-	public BugsFrame (String topText)
-	{
-		GregorianCalendar cal = new GregorianCalendar();
-		//String myDate = 
-		//	cal.get(Calendar.DATE) + "."+(cal.get(Calendar.MONTH)+1) + "."+cal.get(Calendar.YEAR) +" " +
-		//	cal.get(Calendar.HOUR_OF_DAY) + ":"+cal.get(Calendar.MINUTE) + ":"+cal.get(Calendar.SECOND);  
+	
+	public BugsFrame (String topText) {
+ 
 		setTitle(topText + " - "+myDate);
 		
 		//setModal(true);
 
-		cp = getContentPane();
+		Container cp = getContentPane();
 		cp.setLayout( new BorderLayout());
 
 		JPanel bugsPanel = new JPanel();
 		bugsPanel.setLayout( new BorderLayout());
 		JLabel bugsLabel = new JLabel("Bugs:");
 		JTextArea bugsTextArea = new JTextArea(10,60);
-		bugsTextArea.setFont(new Font("Monospaced", Font.PLAIN, 12));
-		bugsTextArea.setBackground(new Color(255,230,230));
-		//bugsTextArea.setForeground(Color.BLACK);	// gives errors on Windows and JRE 1.3!
+
 		bugsTextArea.setEditable(false);
 		bugsTextArea.setText(bugsMessage);
 		bugsTextArea.setWrapStyleWord(true);
@@ -114,9 +101,7 @@ public class BugsFrame extends JFrame {
 		todoPanel.setLayout( new BorderLayout());
 		JLabel todoLabel = new JLabel("To do:");
 		JTextArea todoTextArea = new JTextArea(10,60);
-		todoTextArea.setFont(new Font("Monospaced", Font.PLAIN, 12));
 		todoTextArea.setBackground(new Color(230,230,255));
-		//todoTextArea.setForeground(Color.BLACK);	// gives errors on Windows and JRE 1.3!
 		todoTextArea.setEditable(false);
 		todoTextArea.setText(todoMessage);
 		todoTextArea.setWrapStyleWord(true);
@@ -126,13 +111,12 @@ public class BugsFrame extends JFrame {
 		todoPanel.add(new JScrollPane(todoTextArea), BorderLayout.SOUTH);
 
 		JPanel buttonPanel = new JPanel();
-		okButton = new JButton("Ok");
+		final JButton okButton = new JButton("OK");
 		okButton.setMnemonic('o');
 		okButton.setToolTipText("Leave \"Bugs and ToDo\".");
-		okButton.addActionListener(new ActionListener(){
-			public void actionPerformed(ActionEvent event){
-				if ( event.getSource()==okButton )
-				{
+		okButton.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent event) {
+				if (event.getSource() == okButton ) {
 						dispose();
 				}
 			}
