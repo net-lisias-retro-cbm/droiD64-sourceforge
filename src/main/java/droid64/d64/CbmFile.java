@@ -1,7 +1,10 @@
 package droid64.d64;
 
+import java.io.Serializable;
 import java.util.Arrays;
-/**<pre style='font-family:sans-serif;'>
+
+/**
+ * <pre style='font-family:sans-serif;'>
  * Created on 21.06.2004
  *
  *   droiD64 - A graphical filemanager for D64 files
@@ -23,46 +26,59 @@ import java.util.Arrays;
  *
  *   eMail: wolfvoz@users.sourceforge.net
  *   http://droid64.sourceforge.net
- *</pre>
+ * </pre>
+ *
  * @author wolf
  */
-public class CbmFile implements Comparable<CbmFile>,Cloneable {
+public class CbmFile implements Comparable<CbmFile>, Serializable {
 
+	private static final long serialVersionUID = 1L;
 	private boolean fileScratched;
 	private int fileType;
 	private boolean fileLocked;
 	private boolean fileClosed;
 	private int track;
 	private int sector;
-	private String name;		//string[16]
+	private String name; // string[16]
 	private int relTrack;
 	private int relSector;
 	/** FileStructure, FileType, Year, Month, Day. Hour, Minute */
 	private int[] geos = new int[7];
 	private int sizeInBytes;
 	private int sizeInBlocks;
-	private int dirTrack;		// next directory track
-	private int dirSector;		// next directory sector
-	private int dirPosition;	// position in directory
+	private int dirTrack; // next directory track
+	private int dirSector; // next directory sector
+	private int dirPosition; // position in directory
 	private int offSet;
-	private int lsu;			// last sector usage
+	private int lsu; // last sector usage
+	private int loadAddr;
 
-	public static final int GEOS_NORMAL    = 0x00;
-	public static final int GEOS_BASIC     = 0x01;
-	public static final int GEOS_ASM       = 0x02;
-	public static final int GEOS_DATA      = 0x03;
-	public static final int GEOS_SYS       = 0x04;
-	public static final int GEOS_DESK_ACC  = 0x05;
-	public static final int GEOS_APPL      = 0x06;
+	public static final int GEOS_NORMAL = 0x00;
+	public static final int GEOS_BASIC = 0x01;
+	public static final int GEOS_ASM = 0x02;
+	public static final int GEOS_DATA = 0x03;
+	public static final int GEOS_SYS = 0x04;
+	public static final int GEOS_DESK_ACC = 0x05;
+	public static final int GEOS_APPL = 0x06;
 	public static final int GEOS_APPL_DATA = 0x07;
-	public static final int GEOS_FONT      = 0x08;
-	public static final int GEOS_PRT_DRV   = 0x09;
+	public static final int GEOS_FONT = 0x08;
+	public static final int GEOS_PRT_DRV = 0x09;
 	public static final int GEOS_INPUT_DRV = 0x0a;
-	public static final int GEOS_DISK_DRV  = 0x0b;
-	public static final int GEOS_SYS_BOOT  = 0x0c;
-	public static final int GEOS_TEMP      = 0x0d;
-	public static final int GEOS_AUTOEXEC  = 0x0e;
-	public static final int GEOS_UNDFINED  = 0xff;
+	public static final int GEOS_DISK_DRV = 0x0b;
+	public static final int GEOS_SYS_BOOT = 0x0c;
+	public static final int GEOS_TEMP = 0x0d;
+	public static final int GEOS_AUTOEXEC = 0x0e;
+	public static final int GEOS_UNDFINED = 0xff;
+
+	/** Type of C64 file (DEL, SEQ, PRG, USR, REL) */
+	protected static final String[] FILE_TYPES = { "DEL", "SEQ", "PRG", "USR", "REL", "CBM" };
+
+	public static final int TYPE_DEL = 0;
+	public static final int TYPE_SEQ = 1;
+	public static final int TYPE_PRG = 2;
+	public static final int TYPE_USR = 3;
+	public static final int TYPE_REL = 4;
+	public static final int TYPE_CBM = 5;	// C1581 partition
 
 	public CbmFile() {
 		fileScratched = true;
@@ -86,29 +102,7 @@ public class CbmFile implements Comparable<CbmFile>,Cloneable {
 		dirSector = 0;
 		dirPosition = 0;
 		lsu = 0;
-	}
-
-	public CbmFile(
-			boolean fileScratched, int fileType, boolean fileLocked, boolean fileClosed, int track, int sector,
-			String name, int relTrack, int relSector, int[] geos, int sizeInBytes, int sizeInBlocks, int dirTrack,
-			int dirSector, int dirPosition)
-	{
-		this.fileScratched = fileScratched;
-		this.fileType = fileType;
-		this.fileLocked = fileLocked;
-		this.fileClosed = fileClosed;
-		this.track = track;
-		this.sector = sector;
-		this.name = name;
-		this.relTrack = relTrack;
-		this.relSector = relSector;
-		this.geos = geos;
-		this.sizeInBytes = sizeInBytes;
-		this.sizeInBlocks = sizeInBlocks;
-		this.dirTrack = dirTrack;
-		this.dirSector = dirSector;
-		this.dirPosition = dirPosition;
-		this.lsu = 0;
+		loadAddr = 0;
 	}
 
 	public CbmFile(CbmFile that) {
@@ -133,6 +127,7 @@ public class CbmFile implements Comparable<CbmFile>,Cloneable {
 		this.dirSector = that.dirSector;
 		this.dirPosition = that.dirPosition;
 		this.lsu = that.lsu;
+		this.loadAddr = that.loadAddr;
 	}
 
 	public CbmFile(String name, int fileType, int dirPosition, int track, int sector, int size) {
@@ -147,15 +142,13 @@ public class CbmFile implements Comparable<CbmFile>,Cloneable {
 		fileClosed = false;
 	}
 
-	@Override
-	public CbmFile clone() {
-		return new CbmFile(this);
-	}
-
 	/**
 	 * Construct entry from position in disk image.
-	 * @param data byte[]
-	 * @param position int
+	 *
+	 * @param data
+	 *            byte[]
+	 * @param position
+	 *            int
 	 */
 	public CbmFile(byte[] data, int position) {
 		dirTrack = data[position + 0x00] & 0xff;
@@ -166,22 +159,32 @@ public class CbmFile implements Comparable<CbmFile>,Cloneable {
 		fileClosed = (data[position + 0x02] & 0x80) == 0 ? false : true;
 		track = data[position + 0x03] & 0xff;
 		sector = data[position + 0x04] & 0xff;
-		StringBuffer buf = new StringBuffer();
-		for (int i = 0; i < 16; i++){
+		StringBuilder buf = new StringBuilder();
+		for (int i = 0; i < 16; i++) {
 			int c = data[position + 0x05 + i] & 0xff;
-			if (c != (DiskImage.BLANK & 0xff)) {
-				buf.append((char)(DiskImage.PETSCII_TABLE[c]));
+			if (c != (Utility.BLANK & 0xff)) {
+				buf.append((char) (Utility.PETSCII_TABLE[c]));
 			}
 		}
 		name = buf.toString();
 		relTrack = data[position + 0x15] & 0xff;
 		relSector = data[position + 0x16] & 0xff;
 		for (int i = 0; i < geos.length; i++) {
-			geos[i] = data[position + 0x17 +i] & 0xff;
+			geos[i] = data[position + 0x17 + i] & 0xff;
 		}
-		sizeInBlocks = (data[position + 0x1e] & 0xff) |	((data[position + 0x1f] & 0xff) * 256) ;
+		sizeInBlocks = (data[position + 0x1e] & 0xff) | ((data[position + 0x1f] & 0xff) * 256);
+		loadAddr = 0;
 	}
 
+	/**
+	 * @param type type
+	 * @return file type
+	 */
+	public static String getFileType(int type) {
+		return  type < CbmFile.FILE_TYPES.length ? CbmFile.FILE_TYPES[type] : null;
+	}
+
+	@Override
 	public String toString() {
 		StringBuilder builder = new StringBuilder();
 		builder.append("CbmFile [");
@@ -191,13 +194,11 @@ public class CbmFile implements Comparable<CbmFile>,Cloneable {
 	}
 
 	public String asDirString() {
-		return String.format("%-5s%-18s %s%-3s%s", sizeInBlocks, "\""+name+"\"",
-				fileClosed ? " " : "*",
-						(fileType < DiskImage.FILE_TYPES.length ? DiskImage.FILE_TYPES[fileType] : "???" ),
-						fileLocked ? "<" : " " );
+		return String.format("%-5s%-18s %s%-3s%s", sizeInBlocks, "\"" + name + "\"", fileClosed ? " " : "*",
+				fileType < CbmFile.FILE_TYPES.length ? CbmFile.FILE_TYPES[fileType] : "???",
+						fileLocked ? "<" : " ");
 	}
 
-	/** {@inheritDoc} */
 	protected void toString(StringBuilder builder) {
 		builder.append(" dirSector=").append(dirSector);
 		builder.append(" dirTrack=").append(dirTrack);
@@ -206,6 +207,7 @@ public class CbmFile implements Comparable<CbmFile>,Cloneable {
 		builder.append(" fileScratched=").append(fileScratched);
 		builder.append(" fileType=").append(fileType);
 		builder.append(" geos=").append(Arrays.toString(geos));
+		builder.append(" loadAddr=").append(loadAddr);
 		builder.append(" lsu=").append(lsu);
 		builder.append(" name=").append(name);
 		builder.append(" offSet=").append(offSet);
@@ -215,81 +217,82 @@ public class CbmFile implements Comparable<CbmFile>,Cloneable {
 		builder.append(" sizeInBlocks=").append(sizeInBlocks);
 		builder.append(" sizeInBytes=").append(sizeInBytes);
 		builder.append(" track=").append(track);
-
 	}
 
 	/**
-	 * @return
+	 * @return true when file is closed
 	 */
 	public boolean isFileClosed() {
 		return fileClosed;
 	}
 
 	/**
-	 * @return
+	 * @return true when file is locked
 	 */
 	public boolean isFileLocked() {
 		return fileLocked;
 	}
 
 	/**
-	 * @return
+	 * @return true when file is scratched
 	 */
 	public boolean isFileScratched() {
 		return fileScratched;
 	}
 
 	/**
-	 * @return
+	 * @return type of file
 	 */
 	public int getFileType() {
 		return fileType;
 	}
 
 	/**
-	 * @return
+	 * @param whichone
+	 *            goes attribute number
+	 * @return true if geos
 	 */
 	public int getGeos(int whichone) {
 		return geos[whichone];
 	}
 
 	/**
-	 * @return
+	 * @return name
 	 */
 	public String getName() {
 		return name;
 	}
 
 	/**
-	 * @return
+	 * @return relative sector
 	 */
 	public int getRelSector() {
 		return relSector;
 	}
 
 	/**
-	 * @return
+	 * @return relative track
 	 */
 	public int getRelTrack() {
 		return relTrack;
 	}
 
 	/**
-	 * @return
+	 * @return sector
 	 */
 	public int getSector() {
 		return sector;
 	}
 
 	/**
-	 * @return
+	 * @return size in bytes
 	 */
 	public int getSizeInBytes() {
 		return sizeInBytes;
 	}
 
 	/**
-	 * @return
+	 * @return track
 	 */
 	public int getTrack() {
 		return track;
@@ -297,6 +300,7 @@ public class CbmFile implements Comparable<CbmFile>,Cloneable {
 
 	/**
 	 * @param b
+	 *            file closed
 	 */
 	public void setFileClosed(boolean b) {
 		fileClosed = b;
@@ -304,6 +308,7 @@ public class CbmFile implements Comparable<CbmFile>,Cloneable {
 
 	/**
 	 * @param b
+	 *            file locked
 	 */
 	public void setFileLocked(boolean b) {
 		fileLocked = b;
@@ -311,6 +316,7 @@ public class CbmFile implements Comparable<CbmFile>,Cloneable {
 
 	/**
 	 * @param b
+	 *            file scratched
 	 */
 	public void setFileScratched(boolean b) {
 		fileScratched = b;
@@ -318,13 +324,17 @@ public class CbmFile implements Comparable<CbmFile>,Cloneable {
 
 	/**
 	 * @param b
+	 *            file type
 	 */
 	public void setFileType(int b) {
 		fileType = b;
 	}
 
 	/**
+	 * @param where
+	 *            geos field number
 	 * @param bs
+	 *            data
 	 */
 	public void setGeos(int where, int bs) {
 		geos[where] = bs;
@@ -332,6 +342,7 @@ public class CbmFile implements Comparable<CbmFile>,Cloneable {
 
 	/**
 	 * @param string
+	 *            name
 	 */
 	public void setName(String string) {
 		name = string;
@@ -339,6 +350,7 @@ public class CbmFile implements Comparable<CbmFile>,Cloneable {
 
 	/**
 	 * @param b
+	 *            relative sector
 	 */
 	public void setRelSector(int b) {
 		relSector = b;
@@ -346,6 +358,7 @@ public class CbmFile implements Comparable<CbmFile>,Cloneable {
 
 	/**
 	 * @param b
+	 *            relative track
 	 */
 	public void setRelTrack(int b) {
 		relTrack = b;
@@ -353,6 +366,7 @@ public class CbmFile implements Comparable<CbmFile>,Cloneable {
 
 	/**
 	 * @param b
+	 *            sector
 	 */
 	public void setSector(int b) {
 		sector = b;
@@ -360,6 +374,7 @@ public class CbmFile implements Comparable<CbmFile>,Cloneable {
 
 	/**
 	 * @param i
+	 *            size in bytes
 	 */
 	public void setSizeInBytes(int i) {
 		sizeInBytes = i;
@@ -367,27 +382,28 @@ public class CbmFile implements Comparable<CbmFile>,Cloneable {
 
 	/**
 	 * @param b
+	 *            track
 	 */
 	public void setTrack(int b) {
 		track = b;
 	}
 
 	/**
-	 * @return
+	 * @return directory sector
 	 */
 	public int getDirSector() {
 		return dirSector;
 	}
 
 	/**
-	 * @return
+	 * @return directory track
 	 */
 	public int getDirTrack() {
 		return dirTrack;
 	}
 
 	/**
-	 * @return
+	 * @return size in blocks
 	 */
 	public int getSizeInBlocks() {
 		return sizeInBlocks;
@@ -395,6 +411,7 @@ public class CbmFile implements Comparable<CbmFile>,Cloneable {
 
 	/**
 	 * @param i
+	 *            directory sector
 	 */
 	public void setDirSector(int i) {
 		dirSector = i;
@@ -402,6 +419,7 @@ public class CbmFile implements Comparable<CbmFile>,Cloneable {
 
 	/**
 	 * @param i
+	 *            directory track
 	 */
 	public void setDirTrack(int i) {
 		dirTrack = i;
@@ -409,13 +427,14 @@ public class CbmFile implements Comparable<CbmFile>,Cloneable {
 
 	/**
 	 * @param i
+	 *            size in blocks
 	 */
 	public void setSizeInBlocks(int i) {
 		sizeInBlocks = i;
 	}
 
 	/**
-	 * @return
+	 * @return directory position
 	 */
 	public int getDirPosition() {
 		return dirPosition;
@@ -423,6 +442,7 @@ public class CbmFile implements Comparable<CbmFile>,Cloneable {
 
 	/**
 	 * @param i
+	 *            direcotry position
 	 */
 	public void setDirPosition(int i) {
 		dirPosition = i;
@@ -440,8 +460,20 @@ public class CbmFile implements Comparable<CbmFile>,Cloneable {
 		return lsu;
 	}
 
+	/**
+	 * @param lsu
+	 *            last sector usage
+	 */
 	public void setLsu(int lsu) {
 		this.lsu = lsu;
+	}
+
+	public int getLoadAddr() {
+		return loadAddr;
+	}
+
+	public void setLoadAddr(int loadAddr) {
+		this.loadAddr = loadAddr;
 	}
 
 	@Override
@@ -455,5 +487,74 @@ public class CbmFile implements Comparable<CbmFile>,Cloneable {
 		}
 	}
 
+	@Override
+	public int hashCode() {
+		int result = 1;
+		result = 31 * result + ((name == null) ? 0 : name.hashCode());
+		return result;
+	}
 
+	@Override
+	public boolean equals(Object obj) {
+		if (this == obj) {
+			return true;
+		}
+		if (obj == null) {
+			return false;
+		}
+		if (getClass() != obj.getClass()) {
+			return false;
+		}
+		CbmFile other = (CbmFile) obj;
+		if (name == null) {
+			if (other.name != null) {
+				return false;
+			}
+		} else if (!name.equals(other.name)) {
+			return false;
+		}
+		return true;
+	}
+
+	/**
+	 * Write CbmFile as bytes in data at offset.
+	 * @param data the disk data
+	 * @param offset where to start writing
+	 */
+	public void toBytes(byte[] data, int offset) {
+		if (data == null || offset + DiskImage.DIR_ENTRY_SIZE > data.length) {
+			return;
+		}
+		// file attributes
+		data[offset + 2] = 0;
+		if (!fileScratched) {
+			data[offset + 2] = (byte) fileType;
+			if (fileLocked) {
+				data[offset + 2] |= 64;
+			}
+			if (fileClosed) {
+				data[offset + 2] |= 128;
+			}
+		}
+		// file track / sector (where to start reading)
+		data[offset + 3] = (byte) track;
+		data[offset + 4] = (byte) sector;
+		// FileName
+		for (int i = 0; i <= 15; i++) {
+			data[offset + 5 + i] = Utility.BLANK;
+		}
+		for (int i = 0; i <= name.length() - 1; i++) {
+			data[offset + 5 + i] = (byte) name.charAt(i);
+		}
+		// relative Track/Sector
+		data[offset + 21] = (byte) relTrack;
+		data[offset + 22] = (byte) relSector;
+		// GEOS
+		for (int i = 0; i <= 5 && i < geos.length; i++) {
+			data[offset + 23 + i] = (byte) geos[i];
+		}
+		// Size
+		data[offset + 30] = (byte) sizeInBlocks;
+		data[offset + 31] = (byte) (sizeInBlocks / DiskImage.BLOCK_SIZE);
+	}
 }

@@ -1,5 +1,6 @@
 package droid64.d64;
 
+import java.io.Serializable;
 import java.util.Arrays;
 /**<pre style='font-family:sans-serif;'>
  * Created on 21.06.2004
@@ -20,14 +21,15 @@ import java.util.Arrays;
  *   You should have received a copy of the GNU General Public License
  *   along with this program; if not, write to the Free Software
  *   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
- *   
+ *
  *   eMail: wolfvoz@users.sourceforge.net
  *   http://droid64.sourceforge.net
  *</pre>
  * @author wolf
  */
-public class CbmBam {
+public class CbmBam implements Serializable {
 
+	private static final long serialVersionUID = 1L;
 	private int diskDosType;
 	private int[] freeSectors = null;
 	private int[][] trackBits = null;
@@ -38,13 +40,12 @@ public class CbmBam {
 	public static final String FREE = "-";
 	public static final String INVALID = " ";
 	public static final String RESERVED = "X";
-	
-	
+
 	public CbmBam(int numTracks, int numTrackBytes) {
 		freeSectors = new int[numTracks];
 		trackBits =  new int[numTracks][numTrackBytes - 1];
 	}
-	
+
 	public CbmBam(int diskDosType, int[] freeSectors, int[][] trackBits, String diskName, String diskId) {
 		this.diskDosType = diskDosType;
 		this.freeSectors = freeSectors;
@@ -54,21 +55,21 @@ public class CbmBam {
 	}
 
 	/**
-	 * @return
+	 * @return disk dos type
 	 */
 	public int getDiskDosType() {
 		return diskDosType;
 	}
 
 	/**
-	 * @return
+	 * @return disk id
 	 */
 	public String getDiskId() {
 		return diskId;
 	}
 
 	/**
-	 * @return
+	 * @return disk name
 	 */
 	public String getDiskName() {
 		return diskName;
@@ -76,7 +77,7 @@ public class CbmBam {
 
 	/**
 	 * @param trackNumber the track number (1..LastTrack)
-	 * @return int
+	 * @return number of free sectors
 	 */
 	public int getFreeSectors(int trackNumber) {
 		return freeSectors[trackNumber-1];
@@ -85,28 +86,28 @@ public class CbmBam {
 	/**
 	 * @param trackNumber the track number (1..LastTrack)
 	 * @param byteNumber the byte number (1..3)
-	 * @return int
+	 * @return track bits
 	 */
 	public int getTrackBits(int trackNumber, int byteNumber) {
 		return trackBits[trackNumber-1][byteNumber-1];
 	}
 
 	/**
-	 * @param b
+	 * @param b disk dos type
 	 */
 	public void setDiskDosType(int b) {
 		diskDosType = b;
 	}
 
 	/**
-	 * @param string
+	 * @param string disk id
 	 */
 	public void setDiskId(String string) {
 		diskId = string;
 	}
 
 	/**
-	 * @param string
+	 * @param string disk name
 	 */
 	public void setDiskName(String string) {
 		diskName = string;
@@ -114,7 +115,7 @@ public class CbmBam {
 
 	/**
 	 * @param track the track, starting at 1 until last track number.
-	 * @param value
+	 * @param value value
 	 */
 	public void setFreeSectors(int track, int value) {
 		freeSectors[track-1] = value;
@@ -123,13 +124,13 @@ public class CbmBam {
 	/**
 	 * @param track track which is a number between 1 and last track.
 	 * @param byteNum a number starting 1 and is the number of bytes per track.
-	 * @param value
+	 * @param value value
 	 */
 	public void setTrackBits(int track, int byteNum, int value) {
 		trackBits[track-1][byteNum-1] = value;
 	}
 
-	/** {@inheritDoc} */
+	@Override
 	public String toString() {
 		StringBuilder builder = new StringBuilder();
 		builder.append("CbmBam [");

@@ -26,7 +26,8 @@
  * @author wolf
  */
 package droid64.gui;
-import java.util.Vector;
+import java.util.ArrayList;
+import java.util.List;
 
 import javax.swing.table.AbstractTableModel;
 import javax.swing.table.DefaultTableColumnModel;
@@ -40,27 +41,23 @@ class EntryTableModel extends AbstractTableModel {
 	private static final long serialVersionUID = 1L;
 	protected int nextEmptyRow = 0;
 	protected int numRows = 0;
-
-	public final static int MODE_CBM   = 1;
-	public final static int MODE_CPM   = 2;
-	public final static int MODE_LOCAL = 3;
-
 	private int mode = MODE_CBM;
+
+	public static final int MODE_CBM   = 1;
+	public static final int MODE_CPM   = 2;
+	public static final int MODE_LOCAL = 3;
 
 	private static final String[] COLHEADS_CBM = { "Nr", "Bl", "Name", "Ty", "Fl", "Tr", "Se" };
 	private static final String[] COLHEADS_CPM = { "Nr", "Rec", "Name", "Ext", "Attr", "Tr", "Se" };
 	private static final String[] COLHEADS_LOCAL = { "Nr", "Name", "Attr", "Size" };
 
-	private static final int[] COLWIDTH_CBM = {1,1,220, 1,1,1,1};
-	private static final int[] COLWIDTH_CPM = {1,1,220,1,1,1,1};
-	private static final int[] COLWIDTH_LOCAL = {1, 220, 1,1};
+	private static final int[] COLWIDTH_CBM = {1, 1, 220, 1, 1, 1, 1};
+	private static final int[] COLWIDTH_CPM = {1, 1, 220, 1, 1, 1, 1};
+	private static final int[] COLWIDTH_LOCAL = {1, 220, 1, 1};
 
+	private List<DirEntry> data = new ArrayList<>();
 
-	protected Vector<DirEntry> data = new Vector<DirEntry>();
-
-	public EntryTableModel() {
-	}
-
+	@Override
 	public String getColumnName(int column) {
 		switch (mode) {
 		case MODE_CBM: return column < COLHEADS_CBM.length ? COLHEADS_CBM[column] : "";
@@ -70,6 +67,7 @@ class EntryTableModel extends AbstractTableModel {
 		}
 	}
 
+	@Override
 	public int getColumnCount() {
 		switch (mode) {
 		case MODE_CBM: return COLHEADS_CBM.length;
@@ -79,65 +77,47 @@ class EntryTableModel extends AbstractTableModel {
 		}
 	}
 
+	@Override
 	public synchronized int getRowCount() {
 		return data.size();
 	}
 
-	public synchronized boolean isFile(int row, int column) {
-		DirEntry p = data.elementAt(row);
+	public synchronized boolean isFile(int row) {
+		DirEntry p = data.get(row);
 		return p.isFile();
 	}
 
-	public synchronized boolean isImageFile(int row, int column) {
-		DirEntry p = data.elementAt(row);
+	public synchronized boolean isImageFile(int row) {
+		DirEntry p = data.get(row);
 		return p.isImageFile();
 	}
 
+	@Override
 	public synchronized Object getValueAt(int row, int column) {
-		try {
-			//		{ "Nr", "Bl", "Name", "Ty", "Fl", "Tr", "Se" };
-			DirEntry p = data.elementAt(row);
-			if (p == null) {
-				return "";
+		DirEntry p = (row < data.size() && row >= 0) ? data.get(row) : null;
+		if (p == null) {
+			return "";
+		}
+		if (MODE_CBM == mode || MODE_CPM == mode) {
+			switch (column) {
+			case 0:	return Integer.valueOf(p.getNumber());
+			case 1:	return Integer.valueOf(p.getBlocks());
+			case 2:	return p.getName();
+			case 3:	return p.getType();
+			case 4:	return p.getFlags();
+			case 5: return Integer.valueOf(p.getTrack());
+			case 6: return Integer.valueOf(p.getSector());
+			default: return "";
 			}
-			switch (mode) {
-			case MODE_CBM:
-				switch (column) {
-				case 0:	return new Integer(p.getNumber());
-				case 1:	return new Integer(p.getBlocks());
-				case 2:	return p.getName();
-				case 3:	return p.getType();
-				case 4:	return p.getFlags();
-				case 5: return new Integer(p.getTrack());
-				case 6: return new Integer(p.getSector());
-				default: return "";
-				}
-			case MODE_CPM:
-				switch (column) {
-				case 0:	return new Integer(p.getNumber());
-				case 1:	return new Integer(p.getBlocks());
-				case 2:	return p.getName();
-				case 3:	return p.getType();
-				case 4:	return p.getFlags();
-				case 5: return new Integer(p.getTrack());
-				case 6: return new Integer(p.getSector());
-				default: return "";
-				}
-			case MODE_LOCAL:
-				switch (column) {
-				case 0:	return new Integer(p.getNumber());
-				case 1:	return p.getName();
-				case 2:	return p.getFlags();
-				case 3:	return new Integer(p.getBlocks());
-				case 4:	return "";
-				case 5: return "";
-				case 6: return "";
-				default: return "";
-				}
-			default:
-				return "";
+		} else if (MODE_LOCAL == mode) {
+			switch (column) {
+			case 0:	return Integer.valueOf(p.getNumber());
+			case 1:	return p.getName();
+			case 2:	return p.getFlags();
+			case 3:	return Integer.valueOf(p.getBlocks());
+			default: return "";
 			}
-		} catch (ArrayIndexOutOfBoundsException e) {
+		} else {
 			return "";
 		}
 	}
@@ -145,11 +125,19 @@ class EntryTableModel extends AbstractTableModel {
 	public TableColumnModel getTableColumnModel() {
 		DefaultTableColumnModel columnModel = new DefaultTableColumnModel();
 		for (int i=0; i<getColumnCount(); i++) {
-			int wdt = 1;
+			int wdt;
 			switch (mode) {
-			case MODE_CBM: wdt = COLWIDTH_CBM[i]; break;
-			case MODE_CPM: wdt = COLWIDTH_CPM[i]; break;
-			case MODE_LOCAL: wdt = COLWIDTH_LOCAL[i]; break;
+			case MODE_CBM:
+				wdt = COLWIDTH_CBM[i];
+				break;
+			case MODE_CPM:
+				wdt = COLWIDTH_CPM[i];
+				break;
+			case MODE_LOCAL:
+				wdt = COLWIDTH_LOCAL[i];
+				break;
+			default:
+				wdt = 1;
 			}
 			TableColumn col = new TableColumn(i, wdt);
 			col.setHeaderValue(getColumnName(i));

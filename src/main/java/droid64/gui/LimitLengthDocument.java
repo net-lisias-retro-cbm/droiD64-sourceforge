@@ -8,7 +8,7 @@ import javax.swing.text.SimpleAttributeSet;
 public class LimitLengthDocument extends PlainDocument {
 	private static final long serialVersionUID = 1L;
 	private int limit;
-	
+
 	public LimitLengthDocument(int limit) {
 		super();
 		this.limit = limit;
@@ -19,9 +19,10 @@ public class LimitLengthDocument extends PlainDocument {
 		this.limit = limit;
 		try {
 			insertString(0, text,  new SimpleAttributeSet());
-		} catch (BadLocationException e) {}
+		} catch (BadLocationException e) {}	//NOSONAR
 	}
-	
+
+	@Override
 	public void insertString(int offset, String  str, AttributeSet attr) throws BadLocationException {
 		if (str == null) {
 			return;
@@ -30,15 +31,13 @@ public class LimitLengthDocument extends PlainDocument {
 			super.insertString(offset, str, attr);
 		}
 	}
-	
+
 	public void setText(String text) {
 		AttributeSet attrs = new SimpleAttributeSet();
 		try {
 			super.replace(0, getLength(), text, attrs);
 			insertString(0, text, attrs);
-		} catch (BadLocationException e) {
-			e.printStackTrace();
-		}
+		} catch (BadLocationException e) {}	//NOSONAR
 	}
-	
+
 }

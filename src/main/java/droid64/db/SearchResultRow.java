@@ -1,23 +1,21 @@
 package droid64.db;
 
+import java.io.Serializable;
+
 /**
  * Class to keep one row returned from the search query.
  * @author Henrik
  */
-public class SearchResultRow {
+public class SearchResultRow implements Serializable {
 
+	private static final long serialVersionUID = 1L;
 	private String path;
 	private String disk;
 	private String label;
 	private String file;
 	private String type;
 	private Integer size;
-	
-	/**
-	 * Default constructor
-	 */
-	public SearchResultRow() {
-	}
+	private String hostName;
 
 	/**
 	 * Constructor.
@@ -27,16 +25,18 @@ public class SearchResultRow {
 	 * @param file String
 	 * @param type String
 	 * @param size Integer
+	 * @param hostName String
 	 */
-	public SearchResultRow(String path, String disk, String label, String file, String type, Integer size) {
+	public SearchResultRow(String path, String disk, String label, String file, String type, Integer size, String hostName) {
 		this.path = path;
 		this.disk = disk;
 		this.label = label;
 		this.file = file;
 		this.type = type;
 		this.size = size;
+		this.hostName = hostName;
 	}
-		
+
 	public String getPath() {
 		return path;
 	}
@@ -85,6 +85,14 @@ public class SearchResultRow {
 		this.label = label;
 	}
 
+	public String getHostName() {
+		return hostName;
+	}
+
+	public void setHostName(String hostName) {
+		this.hostName = hostName;
+	}
+
 	@Override
 	public String toString() {
 		StringBuilder builder = new StringBuilder();
@@ -95,6 +103,7 @@ public class SearchResultRow {
 		builder.append(" .file=").append(file);
 		builder.append(" .type=").append(type);
 		builder.append(" .size=").append(size);
+		builder.append(" .hostName=").append(hostName);
 		builder.append("]");
 		return builder.toString();
 	}

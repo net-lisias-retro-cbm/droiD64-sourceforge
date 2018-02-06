@@ -1,4 +1,5 @@
 Manifest-Version: 1.0
-Sealed: true
-Main-Class: droid64.DroiD64
+Built-By: henke
+Created-By: Apache Maven 3.3.3
+Build-Jdk: 1.8.0_111
 

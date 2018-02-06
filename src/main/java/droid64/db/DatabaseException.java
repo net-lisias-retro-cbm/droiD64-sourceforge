@@ -7,7 +7,7 @@ package droid64.db;
 public class DatabaseException extends Exception {
 
 	private static final long serialVersionUID = 1L;
-	
+
 	public DatabaseException(String message) {
 		super(message);
 	}
@@ -15,14 +15,14 @@ public class DatabaseException extends Exception {
 	public DatabaseException(Throwable t) {
 		super(t);
 	}
-	
+
 	public DatabaseException(String message, Throwable t) {
 		super(message, t);
 	}
-	
+
 	@Override
 	public String toString() {
-		StringBuffer buf = new StringBuffer();
+		StringBuilder buf = new StringBuilder();
 		buf.append("DatabaseException[");
 		buf.append(" .message=").append(getMessage());
 		buf.append("]");

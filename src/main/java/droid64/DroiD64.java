@@ -3,9 +3,11 @@ package droid64;
 import javax.swing.JFrame;
 
 import droid64.gui.MainPanel;
+import droid64.gui.Resources;
 import droid64.gui.Settings;
 
-/**<pre style='font-family:sans-serif;'>
+/**
+ * <pre style='font-family:sans-serif;'>
  * Created on 21.06.2004
  *
  *   droiD64 - A graphical filemanager for D64 files
@@ -27,20 +29,24 @@ import droid64.gui.Settings;
  *
  *   eMail: wolfvoz@users.sourceforge.net
  *   http://droid64.sourceforge.net
- *</pre>
+ * </pre>
+ *
  * @author wolf
  */
 public class DroiD64 {
 
 	public static final String PROGNAME = "droiD64";
-	public static final String VERSION = "0.12b";
 	public static final String TITLE = "Beta Version Warning: MAY HAVE ERRORS! USE ONLY ON BACKUPS! LOOK AT \"BUGS AND TO-DO\"!";
+	public static final String VERSION = Settings.getMessage(Resources.DROID_VERSION);
 
-	public DroiD64() {
+	private DroiD64() {
+		super();
 	}
 
 	public static void main(String[] args) {
 		Settings.loadSettingsFromFile();
-		new MainPanel(new JFrame());
+		JFrame mainFrame = new JFrame();
+		new MainPanel(mainFrame);
+		mainFrame.setVisible(true);
 	}
 }

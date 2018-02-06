@@ -15,14 +15,14 @@ public class NotFoundException extends DatabaseException {
 	public NotFoundException(Throwable t) {
 		super(t);
 	}
-	
+
 	public NotFoundException(String message, Throwable t) {
 		super(message, t);
 	}
-	
+
 	@Override
 	public String toString() {
-		StringBuffer buf = new StringBuffer();
+		StringBuilder buf = new StringBuilder();
 		buf.append("NotFoundException{");
 		buf.append(" .message=").append(getMessage());
 		buf.append("]");

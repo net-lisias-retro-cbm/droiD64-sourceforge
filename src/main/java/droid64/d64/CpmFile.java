@@ -1,5 +1,6 @@
 package droid64.d64;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -22,30 +23,28 @@ import java.util.List;
  *   You should have received a copy of the GNU General Public License
  *   along with this program; if not, write to the Free Software
  *   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
- *   
+ *
  *   http://droid64.sourceforge.net
  *
  * @author Henrik
  * </pre>
  */
-public class CpmFile extends CbmFile {
+public class CpmFile extends CbmFile implements Serializable {
 
-	private List<Integer> allocList = null;
+	private static final long serialVersionUID = 1L;
+	private List<Integer> allocList = null;	//NOSONAR
 	private int lastRecordByteCount = 0;
 	private int recordCount = 0;
 	private boolean hidden = false;
 	private boolean readOnly = false;
 	private boolean archived = false;
 	private int lastExtNum = 0;
-	
+
 	private String cpmName;
 	private String cpmNameExt;
-	
+
 	public CpmFile() {
-	}
-	
-	public CpmFile(boolean fileScratched, int fileType, boolean fileLocked, boolean fileClosed, int track, int sector, String name, int relTrack, int relSector, int[] geos, int sizeInBytes, int sizeInBlocks, int dirTrack, int dirSector, int dirPosition) {
-		super(fileScratched, fileType, fileLocked, fileClosed, track, sector, name, relTrack, relSector, geos, sizeInBytes, sizeInBlocks, dirTrack, dirSector, dirPosition);
+		// needed to match CbmFile
 	}
 
 	public CpmFile(CpmFile that) {
@@ -58,37 +57,64 @@ public class CpmFile extends CbmFile {
 		this.cpmName = that.cpmName;
 		this.cpmNameExt = that.cpmNameExt;
 		if (that.allocList != null) {
-			this.allocList = new ArrayList<Integer>(that.allocList);
+			this.allocList = new ArrayList<>(that.allocList);
 		}
 	}
-	
-	@Override
-	public CpmFile clone() {
-		return new CpmFile(this);
-	}
-	
+
 	public void addAllocUnit(int unit) {
 		if (allocList == null) {
-			allocList = new ArrayList<Integer>();
+			allocList = new ArrayList<>();
 		}
 		allocList.add(unit);
 	}
 
 	public List<Integer> getAllocList() {
 		if (allocList == null) {
-			allocList = new ArrayList<Integer>();
+			allocList = new ArrayList<>();
 		}
 		return allocList;
 	}
 
 	public String getCpmNameAndExt() {
 		if (cpmNameExt==null || cpmNameExt.isEmpty()) {
-			return cpmName.trim().toLowerCase();
+			return cpmName != null ? cpmName.trim().toLowerCase() : getName();
 		} else {
-			return cpmName.trim().toLowerCase() + "." + cpmNameExt.trim().toLowerCase();
+			return cpmName != null ? cpmName.trim().toLowerCase() + "." + cpmNameExt.trim().toLowerCase() : getName();
 		}
 	}
-	
+
+	@Override
+	public boolean equals(Object obj) {
+		if (this == obj) {
+			return true;
+		}
+		if (obj == null || getClass() != obj.getClass()) {
+			return false;
+		}
+		CpmFile other = (CpmFile) obj;
+		if (getName() == null) {
+			if (other.getName() != null) {
+				return false;
+			}
+		} else if (cpmName == other.cpmName) {
+			return true;
+		} else if (!getName().equals(other.getName()) || cpmName == null || !cpmName.equals(other.cpmName) || !cpmNameExt.equals(other.cpmNameExt)) {
+			return false;
+		}
+		return true;
+	}
+
+	@Override
+	public int hashCode() {
+		int result = super.hashCode();
+		result = 31 * result + ((allocList == null) ? 0 : allocList.hashCode());
+		result = 31 * result + (archived ? 1231 : 1237);
+		result = 31 * result + ((cpmName == null) ? 0 : cpmName.hashCode());
+		result = 31 * result + ((cpmNameExt == null) ? 0 : cpmNameExt.hashCode());
+		result = 31 * result + ((getName() == null) ? 0 : getName().hashCode());
+		return result;
+	}
+
 	public void setLastRecordByteCount(int count) {
 		lastRecordByteCount = count;
 	}
@@ -97,19 +123,19 @@ public class CpmFile extends CbmFile {
 	}
 
 	public int getRecordCount() {
-		return recordCount;		
+		return recordCount;
 	}
 	public void setRecordCount(int recordCount) {
-		this.recordCount = recordCount;		
+		this.recordCount = recordCount;
 	}
 
 	public boolean isHidden() {
-		return hidden;		
+		return hidden;
 	}
 	public void setHidden(boolean hidden) {
-		this.hidden = hidden;		
+		this.hidden = hidden;
 	}
-	
+
 	public int getLastExtNum() {
 		return lastExtNum;
 	}
@@ -150,12 +176,14 @@ public class CpmFile extends CbmFile {
 		this.archived = archived;
 	}
 
+	@Override
 	public String asDirString() {
 		return String.format("%-5s %-8s %-3s %-3s",
 				recordCount, cpmName, cpmNameExt,
 				(readOnly ? "R" : "-") + (hidden ? "H" : "-") + (archived ? "A" : "-"));
 	}
 
+	@Override
 	public String toString() {
 		StringBuilder builder = new StringBuilder();
 		builder.append("CpmFile[");

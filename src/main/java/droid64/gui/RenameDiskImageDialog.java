@@ -45,7 +45,7 @@ import droid64.d64.DiskImage;
  *   You should have received a copy of the GNU General Public License
  *   along with this program; if not, write to the Free Software
  *   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
- *   
+ *
  *   eMail: wolfvoz@users.sourceforge.net
  *   http://droid64.sourceforge.net
  */
@@ -61,18 +61,23 @@ public class RenameDiskImageDialog extends JDialog {
 	private JTextField idTextField;
 	private JCheckBox compressedBox;
 	private JCheckBox cpmBox;
-	private JComboBox<Object>  diskTypeBox;
-	
-	public RenameDiskImageDialog (String topText, final DiskPanel diskPanel, String oldDiskName, String oldDiskID, final boolean create) {		
+	private JComboBox<String>  diskTypeBox;
+
+	private static final String[] DISK_TYPE_LABELS = { "D64 (C1541)", "D67 (C2040)", "D71 (C1571)", "D80 (C8050)", "D81 (C1581)", "D82 (C8250)", "T64 (C1530)" };
+	private static final int[] DISK_TYPES = { DiskImage.D64_IMAGE_TYPE, DiskImage.D67_IMAGE_TYPE, DiskImage.D71_IMAGE_TYPE, DiskImage.D80_IMAGE_TYPE,
+			DiskImage.D81_IMAGE_TYPE, DiskImage.D82_IMAGE_TYPE, DiskImage.T64_IMAGE_TYPE};
+
+	public RenameDiskImageDialog (String topText, String oldDiskName, String oldDiskID, final boolean create, MainPanel mainPanel, final RenameResult result) {
 		setTitle(topText);
 
 		final JButton exitButton = new JButton("Cancel");
 		exitButton.setMnemonic('c');
 		exitButton.setToolTipText("Cancel and return.");
 		exitButton.addActionListener(new ActionListener(){
+			@Override
 			public void actionPerformed(ActionEvent event){
 				if ( event.getSource() == exitButton ) {
-					diskPanel.setNewDiskNameSuccess(false);
+					result.setSuccess(false);
 					dispose();
 				}
 			}
@@ -82,34 +87,10 @@ public class RenameDiskImageDialog extends JDialog {
 		okButton.setMnemonic('o');
 		okButton.setToolTipText("Proceed.");
 		okButton.addActionListener(new ActionListener(){
+			@Override
 			public void actionPerformed(ActionEvent event){
 				if ( event.getSource() == okButton ) {
-					diskPanel.setNewDiskNameSuccess(true);
-					String diskName = nameTextField.getText();
-					if (diskName.length() > 16) {
-						diskName = diskName.substring(0,16);
-					}
-					diskPanel.setNewDiskName(diskName);
-					String diskID = idTextField.getText();
-					int diskIdLen = diskID.length();
-					int chosenType = diskTypeBox.getSelectedIndex();
-					if (diskIdLen > 5) {
-						diskID = diskID.substring(0, 5);
-					} else if (diskIdLen <= 2) {
-						diskID = (diskID + "  ").substring(0,2) + (chosenType == 2 ? " 3D" : " 2A");
-					}
-					diskPanel.setNewDiskID(diskID);
-					if (create) {
-						if (chosenType == 0) {
-							diskPanel.setNewDiskType(DiskImage.D64_IMAGE_TYPE);
-						} else if (chosenType == 1) {
-							diskPanel.setNewDiskType(DiskImage.D71_IMAGE_TYPE);
-						} else if (chosenType == 2) {
-							diskPanel.setNewDiskType(DiskImage.D81_IMAGE_TYPE);
-						}
-						diskPanel.setNewCompressedDisk(compressedBox.isSelected());
-						diskPanel.setNewCpmDisk(cpmBox.isSelected());
-					}
+					done(create, result);
 					dispose();
 				}
 			}
@@ -119,29 +100,56 @@ public class RenameDiskImageDialog extends JDialog {
 		buttonPanel.add(exitButton);
 		buttonPanel.add(okButton);
 
-		JPanel mainPanel = setupMainPanel(oldDiskName, oldDiskID, create);
-
-		
+		JPanel panel = setupMainPanel(oldDiskName, oldDiskID, create, mainPanel);
 		setModal(true);
 		Container cp = getContentPane();
-		cp.setLayout(new BorderLayout());		
-		cp.add(mainPanel, BorderLayout.CENTER);
-		cp.add(buttonPanel, BorderLayout.SOUTH);		
+		cp.setLayout(new BorderLayout());
+		cp.add(panel, BorderLayout.CENTER);
+		cp.add(buttonPanel, BorderLayout.SOUTH);
 
 		Dimension dim = Toolkit.getDefaultToolkit().getScreenSize();
 		setLocation(
 				(int)((dim.width - getSize().getWidth()) / 3),
 				(int)((dim.height - getSize().getHeight()) / 3)
 				);
-		//		setLocation(300,200);
 		pack();
-		setVisible(true);
-
+		setVisible(mainPanel != null);
 		setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
 	}
 
-	private JPanel setupMainPanel(String diskName, String diskId, boolean create) {
-				
+	private void done(final boolean create, final RenameResult result) {
+		result.setSuccess(true);
+		String diskName = nameTextField.getText();
+		if (diskName.length() > 16) {
+			diskName = diskName.substring(0,16);
+		}
+		result.setDiskName(diskName);
+		String diskID = idTextField.getText();
+		int diskIdLen = diskID.length();
+		int chosenType = diskTypeBox.getSelectedIndex();
+		if (diskIdLen > 5) {
+			diskID = diskID.substring(0, 5);
+		} else if (diskIdLen <= 2) {
+			diskID = (diskID + "  ").substring(0,2) + (DISK_TYPES[chosenType] == DiskImage.D81_IMAGE_TYPE ? " 3D" : " 2A");
+		}
+		result.setDiskID(diskID);
+		if (create) {
+			result.setDiskType(DISK_TYPES[chosenType]);
+			result.setCompressedDisk(compressedBox.isSelected());
+			result.setCpmDisk(cpmBox.isSelected());
+		}
+	}
+
+	private void updateField(DocumentEvent e, JTextField field) {
+		try {
+			Document originator = e.getDocument();
+			String text = e.getDocument().getText(0, originator.getLength());
+			field.setText(text);
+		} catch (BadLocationException ex) {}	//NOSONAR
+	}
+
+	private JPanel setupMainPanel(String diskName, String diskId, boolean create, final MainPanel mainPanel) {
+
 		nameTextField = new JTextField("", 16);
 		nameTextField.setToolTipText("The label of your image (max 16 characters)");
 		nameTextField.setDocument(new LimitLengthDocument(16, diskName));
@@ -150,9 +158,8 @@ public class RenameDiskImageDialog extends JDialog {
 		idTextField.setToolTipText("The disk ID of your image.");
 		idTextField.setDocument(new LimitLengthDocument(5, diskId));
 		idTextField.setToolTipText("The disk ID (max 5 characters)");
-		
-		final String[] diskTypes = { "D64", "D71", "D81" };
-		diskTypeBox = new JComboBox<Object>(diskTypes);
+
+		diskTypeBox = new JComboBox<>(DISK_TYPE_LABELS);
 		diskTypeBox.setToolTipText("Select a disktype.");
 		diskTypeBox.setEditable(false);
 		diskTypeBox.setSelectedIndex(0);
@@ -161,7 +168,6 @@ public class RenameDiskImageDialog extends JDialog {
 		compressedBox.setToolTipText("GZIP new image.");
 		cpmBox = new JCheckBox("CP/M formatted", false);
 		cpmBox.setToolTipText("Format for CP/M.");
-		
 
 		final JTextField nameTextField2 = new JTextField("", 16);
 		try {
@@ -172,24 +178,22 @@ public class RenameDiskImageDialog extends JDialog {
 			nameTextField2.setText(diskName);
 			nameTextField2.setBorder(BorderFactory.createCompoundBorder(nameTextField2.getBorder(), BorderFactory.createEmptyBorder(4, 4, 4, 4)));
 			nameTextField.getDocument().addDocumentListener(new DocumentListener(){
+				@Override
 				public void insertUpdate(DocumentEvent e) {
-					update(e);
+					updateField(e, nameTextField2);
 				}
+				@Override
 				public void removeUpdate(DocumentEvent e) {
-					update(e);				
+					updateField(e, nameTextField2);
 				}
+				@Override
 				public void changedUpdate(DocumentEvent e) {
-					update(e);	
-				}
-				private void update(DocumentEvent e) {				
-					try {
-						Document originator = e.getDocument();
-						String text = e.getDocument().getText(0, originator.getLength());
-						nameTextField2.setText(text);
-					} catch (BadLocationException ex) { }
+					updateField(e, nameTextField2);
 				}
 			});
-		} catch (CbmException e) { };
+		} catch (CbmException e) {	//NOSONAR
+			mainPanel.appendConsole("Failed to setup name field: "+e.getMessage());
+		}
 
 		final JTextField idTextField2 = new JTextField("", 5);
 		try {
@@ -200,31 +204,26 @@ public class RenameDiskImageDialog extends JDialog {
 			idTextField2.setText(diskId);
 			idTextField2.setBorder(BorderFactory.createCompoundBorder(idTextField2.getBorder(), BorderFactory.createEmptyBorder(4, 4, 4, 4)));
 			idTextField.getDocument().addDocumentListener(new DocumentListener(){
+				@Override
 				public void insertUpdate(DocumentEvent e) {
-					update(e);
+					updateField(e, idTextField2);
 				}
+				@Override
 				public void removeUpdate(DocumentEvent e) {
-					update(e);				
+					updateField(e, idTextField2);
 				}
+				@Override
 				public void changedUpdate(DocumentEvent e) {
-					update(e);	
-				}
-				private void update(DocumentEvent e) {				
-					try {
-						Document originator = e.getDocument();
-						String text = e.getDocument().getText(0, originator.getLength());
-						idTextField2.setText(text);
-					} catch (BadLocationException ex) { }
+					updateField(e, idTextField2);
 				}
 			});
-		} catch (CbmException e) { };
-		
-		
+		} catch (CbmException e) {	//NOSONAR
+			mainPanel.appendConsole("Failed to setup id field: "+e.getMessage());
+		}
 
-		JPanel mainPanel = new JPanel();
+		JPanel main = new JPanel(new GridBagLayout());
 
 		GridBagConstraints gbc = new GridBagConstraints();
-		mainPanel.setLayout(new GridBagLayout());				
 		gbc.fill = GridBagConstraints.HORIZONTAL;
 		int row = 0;
 		if (create) {
@@ -233,25 +232,25 @@ public class RenameDiskImageDialog extends JDialog {
 			createPanel.add(compressedBox);
 			createPanel.add(cpmBox);
 
-			addToGridBag(0, row, 0.0, 0.0, gbc, mainPanel, new JLabel("Image Type:"));
-			addToGridBag(1, row, 0.0, 0.0, gbc, mainPanel, createPanel);
-			addToGridBag(2, row, 1.0, 0.0, gbc, mainPanel, new JPanel());
+			addToGridBag(0, row, 0.0, 0.0, gbc, main, new JLabel("Image Type:"));
+			addToGridBag(1, row, 0.0, 0.0, gbc, main, createPanel);
+			addToGridBag(2, row, 1.0, 0.0, gbc, main, new JPanel());
 			row++;
 		}
-		addToGridBag(0, row, 0.0, 0.0, gbc, mainPanel, new JLabel("Disk Name:"));
-		addToGridBag(1, row, 0.0, 0.0, gbc, mainPanel, nameTextField);
-		addToGridBag(2, row, 1.0, 0.0, gbc, mainPanel, idTextField);
+		addToGridBag(0, row, 0.0, 0.0, gbc, main, new JLabel("Disk Name:"));
+		addToGridBag(1, row, 0.0, 0.0, gbc, main, nameTextField);
+		addToGridBag(2, row, 1.0, 0.0, gbc, main, idTextField);
 		row++;
-		addToGridBag(0, row, 0.0, 0.0, gbc, mainPanel, new JLabel(""));
-		addToGridBag(1, row, 0.0, 0.0, gbc, mainPanel, nameTextField2);
-		addToGridBag(2, row, 1.0, 0.0, gbc, mainPanel, idTextField2);
+		addToGridBag(0, row, 0.0, 0.0, gbc, main, new JLabel(""));
+		addToGridBag(1, row, 0.0, 0.0, gbc, main, nameTextField2);
+		addToGridBag(2, row, 1.0, 0.0, gbc, main, idTextField2);
 		row++;
-		addToGridBag(0, row, 1.0, 1.0, gbc, mainPanel, new JPanel());
-		addToGridBag(1, row, 1.0, 1.0, gbc, mainPanel, new JPanel());
-		addToGridBag(2, row, 1.0, 1.0, gbc, mainPanel, new JPanel());
-		return mainPanel;
+		addToGridBag(0, row, 1.0, 1.0, gbc, main, new JPanel());
+		addToGridBag(1, row, 1.0, 1.0, gbc, main, new JPanel());
+		addToGridBag(2, row, 1.0, 1.0, gbc, main, new JPanel());
+		return main;
 	}
-	
+
 	/**
 	 * Wrapper to add a JComponent to a GridBagConstraints.
 	 * @param x column

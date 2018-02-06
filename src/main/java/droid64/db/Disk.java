@@ -13,25 +13,26 @@ import java.util.List;
  *
  */
 public class Disk extends Value {
-	
+
 	private long diskId;
 	private String label;
 	private String filePath;
 	private String fileName;
-	private List<DiskFile> fileList = new ArrayList<DiskFile>();
+	private List<DiskFile> fileList = null;
 	private Date updated;
 	private int imageType;
 	private Integer errors;
 	private Integer warnings;
-	
+	private String hostName;
+
 	public void setDiskId(long id) {
 		this.diskId = id;
 	}
-	
+
 	public long getDiskId() {
 		return diskId;
 	}
-	
+
 	public String getLabel() {
 		return label;
 	}
@@ -47,7 +48,7 @@ public class Disk extends Value {
 	public void setFilePath(String filePath) {
 		this.filePath = filePath;
 	}
-	
+
 	public String getFileName() {
 		return fileName;
 	}
@@ -57,13 +58,16 @@ public class Disk extends Value {
 	}
 
 	public List<DiskFile> getFileList() {
+		if (fileList == null) {
+			fileList = new ArrayList<>();
+		}
 		return fileList;
 	}
 
 	public void setFileList(List<DiskFile> fileList) {
 		this.fileList = fileList;
 	}
-	
+
 	public Date getUpdated() {
 		return updated;
 	}
@@ -80,7 +84,7 @@ public class Disk extends Value {
 		this.imageType = imageType;
 	}
 
-	
+
 	public Integer getErrors() {
 		return errors;
 	}
@@ -97,7 +101,15 @@ public class Disk extends Value {
 		this.warnings = warnings;
 	}
 
-	/** {@inheritDoc} */
+	public String getHostName() {
+		return hostName;
+	}
+
+	public void setHostName(String hostName) {
+		this.hostName = hostName;
+	}
+
+	@Override
 	public String toString() {
 		StringBuilder builder = new StringBuilder();
 		builder.append("Disk[");
@@ -110,6 +122,7 @@ public class Disk extends Value {
 		builder.append(" .errors=").append(errors);
 		builder.append(" .warnings=").append(warnings);
 		builder.append(" .fileList=").append(fileList);
+		builder.append(" .hostName=").append(hostName);
 		builder.append(" .state=").append(getState());
 		builder.append("]");
 		return builder.toString();

@@ -1,6 +1,7 @@
 package droid64.gui;
 
-import java.util.Vector;
+import java.util.ArrayList;
+import java.util.List;
 
 import javax.swing.table.AbstractTableModel;
 
@@ -15,17 +16,13 @@ public class SearchResultTableModel extends AbstractTableModel {
 
 	private static final long serialVersionUID = 1L;
 	/** Search results in a Vector of SearchResultRow */
-	protected Vector<SearchResultRow> data = new Vector<SearchResultRow>();
+	private List<SearchResultRow> data = new ArrayList<>();
 	/** Table headers */
-	private static final String[] COL_HEADS =	{ "Path", "Disk", "Label", "File", "Type", "Size" };
-
-	/** Constructor */
-	public SearchResultTableModel() {
-	}
+	private static final String[] COL_HEADS =	{ "Path", "Disk", "Label", "File", "Type", "Size", "Host" };
 
 	@Override
 	public int getRowCount() {
-		return 25; //data.size();
+		return 25;
 	}
 
 	@Override
@@ -36,21 +33,25 @@ public class SearchResultTableModel extends AbstractTableModel {
 	public String getColumnHeader(int column) {
 		return COL_HEADS[column];
 	}
-	
+
 	@Override
 	public Object getValueAt(int rowIndex, int columnIndex) {
 		try {
-			SearchResultRow row = data.elementAt(rowIndex);
-			switch (columnIndex) {
-				case 0: return row.getPath();
-				case 1: return row.getDisk();
-				case 2: return row.getLabel();
-				case 3:	return row.getFile();
-				case 4: return row.getType();
-				case 5: return row.getSize();
-				default: return "";
+			if (rowIndex >= data.size()) {
+				return "";
 			}
-		} catch (ArrayIndexOutOfBoundsException  e) {
+			SearchResultRow row = data.get(rowIndex);
+			switch (columnIndex) {
+			case 0: return row.getPath();
+			case 1: return row.getDisk();
+			case 2: return row.getLabel();
+			case 3:	return row.getFile();
+			case 4: return row.getType();
+			case 5: return row.getSize();
+			case 6: return row.getHostName();
+			default: return "";
+			}
+		} catch (ArrayIndexOutOfBoundsException  e) {	//NOSONAR
 			return "";
 		}
 	}
@@ -66,11 +67,11 @@ public class SearchResultTableModel extends AbstractTableModel {
 
 	/**
 	 * Add row to table
-	 * @param row
+	 * @param row search result row
 	 */
 	public void updateDirEntry(SearchResultRow row) {
 		data.add(row);
 		fireTableRowsInserted(data.size()-1, data.size()-1);
 	}
-	
+
 }

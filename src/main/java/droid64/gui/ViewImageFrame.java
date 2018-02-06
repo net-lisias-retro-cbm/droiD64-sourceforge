@@ -23,7 +23,6 @@ import javax.imageio.ImageIO;
 import javax.swing.BorderFactory;
 import javax.swing.JButton;
 import javax.swing.JComponent;
-import javax.swing.JFileChooser;
 import javax.swing.JFrame;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
@@ -47,7 +46,7 @@ import javax.swing.JScrollPane;
  *   You should have received a copy of the GNU General Public License
  *   along with this program; if not, write to the Free Software
  *   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
- *   
+ *
  *   http://droid64.sourceforge.net
  *
  * @author Henrik
@@ -59,8 +58,10 @@ public class ViewImageFrame extends JFrame {
 	private List<byte[]> dataList;
 	private List<String> nameList;
 	private int currentIndex = 0;
+	private MainPanel mainPanel;
 
-	public ViewImageFrame(String title, List<byte[]> dataList, List<String> nameList) throws IOException {
+	public ViewImageFrame(String title, List<byte[]> dataList, List<String> nameList, MainPanel mainPanel) throws IOException {
+		this.mainPanel = mainPanel;
 		if (dataList == null || dataList.isEmpty()) {
 			dispose();
 		} else {
@@ -70,121 +71,105 @@ public class ViewImageFrame extends JFrame {
 			setup();
 		}
 	}
-	
+
 	private void setup() throws IOException {
 		Container cp = getContentPane();
 		cp.setLayout(new BorderLayout());
 		JPanel panel = new JPanel();
-		GridBagConstraints gbc = new GridBagConstraints();		
-		gbc.fill = GridBagConstraints.VERTICAL;
-		int row = 0;
-		
+		cp.add(new JScrollPane(panel), BorderLayout.CENTER);
+
 		final CbmPicture picture = getNextImage();
 		final BufferedImage image = picture.getImage();
-		final ImagePanel imgPanel = new ImagePanel(picture);
-		if (image != null) {
-			imgPanel.setBorder(BorderFactory.createLineBorder(Color.BLACK));
-			imgPanel.addMouseListener(new MouseListener() {
-				@Override
-				public void mouseClicked(MouseEvent e) {
-					CbmPicture img = getNextImage();
-					imgPanel.setImage(img);
-				}
-				@Override
-				public void mousePressed(MouseEvent e) {}
-				@Override
-				public void mouseReleased(MouseEvent e) {}
-				@Override
-				public void mouseEntered(MouseEvent e) {}
-				@Override
-				public void mouseExited(MouseEvent e) {}
-			});
-			addToGridBag(0, row++, 0.0, 0.0, gbc, panel, imgPanel);			
-		} 
-		
-		cp.add(new JScrollPane(panel), BorderLayout.CENTER);
-		
+		final ImagePanel imgPanel = drawImagePanel(panel, image, picture);
+
 		final JButton okButton = new JButton("OK");
 		okButton.setMnemonic('o');
-		okButton.addActionListener(new ActionListener() {
-			public void actionPerformed(ActionEvent event) {
-				if ( event.getSource() == okButton ) {
-					dispose();
-				}
-			}
-		});
 
 		final JButton printButton = new JButton("Print");
 		printButton.setMnemonic('p');
 		printButton.setToolTipText("Print");
-		printButton.addActionListener(new ActionListener() {
-			public void actionPerformed(ActionEvent event) {
-				if ( event.getSource() == printButton ) {
-					print(image, picture.getName());
-				}
-			}
-		});	
-		
+
 		final JButton saveButton = new JButton("Save PNG");
 		saveButton.setMnemonic('s');
 		saveButton.setEnabled(image != null);
-		saveButton.addActionListener(new ActionListener() {
+
+		ActionListener listener = new ActionListener() {
+			@Override
 			public void actionPerformed(ActionEvent event) {
-				if ( event.getSource() == saveButton ) {
-					try {		
-						File save = saveImageDialog(imgPanel);
-						if (save != null) {
-							ImageIO.write(image, "png", save);
-						}
-					} catch (IOException e) {
-					}
+				if (event.getSource() == okButton) {
+					dispose();
+				} else if (event.getSource() == printButton ) {
+					print(image, picture.getName());
+				} else if (event.getSource() == saveButton ) {
+					saveImage(image, imgPanel);
 				}
 			}
-		});
-		
+		};
+		okButton.addActionListener(listener);
+		printButton.addActionListener(listener);
+		saveButton.addActionListener(listener);
+
 		JPanel buttonPanel = new JPanel();
 		buttonPanel.add(printButton);
 		buttonPanel.add(saveButton);
 		buttonPanel.add(okButton);
-		cp.add(buttonPanel, BorderLayout.SOUTH);		
+		cp.add(buttonPanel, BorderLayout.SOUTH);
 
 		Dimension dim = Toolkit.getDefaultToolkit().getScreenSize();
-		setLocation( (int)((dim.width - getSize().getWidth()) / 3),	(int)((dim.height - getSize().getHeight()) / 3)	);		
+		setLocation( (int)((dim.width - getSize().getWidth()) / 3),	(int)((dim.height - getSize().getHeight()) / 3)	);
 		pack();
-		setVisible(true);
-		setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);		
-	}
-	
-	private CbmPicture getNextImage() {
-		currentIndex = currentIndex % dataList.size();
-		try {
-			byte[] data = dataList.get(currentIndex);
-			String name = currentIndex < nameList.size() ? nameList.get(currentIndex) : null;
-			CbmPicture cbm = new CbmPicture(data, name);
-			currentIndex++;
-			return cbm;
-		} catch (IOException e) {}
-		return null;
+		setVisible(mainPanel != null);
+		setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
 	}
 
-	
-	private File saveImageDialog(ImagePanel imgPanel) {
-		JFileChooser chooser = new JFileChooser();
-		chooser.setDialogTitle("Save image to PNG file");
-		chooser.setMultiSelectionEnabled(false);
-		String name = imgPanel.getName();
-		if (name != null) {
-			if (!name.toLowerCase().endsWith(".png")) {
-				name = name + ".png";
+	private ImagePanel drawImagePanel(JPanel parentPanel, BufferedImage image, CbmPicture picture) throws IOException {
+		final ImagePanel imgPanel = new ImagePanel(picture);
+		if (image != null) {
+			GridBagConstraints gbc = new GridBagConstraints();
+			gbc.fill = GridBagConstraints.VERTICAL;
+			imgPanel.setBorder(BorderFactory.createLineBorder(Color.BLACK));
+			if (dataList.size() > 1) {
+				imgPanel.addMouseListener(new MouseListener() {
+					@Override
+					public void mouseClicked(MouseEvent e) {
+						CbmPicture img = getNextImage();
+						imgPanel.setImage(img);
+					}
+					@Override
+					public void mousePressed(MouseEvent e) { /* Not used */}
+					@Override
+					public void mouseReleased(MouseEvent e) { /* Not used */}
+					@Override
+					public void mouseEntered(MouseEvent e) { /* Not used */}
+					@Override
+					public void mouseExited(MouseEvent e) { /* Not used */}
+				});
 			}
-			chooser.setSelectedFile(new File(name));
+			addToGridBag(0, 0, 0.0, 0.0, gbc, parentPanel, imgPanel);
 		}
-		if (chooser.showSaveDialog(this) == JFileChooser.APPROVE_OPTION) {
-			return chooser.getSelectedFile();
+		return imgPanel;
+	}
+
+	private void saveImage(BufferedImage image, ImagePanel imgPanel) {
+		try {
+			String filename = FileDialogHelper.openTextFileDialog("Save PNG file", null, imgPanel.getName(), true, new String[]{ ".png" });
+			if (filename != null) {
+				ImageIO.write(image, "png", new File(filename));
+			}
+		} catch (IOException e) {	//NOSONAR
+			mainPanel.appendConsole("Failed to save PNG image.\n"+e.getMessage());
 		}
-		return null;
-	}	
-	
+	}
+
+	private CbmPicture getNextImage() {
+		currentIndex = currentIndex % dataList.size();
+		byte[] data = dataList.get(currentIndex);
+		String name = currentIndex < nameList.size() ? nameList.get(currentIndex) : null;
+		CbmPicture cbm = new CbmPicture(data, name);
+		currentIndex++;
+		return cbm;
+	}
+
 	private void addToGridBag(int x, int y, double weightx, double weighty, GridBagConstraints gbc, JComponent parent, JComponent component) {
 		gbc.gridx = x;
 		gbc.gridy = y;
@@ -192,54 +177,55 @@ public class ViewImageFrame extends JFrame {
 		gbc.weighty = weighty;
 		parent.add(component, gbc);
 	}
-	
+
 	private void print(BufferedImage image, String title) {
-		System.out.println("ImageViewFrame.print:");
-		PrinterJob job = PrinterJob.getPrinterJob();		
-		job.setPageable(new PrintPageable(image, title));
+		PrinterJob job = PrinterJob.getPrinterJob();
+		job.setPageable(new PrintPageable(image, title, mainPanel));
 		boolean doPrint = job.printDialog();
 		if (doPrint) {
-		    try {
-		        job.print();
-		    } catch (PrinterException e) {
-		    	e.printStackTrace();
-		    }
+			try {
+				job.print();
+			} catch (PrinterException e) {	//NOSONAR
+				mainPanel.appendConsole("Failed to print image.\n"+e.getMessage());
+			}
 		}
 	}
-	
+
 	class ImagePanel extends JPanel {
 		private static final long serialVersionUID = 1L;
-		private Image image;
+		private transient Image image;
 		private String name;
-		
+
 		public ImagePanel(CbmPicture picture) throws IOException {
-			BufferedImage image = picture.getImage(); 
-			this.image = image;
+			BufferedImage bufImage = picture.getImage();
+			this.image = picture.getImage();
 			this.name = picture.getName();
-			Dimension dim = new Dimension(image.getWidth(), image.getHeight());
+			Dimension dim = new Dimension(bufImage.getWidth(), bufImage.getHeight());
 			setSize(dim);
 			setMinimumSize(dim);
 			setPreferredSize(dim);
 		}
+		@Override
 		protected void paintComponent(Graphics g) {
 			super.paintComponent(g);
 			g.drawImage(image, 0, 0, this);
 		}
 		public void setImage(CbmPicture picture) {
 			try {
-			BufferedImage image = picture.getImage(); 
-			this.image = image;
-			this.name = picture.getName();
-			Dimension dim = new Dimension(image.getWidth(), image.getHeight());
-			setSize(dim);
-			setMinimumSize(dim);
-			setPreferredSize(dim);
-			invalidate();
-			repaint();
-			} catch (IOException e) {
-				
+				BufferedImage img = picture.getImage();
+				this.image = img;
+				this.name = picture.getName();
+				Dimension dim = new Dimension(img.getWidth(), img.getHeight());
+				setSize(dim);
+				setMinimumSize(dim);
+				setPreferredSize(dim);
+				invalidate();
+				repaint();
+			} catch (IOException e) {	//NOSONAR
+				mainPanel.appendConsole("Failed to draw image.\n"+e.getMessage());
 			}
 		}
+		@Override
 		public String getName() {
 			return name;
 		}

@@ -22,7 +22,7 @@ public class CbmException extends Exception {
 
 	@Override
 	public String toString() {
-		StringBuffer buf = new StringBuffer();
+		StringBuilder buf = new StringBuilder();
 		buf.append("CbmException[");
 		buf.append(" .message=").append(getMessage());
 		buf.append("]");

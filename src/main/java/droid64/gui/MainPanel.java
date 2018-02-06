@@ -11,16 +11,20 @@ import java.awt.event.ActionListener;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.io.File;
-import java.io.PrintWriter;
+import java.io.InputStream;
+import java.io.Serializable;
+import java.net.URL;
 import java.util.Arrays;
 import java.util.Enumeration;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Scanner;
 import java.util.TreeMap;
 
 import javax.swing.BorderFactory;
+import javax.swing.ImageIcon;
 import javax.swing.JButton;
 import javax.swing.JComponent;
 import javax.swing.JFileChooser;
@@ -39,7 +43,6 @@ import javax.swing.UIManager;
 import javax.swing.UnsupportedLookAndFeelException;
 import javax.swing.border.Border;
 import javax.swing.border.EtchedBorder;
-import javax.swing.filechooser.FileFilter;
 import javax.swing.plaf.ColorUIResource;
 import javax.swing.plaf.FontUIResource;
 import javax.swing.text.DefaultCaret;
@@ -47,6 +50,7 @@ import javax.swing.text.DefaultCaret;
 import droid64.DroiD64;
 import droid64.d64.CbmException;
 import droid64.d64.DiskImage;
+import droid64.d64.Utility;
 import droid64.db.DaoFactory;
 import droid64.db.DaoFactoryImpl;
 import droid64.db.DatabaseException;
@@ -77,106 +81,89 @@ import droid64.db.Disk;
  * @author wolf
  *</pre>
  */
-public class MainPanel {
+public class MainPanel implements Serializable {
 
-	private final static int FEEDBACK_PANEL_ROWS = 10;
-	private final static int FEEDBACK_PANEL_COLS = 80;
-	private final static int COLOUR_POWER_1 = 5;
-	private final static int COLOUR_POWER_2 = 35;
+	private static final long serialVersionUID = 1L;
+	private static final int COLOUR_POWER_1 = 5;
+	private static final int COLOUR_POWER_2 = 35;
 
-	public static Insets BUTTON_MARGINS = new Insets(1, 4, 1, 4);
+	public static final Insets BUTTON_MARGINS = new Insets(1, 4, 1, 4);
 	/** Left disk panel */
 	private DiskPanel diskPanel1;
 	/** Right disk panel */
 	private DiskPanel diskPanel2;
 	/** True when scanning for disk images is running. */
 	private boolean scannerActive = false;
-	private HashMap<Object, Object> colorHashMap = new HashMap<Object, Object>();
-	/** The menu shown when database is used */
-	private JMenu searchMenu;
-	/** The console */
-	private JTextArea consoleTextArea = null;
-	/** File save dialog for disk images */
-	private JFileChooser chooser = null;
-	/** File save dialog for console text etc. */
-	private JFileChooser textFileChooser = null;
-	/** The split pane used for the console at the bottom and the rest in the upper half. */
-	private JSplitPane splitPane = null;
+	private HashMap<Object, Object> colorHashMap = new HashMap<>();
 	/** The position of the divider in the splitPane. */
 	private int dividerLoc = 0;
 	/** The size of the divider in the splitPane. */
 	private int dividerSize = 0;
-
-	// Buttons are put into GUI in numerical order, left to right, and then next row.
-	// Keep them unique or strange things will happen.
-	private final static Integer LOAD_DISK_BUTTON     =  1;
-	private final static Integer BAM_BUTTON           =  2;
-	private final static Integer UP_BUTTON            =  3;
-	private final static Integer COPY_FILE_BUTTON     =  4;
-	private final static Integer RENAME_FILE_BUTTON   =  5;
-	private final static Integer VIEW_TEXT_BUTTON     =  6;
-	private final static Integer PLUGIN_2_BUTTON      =  7;
-	private final static Integer HIDE_CONSOLE_BUTTON  =  8;
-	private final static Integer UNLOAD_DISK_BUTTON   =  9;
-	private final static Integer VALIDATE_DISK_BUTTON = 10;
-	private final static Integer DOWN_BUTTON          = 11;
-	private final static Integer NEW_FILE_BUTTON      = 12;
-	private final static Integer VIEW_IMAGE_BUTTON    = 13;
-	private final static Integer VIEW_BASIC_BUTTON    = 14;
-	private final static Integer PLUGIN_3_BUTTON      = 15;
-	private final static Integer SETTINGS_BUTTON      = 16;
-	private final static Integer NEW_DISK_BUTTON      = 17;
-	private final static Integer RENAME_DISK_BUTTON   = 18;
-	private final static Integer SORT_FILES_BUTTON    = 19;
-	private final static Integer DELETE_FILE_BUTTON   = 20;
-	private final static Integer VIEW_HEX_BUTTON      = 21;
-	private final static Integer PLUGIN_1_BUTTON      = 22;
-	private final static Integer PLUGIN_4_BUTTON      = 23;
-	private final static Integer EXIT_BUTTON          = 24;
-
+	/** Buttons are put into GUI in numerical order, left to right, and then next row. */
+	enum Button {
+		LOAD_DISK_BUTTON,	BAM_BUTTON,			UP_BUTTON,				COPY_FILE_BUTTON,	RENAME_FILE_BUTTON,
+		VIEW_TEXT_BUTTON,	PLUGIN_2_BUTTON,	HIDE_CONSOLE_BUTTON,	UNLOAD_DISK_BUTTON,	VALIDATE_DISK_BUTTON,
+		DOWN_BUTTON,		NEW_FILE_BUTTON,	VIEW_IMAGE_BUTTON,		VIEW_BASIC_BUTTON,	PLUGIN_3_BUTTON,
+		SETTINGS_BUTTON,	NEW_DISK_BUTTON,	RENAME_DISK_BUTTON,		SORT_FILES_BUTTON,	DELETE_FILE_BUTTON,
+		VIEW_HEX_BUTTON,	PLUGIN_1_BUTTON,	PLUGIN_4_BUTTON,		EXIT_BUTTON
+	}
 	/** Number of columns of buttons. */
-	private final static int NUM_BUTTON_COLUMNS = 8;
+	private static final int NUM_BUTTON_COLUMNS = 8;
 	/** Number of rows of buttons. */
-	private final static int NUM_BUTTON_ROWS = 3;
+	private static final int NUM_BUTTON_ROWS = 3;
 	/** Array with the button ID for each plugin button */
-	private final static int[] PLUGIN_IDS = { PLUGIN_1_BUTTON, PLUGIN_2_BUTTON, PLUGIN_3_BUTTON, PLUGIN_4_BUTTON };
+	private static final Button[] PLUGIN_IDS = { Button.PLUGIN_1_BUTTON, Button.PLUGIN_2_BUTTON, Button.PLUGIN_3_BUTTON, Button.PLUGIN_4_BUTTON };
 	/** Map containing all buttons */
-	private Map<Integer,JComponent> buttonMap = new TreeMap<Integer,JComponent>();
+	private Map<Button,JComponent> buttonMap = new TreeMap<>();
 
-	private final static String LOOK_AND_FEEL_CLASSES[] = {
+	private static final String[] LOOK_AND_FEEL_CLASSES = {
 			"javax.swing.plaf.metal.MetalLookAndFeel",
 			"com.sun.java.swing.plaf.windows.WindowsLookAndFeel",
 			"com.sun.java.swing.plaf.motif.MotifLookAndFeel",
 			"com.sun.java.swing.plaf.gtk.GTKLookAndFeel"
 	};
 
+	// Labels
+	private static final String LBL_NODISK = "noDisk";
+	private static final String LBL_INSERTERROR = "insertError";
+
 	// BUTTONS
-	final JButton loadDiskButton =new JButton("Load Disk");
-	final JButton unloadDiskButton = new JButton("Unload Disk");
-	final JButton newDiskButton = new JButton("New Disk");
-	final JButton showBamButton = new JButton("BAM");
-	final JButton validateDiskButton = new JButton("Validate Disk");
-	final JButton renameDiskButton = new JButton("Rename Disk");
-	final JButton upButton = new JButton("Up");
-	final JButton downButton = new JButton("Down");
-	final JButton sortButton = new JButton("Sort Files");
-	final JButton copyButton = new JButton("Copy File");
-	final JButton newFileButton = new JButton("New File");
-	final JButton delPRGButton = new JButton("Delete File");
-	final JButton renamePRGButton = new JButton("Rename File");
-	final JButton imageViewButton = new JButton("View Image");
-	final JButton hexViewButton = new JButton("View Hex");
-	final JButton viewTextButton = new JButton("View Text");
-	final JButton basicViewButton = new JButton("View Basic");
+	private JButton loadDiskButton;
+	private JButton unloadDiskButton ;
+	private JButton newDiskButton;
+	private JButton showBamButton;
+	private JButton validateDiskButton;
+	private JButton renameDiskButton;
+	private JButton upButton;
+	private JButton downButton;
+	private JButton sortButton;
+	private JButton copyButton;
+	private JButton newFileButton;
+	private JButton delPRGButton;
+	private JButton renamePRGButton;
+	private JButton imageViewButton;
+	private JButton hexViewButton;
+	private JButton viewTextButton;
+	private JButton basicViewButton;
 	/** The plugin buttons. Used to be able to change the label from settings. */
 	private JButton[] pluginButtons = new JButton[Settings.MAX_PLUGINS];
-	final JToggleButton consoleHideButton = new JToggleButton("Hide console");
-	final JButton settingsButton = new JButton("Settings");
-	final JButton exitButton = new JButton("Exit");
-	final JFrame parent;
+	private JToggleButton consoleHideButton;
+	private JButton settingsButton;
+	private JButton exitButton;
+	private JFrame parent;
+	/** The menu shown when database is used */
+	private JMenu searchMenu;
+	/** The console */
+	private JTextArea consoleTextArea = null;
+	/** The split pane used for the console at the bottom and the rest in the upper half. */
+	private JSplitPane splitPane = null;
+
+	private static String releaseNotes = null;
+	private static String manual = null;
 
 	/**
-	 * Constructor
+	 * Constructor.
+	 * @param parent parent frame
 	 */
 	public MainPanel(JFrame parent) {
 		this.parent = parent;
@@ -185,44 +172,38 @@ public class MainPanel {
 		doSettings(parent);
 		diskPanel1 = new DiskPanel(this);
 		diskPanel2 = new DiskPanel(this);
+		drawPanel(parent);
 		diskPanel1.setDirectory(Settings.getDefaultImageDir());
 		diskPanel2.setDirectory(Settings.getDefaultImageDir2());
 		diskPanel1.setOtherDiskPanelObject(diskPanel2);
 		diskPanel2.setOtherDiskPanelObject(diskPanel1);
 		diskPanel1.setActive(true);
 		// Setup GUI
-		drawPanel(parent);
 		setupMenuBar(parent);
-
-		Dimension dim = Toolkit.getDefaultToolkit().getScreenSize();
-		parent.setLocation(
-				(int)((dim.width - parent.getSize().getWidth()) / 4),
-				(int)((dim.height - parent.getSize().getHeight()) / 4)
-				);
 		parent.setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
 		parent.addWindowListener(
 				new WindowAdapter(){
+					@Override
 					public void windowClosing(WindowEvent e){
 						exitThisProgram();
 					}
 				});
 		saveDefaultValues();
 		doSettings(parent);
-		parent.pack();
-		parent.setVisible(true);
-
+		setMainWindowSize(parent);
 		diskPanel1.loadLocalDirectory(Settings.getDefaultImageDir());
 		diskPanel2.loadLocalDirectory(Settings.getDefaultImageDir2());
 	}
 
 	/**
 	 * Setup menu
+	 * @param parent parent frame
 	 */
 	public void setupMenuBar(final JFrame parent) {
 		JMenuBar menubar = new JMenuBar();
 		menubar.add(createProgramMenu(parent));
-		menubar.add(diskPanel1.createDiskImageMenu("Disk 1", "1"));
-		menubar.add(diskPanel2.createDiskImageMenu("Disk 2", "2"));
+		menubar.add(diskPanel1.createDiskImageMenu(Resources.DROID64_MENU_DISK_1, "1"));
+		menubar.add(diskPanel2.createDiskImageMenu(Resources.DROID64_MENU_DISK_2, "2"));
 		menubar.add(createSearchMenu(parent));
 		menubar.add(createHelpMenu(parent));
 		parent.setJMenuBar(menubar);
@@ -254,67 +235,187 @@ public class MainPanel {
 	 * Setup main panel
 	 */
 	private void drawPanel(final JFrame parent) {
-		final JPanel dirListPanel = new JPanel();
-		dirListPanel.setLayout(new GridLayout(1,2));
+		final JPanel dirListPanel = new JPanel(new GridLayout(1,2));
 		dirListPanel.add(diskPanel1);
 		dirListPanel.add(diskPanel2);
-
 		// Create all buttons into the buttonMap
 		createDiskOperationButtons(parent);
 		createFileOperationButtons(parent);
 		createViewFileButtons();
 		createOtherButtons(parent);
 		// Put buttons in GUI
-		JPanel buttonPanel = new JPanel();
-		buttonPanel.setLayout(new GridLayout(NUM_BUTTON_ROWS, NUM_BUTTON_COLUMNS));
-		for (Integer key : buttonMap.keySet()) {
-			buttonPanel.add(buttonMap.get(key));
-		}
+		JPanel buttonPanel = new JPanel(new GridLayout(NUM_BUTTON_ROWS, NUM_BUTTON_COLUMNS));
+		for (Entry<Button, JComponent> entry : buttonMap.entrySet()) {
+			buttonPanel.add(entry.getValue());
 
-		JPanel listButtonPanel = new JPanel();
-		listButtonPanel.setLayout(new BorderLayout());
+		}
+		JPanel listButtonPanel = new JPanel(new BorderLayout());
 		listButtonPanel.add(dirListPanel, BorderLayout.CENTER);
 		listButtonPanel.add(buttonPanel, BorderLayout.SOUTH);
-
-		JPanel consolePanel = createConsolePanel();
-
 		splitPane = new JSplitPane(JSplitPane.VERTICAL_SPLIT);
 		splitPane.setContinuousLayout(true);
 		splitPane.setTopComponent(listButtonPanel);
-		splitPane.setBottomComponent(consolePanel);
-
+		splitPane.setBottomComponent(createConsolePanel());
+		splitPane.setDividerLocation(0.80);
+		splitPane.setResizeWeight(0.80);
 		parent.setContentPane(splitPane);
+	}
+
+	private Color adjustedColor(Color color, int red, int green, int blue) {
+		int newRed = Math.min(Math.max(0, color.getRed() + red), 255);
+		int newGreen = Math.min(Math.max(0, color.getGreen() + green), 255);
+		int newBlue = Math.min(Math.max(0, color.getBlue() + blue), 255);
+		return new Color(newRed, newGreen, newBlue);
+	}
+
+	private JToggleButton createToggleButton(String propertyKey, char mnemonic, Button buttonKey, ActionListener listener) {
+		JToggleButton button = new JToggleButton(Settings.getMessage(propertyKey + ".label"));
+		button.setMnemonic(mnemonic);
+		button.setToolTipText(Settings.getMessage(propertyKey + ".tooltip"));
+		button.setMargin(BUTTON_MARGINS);
+		button.addActionListener(listener);
+		buttonMap.put(buttonKey, button);
+		setButtonColor(button, buttonKey);
+		return button;
+	}
+
+	private JButton createButton(String label, char mnemonic, Button buttonKey, String toolTip, ActionListener listener) {
+		JButton button = new JButton(label);
+		button.setMnemonic(mnemonic);
+		button.setToolTipText(toolTip);
+		button.setMargin(BUTTON_MARGINS);
+		button.addActionListener(listener);
+		setButtonColor(button, buttonKey);
+		buttonMap.put(buttonKey, button);
+		return button;
+	}
+
+	private JButton createButton(String propertyKey, char mnemonic, Button buttonKey, ActionListener listener) {
+		JButton button = new JButton(Settings.getMessage(propertyKey + ".label"));
+		button.setMnemonic(mnemonic);
+		button.setToolTipText(Settings.getMessage(propertyKey + ".tooltip"));
+		button.setMargin(BUTTON_MARGINS);
+		button.addActionListener(listener);
+		button.setActionCommand(propertyKey);
+		setButtonColor(button, buttonKey);
+		buttonMap.put(buttonKey, button);
+		return button;
+	}
+
+	private void setButtonColor(JComponent button, Button buttonKey) {
+		switch (buttonKey) {
+		case LOAD_DISK_BUTTON:
+		case UNLOAD_DISK_BUTTON:
+		case NEW_DISK_BUTTON:
+		case BAM_BUTTON:
+		case VALIDATE_DISK_BUTTON:
+		case RENAME_DISK_BUTTON:
+			button.setBackground(adjustedColor(button.getBackground(), -20, -20, 20));
+			break;
+		case UP_BUTTON:
+		case DOWN_BUTTON:
+		case SORT_FILES_BUTTON:
+			button.setBackground(adjustedColor(button.getBackground(), -20, 20, -20));
+			break;
+		case COPY_FILE_BUTTON:
+		case NEW_FILE_BUTTON:
+		case DELETE_FILE_BUTTON:
+		case RENAME_FILE_BUTTON:
+			button.setBackground(adjustedColor(button.getBackground(), 20, -20, 20));
+			break;
+		case VIEW_IMAGE_BUTTON:
+		case VIEW_HEX_BUTTON:
+		case VIEW_TEXT_BUTTON:
+		case VIEW_BASIC_BUTTON:
+			button.setBackground(adjustedColor(button.getBackground(), 20, 20, -20));
+			break;
+		case PLUGIN_1_BUTTON:
+		case PLUGIN_2_BUTTON:
+		case PLUGIN_3_BUTTON:
+		case PLUGIN_4_BUTTON:
+			button.setBackground(adjustedColor(button.getBackground(), -20, 20, 20));
+			break;
+		case HIDE_CONSOLE_BUTTON:
+		case SETTINGS_BUTTON:
+		case EXIT_BUTTON:
+			button.setBackground(adjustedColor(button.getBackground(), 30, -20, -20));
+			break;
+		default:
+			break;
+		}
+	}
+
+	private void unloadDiskImage() {
+		DiskPanel diskPanel = getActiveDiskPanel();
+		if  (diskPanel != null) {
+			if (diskPanel.isImageLoaded()) {
+				diskPanel.unloadDisk();
+			} else {
+				String dir = diskPanel.getCurrentImagePath();
+				File dirfile = dir != null ? new File(dir) : null;
+				if (dirfile != null && dirfile.getParent() != null) {
+					diskPanel.loadLocalDirectory(dirfile.getParent());
+				}
+			}
+			setButtonState();
+		}
+	}
+
+	private void enableButtons(boolean enabled, JButton... buttons) {
+		for (JButton button : buttons) {
+			button.setEnabled(enabled);
+		}
+	}
+
+	public void setButtonState() {
+		DiskPanel activePanel = getActiveDiskPanel();
+		DiskPanel inactivePanel = getInactiveDiskPanel();
+		showBamButton.setEnabled(activePanel != null && activePanel.isImageLoaded());
+		unloadDiskButton.setText(activePanel != null && activePanel.isImageLoaded() ? "Unload" : "Parent");
+		if (activePanel != null && activePanel.isWritableImageLoaded()) {
+			if (activePanel.isZipFileLoaded()) {
+				enableButtons(false, validateDiskButton, renameDiskButton, upButton, downButton, sortButton);
+			} else {
+				enableButtons(true, validateDiskButton, renameDiskButton, upButton, downButton, sortButton);
+			}
+			if (inactivePanel != null && (inactivePanel.isWritableImageLoaded() || (!inactivePanel.isImageLoaded() && !inactivePanel.isZipFileLoaded()))) {
+				enableButtons(true, copyButton, newFileButton, delPRGButton, renamePRGButton);
+			} else {
+				enableButtons(false, copyButton, newFileButton, delPRGButton, renamePRGButton);
+			}
+		} else {
+			enableButtons(false, validateDiskButton, renameDiskButton, upButton, downButton, sortButton);
+			if (inactivePanel != null && (inactivePanel.isWritableImageLoaded() || (!inactivePanel.isImageLoaded() && !inactivePanel.isZipFileLoaded()))) {
+				enableButtons(true, copyButton, newFileButton, delPRGButton, renamePRGButton);
+			} else {
+				enableButtons(false, copyButton, newFileButton, delPRGButton, renamePRGButton);
+			}
+		}
 	}
 
 	private void createOtherButtons(final JFrame parent) {
 		ExternalProgram[] externalPrograms = Settings.getExternalPrograms();
-		for (int i = 0; i < pluginButtons.length && i < externalPrograms.length; i++) {
-			String label = externalPrograms[i] != null ? externalPrograms[i].getLabel() : null;
-			String tooltip = externalPrograms[i] != null ? externalPrograms[i].getDescription() : null;
-			pluginButtons[i] = new JButton(label != null ? label : "");
-			pluginButtons[i].setMargin(BUTTON_MARGINS);
-			pluginButtons[i].setToolTipText(tooltip);
-			pluginButtons[i].addActionListener(new ActionListener() {
-				public void actionPerformed(ActionEvent event) {
-					for (int cnt = 0; cnt < Settings.getExternalPrograms().length; cnt ++){
-						if ( event.getSource() == pluginButtons[cnt] ){
-							DiskPanel diskPanel = getActiveDiskPanel();
-							ExternalProgram prg = Settings.getExternalPrograms()[cnt];
-							if (diskPanel != null && prg != null) {
-								diskPanel.doExternalProgram(prg);;
-							}
+		ActionListener pluginButtonListener = new ActionListener() {
+			@Override
+			public void actionPerformed(ActionEvent event) {
+				for (int cnt = 0; cnt < Settings.getExternalPrograms().length; cnt ++){
+					if ( event.getSource() == pluginButtons[cnt] ){
+						DiskPanel diskPanel = getActiveDiskPanel();
+						ExternalProgram prg = Settings.getExternalPrograms()[cnt];
+						if (diskPanel != null && prg != null) {
+							diskPanel.doExternalProgram(prg);
 						}
 					}
 				}
-			});
-			if (i < PLUGIN_IDS.length && i<pluginButtons.length) {
-				pluginButtons[i].setBackground(adjustedColor(pluginButtons[i].getBackground(), -20, 20, 20));
-				buttonMap.put(PLUGIN_IDS[i], pluginButtons[i]);
 			}
+		};
+		for (int i = 0; i < pluginButtons.length && i < externalPrograms.length; i++) {
+			String label = externalPrograms[i] != null ? externalPrograms[i].getLabel() : null;
+			String tooltip = externalPrograms[i] != null ? externalPrograms[i].getDescription() : null;
+			pluginButtons[i] = createButton(label != null ? label : "", Integer.toString(i+1).charAt(0), PLUGIN_IDS[i], tooltip, pluginButtonListener);
 		}
-		consoleHideButton.setMnemonic('e');
-		consoleHideButton.setMargin(BUTTON_MARGINS);
-		consoleHideButton.addActionListener(new ActionListener() {
+		consoleHideButton = createToggleButton(Resources.DROID64_BUTTON_HIDECONSOLE, 'e', Button.HIDE_CONSOLE_BUTTON, new ActionListener() {
+			@Override
 			public void actionPerformed(ActionEvent event) {
 				if (event.getSource() == consoleHideButton) {
 					boolean show = !consoleHideButton.isSelected();
@@ -330,48 +431,27 @@ public class MainPanel {
 				}
 			}
 		});
-		consoleHideButton.setBackground(adjustedColor(consoleHideButton.getBackground(), 30, -20, -20));
-		buttonMap.put(HIDE_CONSOLE_BUTTON, consoleHideButton);
-		settingsButton.setMargin(BUTTON_MARGINS);
-		settingsButton.setToolTipText("Open the settings dialog for DroiD64.");
-		settingsButton.addActionListener(new ActionListener(){
+		settingsButton = createButton(Resources.DROID64_BUTTON_SETTINGS, 'S', Button.SETTINGS_BUTTON, new ActionListener() {
+			@Override
 			public void actionPerformed(ActionEvent event){
 				if (event.getSource() == settingsButton ) {
 					showSettings(parent);
-				};
+				}
 			}
 		});
-		settingsButton.setBackground(adjustedColor(settingsButton.getBackground(), 30, -20, -20));
-		buttonMap.put(SETTINGS_BUTTON, settingsButton);
-		exitButton.setMargin(BUTTON_MARGINS);
-		exitButton.setMnemonic('x');
-		exitButton.setToolTipText("Leave this program.");
-		exitButton.addActionListener(new ActionListener(){
+		exitButton = createButton(Resources.DROID64_BUTTON_EXIT, 'x', Button.EXIT_BUTTON, new ActionListener() {
+			@Override
 			public void actionPerformed(ActionEvent event){
 				if (event.getSource() == exitButton ) {
 					exitThisProgram();
 				}
 			}
 		});
-		exitButton.setBackground(adjustedColor(exitButton.getBackground(), 30, -20, -20));
-		buttonMap.put(EXIT_BUTTON, exitButton);
-	}
-
-	private Color adjustedColor(Color color, int red, int green, int blue) {
-		int newRed = color.getRed() + red;
-		int newGreen = color.getGreen() + green;
-		int newBlue = color.getBlue() + blue;
-		return new Color(
-				newRed >=0 ? (newRed < 256 ? newRed : 255) : 0,
-						newGreen >= 0 ? (newGreen < 256 ? newGreen : 255) : 0,
-								newBlue >= 0 ? (newBlue < 256 ? newBlue : 255) : 0);
 	}
 
 	private void createDiskOperationButtons(final JFrame parent) {
-		newDiskButton.setMnemonic('n');
-		newDiskButton.setToolTipText("Create a new blank disk.");
-		newDiskButton.setMargin(BUTTON_MARGINS);
-		newDiskButton.addActionListener(new ActionListener() {
+		newDiskButton = createButton(Resources.DROID64_BUTTON_NEWDISK, 'n', Button.NEW_DISK_BUTTON, new ActionListener() {
+			@Override
 			public void actionPerformed(ActionEvent event) {
 				if (event.getSource() == newDiskButton) {
 					DiskPanel diskPanel = getActiveDiskPanel();
@@ -381,407 +461,192 @@ public class MainPanel {
 				}
 			}
 		});
-		newDiskButton.setBackground(adjustedColor(newDiskButton.getBackground(), -20, -20, 20));
-		buttonMap.put(NEW_DISK_BUTTON, newDiskButton);
-
-		loadDiskButton.setMnemonic('l');
-		loadDiskButton.setToolTipText("Open a disk.");
-		loadDiskButton.setMargin(BUTTON_MARGINS);
-		loadDiskButton.addActionListener(new ActionListener() {
+		loadDiskButton = createButton(Resources.DROID64_BUTTON_LOADDISK, 'l', Button.LOAD_DISK_BUTTON, new ActionListener() {
+			@Override
 			public void actionPerformed(ActionEvent event) {
 				if (event.getSource() == loadDiskButton) {
 					DiskPanel diskPanel = getActiveDiskPanel();
 					if (diskPanel != null) {
-						diskPanel.openDiskImage(newDiskImageFileDialog(diskPanel.getDirectory()), true);
+						String imgFile = FileDialogHelper.openImageFileDialog(diskPanel.getDirectory(), null, false);
+						diskPanel.openDiskImage(imgFile, true);
 					}
 				}
 			}
 		});
-		loadDiskButton.setBackground(adjustedColor(loadDiskButton.getBackground(), -20, -20, 20));
-		buttonMap.put(LOAD_DISK_BUTTON, loadDiskButton);
-
-		unloadDiskButton.setMnemonic('u');
-		unloadDiskButton.setToolTipText("Unload a loaded disk image.");
-		unloadDiskButton.setMargin(BUTTON_MARGINS);
-		unloadDiskButton.addActionListener(new ActionListener() {
+		unloadDiskButton = createButton(Resources.DROID64_BUTTON_UNLOADDISK, 'u', Button.UNLOAD_DISK_BUTTON, new ActionListener() {
+			@Override
 			public void actionPerformed(ActionEvent event) {
-				DiskPanel diskPanel = getActiveDiskPanel();
-				if  (diskPanel != null && event.getSource() == unloadDiskButton) {
-					if (diskPanel.isImageLoaded()) {
-						diskPanel.unloadDisk();
-					} else if (diskPanel.isZipFileLoaded()) {
-						String dir = diskPanel.getCurrentImagePath();
-						File dirfile = dir != null ? new File(dir) : null;
-						if (dirfile != null && dirfile.getParent() != null) {
-							diskPanel.loadLocalDirectory(dirfile.getParent());
-						}
-					} else {
-						String dir = diskPanel.getCurrentImagePath();
-						File dirfile = dir != null ? new File(dir) : null;
-						if (dirfile != null && dirfile.getParent() != null) {
-							diskPanel.loadLocalDirectory(dirfile.getParent());
-						}
-					}
-					setButtonState();
-				}
+				unloadDiskImage();
 			}
 		});
-		unloadDiskButton.setBackground(adjustedColor(unloadDiskButton.getBackground(), -20, -20, 20));
-		buttonMap.put(UNLOAD_DISK_BUTTON, unloadDiskButton);
-
-		showBamButton.setMnemonic('b');
-		showBamButton.setToolTipText("Show the BAM of this disk.");
-		showBamButton.setMargin(BUTTON_MARGINS);
-		showBamButton.addActionListener(new ActionListener() {
+		showBamButton = createButton(Resources.DROID64_BUTTON_SHOWBAM, 'b', Button.BAM_BUTTON, new ActionListener() {
+			@Override
 			public void actionPerformed(ActionEvent event) {
 				if (event.getSource() == showBamButton) {
 					DiskPanel diskPanel = getActiveDiskPanel();
 					if (diskPanel != null && diskPanel.isImageLoaded()) {
 						diskPanel.showBAM();
 					} else {
-						showErrorMessage(parent, "noDisk");
+						showErrorMessage(parent, LBL_NODISK);
 					}
 				}
 			}
 		});
-		showBamButton.setBackground(adjustedColor(showBamButton.getBackground(), -20, -20, 20));
-		buttonMap.put(BAM_BUTTON, showBamButton);
-
-		renameDiskButton.setMnemonic('r');
-		renameDiskButton.setToolTipText("Modify the label of the disk.");
-		renameDiskButton.setMargin(BUTTON_MARGINS);
-		renameDiskButton.addActionListener(new ActionListener() {
+		renameDiskButton = createButton(Resources.DROID64_BUTTON_RENAMEDISK, 'r', Button.RENAME_DISK_BUTTON, new ActionListener() {
+			@Override
 			public void actionPerformed(ActionEvent event) {
 				if (event.getSource() == renameDiskButton) {
 					DiskPanel diskPanel = getActiveDiskPanel();
 					if (diskPanel != null && diskPanel.isImageLoaded()) {
 						diskPanel.renameDisk();
 					} else {
-						showErrorMessage(parent, "noDisk");
+						showErrorMessage(parent, LBL_NODISK);
 						return;
 					}
 				}
 			}
 		});
-		renameDiskButton.setBackground(adjustedColor(renameDiskButton.getBackground(), -20, -20, 20));
-		buttonMap.put(RENAME_DISK_BUTTON, renameDiskButton);
-
-		validateDiskButton.setMnemonic('v');
-		validateDiskButton.setToolTipText("Validate the disk.");
-		validateDiskButton.setMargin(BUTTON_MARGINS);
-		validateDiskButton.addActionListener(new ActionListener() {
+		validateDiskButton = createButton(Resources.DROID64_BUTTON_VALIDATE, 'v', Button.VALIDATE_DISK_BUTTON, new ActionListener() {
+			@Override
 			public void actionPerformed(ActionEvent event) {
 				if (event.getSource() == validateDiskButton) {
 					DiskPanel diskPanel = getActiveDiskPanel();
 					if (diskPanel != null && diskPanel.isImageLoaded()) {
 						diskPanel.validateDisk();
 					} else {
-						showErrorMessage(parent, "noDisk");
+						showErrorMessage(parent, LBL_NODISK);
 						return;
 					}
 				}
 			}
 		});
-		validateDiskButton.setBackground(adjustedColor(validateDiskButton.getBackground(), -20, -20, 20));
-		buttonMap.put(VALIDATE_DISK_BUTTON, validateDiskButton);
-	}
-
-	public void setButtonState() {
-		DiskPanel activePanel = getActiveDiskPanel();
-		DiskPanel inactivePanel = getInactiveDiskPanel();
-		showBamButton.setEnabled(activePanel.isImageLoaded());
-		unloadDiskButton.setText(activePanel.isImageLoaded() ? "Unload" : "Parent");
-		if (activePanel.writableImageLoaded()) {
-			if (activePanel.isZipFileLoaded()) {
-				validateDiskButton.setEnabled(false);
-				renameDiskButton.setEnabled(false);
-				upButton.setEnabled(false);
-				downButton.setEnabled(false);
-				sortButton.setEnabled(false);
-			} else {
-				validateDiskButton.setEnabled(true);
-				renameDiskButton.setEnabled(true);
-				upButton.setEnabled(true);
-				downButton.setEnabled(true);
-				sortButton.setEnabled(true);
-			}
-			if (inactivePanel.writableImageLoaded() || (!inactivePanel.isImageLoaded() && !inactivePanel.isZipFileLoaded())) {
-				copyButton.setEnabled(true);
-				newFileButton.setEnabled(true);
-				delPRGButton.setEnabled(true);
-				renamePRGButton.setEnabled(true);
-			} else {
-				copyButton.setEnabled(false);
-				newFileButton.setEnabled(false);
-				delPRGButton.setEnabled(false);
-				renamePRGButton.setEnabled(false);
-			}
-		} else {
-			validateDiskButton.setEnabled(false);
-			renameDiskButton.setEnabled(false);
-			upButton.setEnabled(false);
-			downButton.setEnabled(false);
-			sortButton.setEnabled(false);
-			if (inactivePanel.writableImageLoaded() || (!inactivePanel.isImageLoaded() && !inactivePanel.isZipFileLoaded())) {
-				copyButton.setEnabled(true);
-				newFileButton.setEnabled(true);
-				delPRGButton.setEnabled(true);
-				renamePRGButton.setEnabled(true);
-			} else {
-				copyButton.setEnabled(false);
-				newFileButton.setEnabled(false);
-				delPRGButton.setEnabled(false);
-				renamePRGButton.setEnabled(false);
-			}
-		}
 	}
 
 	private void createViewFileButtons() {
-		viewTextButton.setMnemonic('t');
-		viewTextButton.setToolTipText("Show text from selected file.");
-		viewTextButton.setMargin(BUTTON_MARGINS);
-		viewTextButton.addActionListener(new ActionListener() {
+		viewTextButton = createButton(Resources.DROID64_BUTTON_VIEWTEXT, 't', Button.VIEW_TEXT_BUTTON, null);
+		hexViewButton = createButton(Resources.DROID64_BUTTON_VIEWHEX, 'h', Button.VIEW_HEX_BUTTON, null);
+		basicViewButton = createButton(Resources.DROID64_BUTTON_VIEWBASIC, 's', Button.VIEW_BASIC_BUTTON, null);
+		imageViewButton = createButton(Resources.DROID64_BUTTON_VIEWIMAGE, 'm', Button.VIEW_IMAGE_BUTTON, null);
+		ActionListener viewListener = new ActionListener() {
+			@Override
 			public void actionPerformed(ActionEvent event) {
-				if (event.getSource() == viewTextButton) {
-					DiskPanel diskPanel = getActiveDiskPanel();
-					if (diskPanel != null) {
-						diskPanel.showFile();
-					}
+				DiskPanel diskPanel = getActiveDiskPanel();
+				String cmd = event.getActionCommand();
+				if (diskPanel == null || cmd == null) {
+					return;
+				} else if (viewTextButton.getActionCommand().equals(cmd)) {
+					diskPanel.showFile();
+				} else if (hexViewButton.getActionCommand().equals(cmd)) {
+					diskPanel.hexViewFile();
+				} else if (basicViewButton.getActionCommand().equals(cmd)) {
+					diskPanel.basicViewFile();
+				} else if (imageViewButton.getActionCommand().equals(cmd)) {
+					diskPanel.imageViewFile();
 				}
 			}
-		});
-		viewTextButton.setBackground(adjustedColor(viewTextButton.getBackground(), 20, 20, -20));
-		buttonMap.put(VIEW_TEXT_BUTTON, viewTextButton);
-
-		hexViewButton.setMnemonic('h');
-		hexViewButton.setToolTipText("Show hex dump of selected file.");
-		hexViewButton.setMargin(BUTTON_MARGINS);
-		hexViewButton.addActionListener(new ActionListener() {
-			public void actionPerformed(ActionEvent event) {
-				if (event.getSource() == hexViewButton) {
-					DiskPanel diskPanel = getActiveDiskPanel();
-
-					if (diskPanel != null) {
-						diskPanel.hexViewFile();
-					}
-				}
-			}
-		});
-		hexViewButton.setBackground(adjustedColor(hexViewButton.getBackground(), 20, 20, -20));
-		buttonMap.put(VIEW_HEX_BUTTON, hexViewButton);
-
-		basicViewButton.setMnemonic('s');
-		basicViewButton.setToolTipText("Show BASIC listing from selected file.");
-		basicViewButton.setMargin(BUTTON_MARGINS);
-		basicViewButton.addActionListener(new ActionListener() {
-			public void actionPerformed(ActionEvent event) {
-				if (event.getSource() == basicViewButton) {
-					DiskPanel diskPanel = getActiveDiskPanel();
-
-					if (diskPanel != null) {
-						diskPanel.basicViewFile();
-					}
-				}
-			}
-		});
-		basicViewButton.setBackground(adjustedColor(basicViewButton.getBackground(), 20, 20, -20));
-		buttonMap.put(VIEW_BASIC_BUTTON, basicViewButton);
-
-		imageViewButton.setMnemonic('m');
-		imageViewButton.setToolTipText("Show image from selected file.");
-		imageViewButton.setMargin(BUTTON_MARGINS);
-		imageViewButton.addActionListener(new ActionListener() {
-			public void actionPerformed(ActionEvent event) {
-				if (event.getSource() == imageViewButton) {
-					DiskPanel diskPanel = getActiveDiskPanel();
-					if (diskPanel != null) {
-						diskPanel.imageViewFile();
-					}
-				}
-			}
-		});
-		imageViewButton.setBackground(adjustedColor(imageViewButton.getBackground(), 20, 20, -20));
-		buttonMap.put(VIEW_IMAGE_BUTTON, imageViewButton);
+		};
+		viewTextButton.addActionListener(viewListener);
+		hexViewButton.addActionListener(viewListener);
+		basicViewButton.addActionListener(viewListener);
+		imageViewButton.addActionListener(viewListener);
 	}
 
 	private void createFileOperationButtons(final JFrame parent) {
-		upButton.setToolTipText("Move file upwards in directory listing.");
-		upButton.setMargin(BUTTON_MARGINS);
-		upButton.setBackground(adjustedColor(upButton.getBackground(), -20, 20, -20));
-		buttonMap.put(UP_BUTTON, upButton);
-
-		downButton.setMargin(BUTTON_MARGINS);
-		downButton.setToolTipText("Move file downwards in directory listing.");
-		downButton.setBackground(adjustedColor(downButton.getBackground(), -20, 20, -20));
-		buttonMap.put(DOWN_BUTTON, downButton);
-
-		ActionListener upDownListener = new ActionListener() {
+		upButton = createButton(Resources.DROID64_BUTTON_UP, 'U', Button.UP_BUTTON, new ActionListener() {
+			@Override
 			public void actionPerformed(ActionEvent event) {
 				DiskPanel diskPanel = getActiveDiskPanel();
-				if ((event.getSource() == upButton || event.getSource() == downButton)) {
+				if (upButton.getActionCommand().equals(event.getActionCommand())) {
 					if (diskPanel != null && diskPanel.isImageLoaded()) {
-						diskPanel.moveFile(event.getSource() == upButton);
+						diskPanel.moveFile(true);
 					} else {
-						appendConsole("Error: No image mounted.");
+						appendConsole(Settings.getMessage(Resources.DROID64_ERROR_NOIMAGEMOUNTED));
 					}
 				}
-			}};
-
-			upButton.addActionListener(upDownListener);
-			downButton.addActionListener(upDownListener);
-
-			sortButton.setToolTipText("Sort file entries by name.");
-			sortButton.setMargin(BUTTON_MARGINS);
-			sortButton.addActionListener(new ActionListener() {
-				public void actionPerformed(ActionEvent event) {
-					if (event.getSource() == sortButton) {
-						DiskPanel diskPanel = getActiveDiskPanel();
-						if (diskPanel != null) {
-							diskPanel.sortFiles();
-						}
+			}
+		});
+		downButton = createButton(Resources.DROID64_BUTTON_DOWN, 'D', Button.DOWN_BUTTON, new ActionListener() {
+			@Override
+			public void actionPerformed(ActionEvent event) {
+				DiskPanel diskPanel = getActiveDiskPanel();
+				if (downButton.getActionCommand().equals(event.getActionCommand())) {
+					if (diskPanel != null && diskPanel.isImageLoaded()) {
+						diskPanel.moveFile(false);
+					} else {
+						appendConsole(Settings.getMessage(Resources.DROID64_ERROR_NOIMAGEMOUNTED));
 					}
 				}
-			});
-			sortButton.setBackground(adjustedColor(sortButton.getBackground(), -20, 20, -20));
-			buttonMap.put(SORT_FILES_BUTTON, sortButton);
-
-			copyButton.setMnemonic('c');
-			copyButton.setToolTipText("Copy files to the other disk.");
-			copyButton.setMargin(BUTTON_MARGINS);
-			copyButton.addActionListener(new ActionListener() {
-				public void actionPerformed(ActionEvent event) {
-					if (event.getSource() == copyButton) {
-						DiskPanel diskPanel1 = getActiveDiskPanel();
-						DiskPanel diskPanel2 = getInactiveDiskPanel();
-						if (diskPanel1 != null && diskPanel2 != null) {
-							diskPanel1.copyFile();
-						}
+			}
+		});
+		sortButton = createButton(Resources.DROID64_BUTTON_SORT, 'S', Button.SORT_FILES_BUTTON, new ActionListener() {
+			@Override
+			public void actionPerformed(ActionEvent event) {
+				if (sortButton.getActionCommand().equals(event.getActionCommand())) {
+					DiskPanel diskPanel = getActiveDiskPanel();
+					if (diskPanel != null) {
+						diskPanel.sortFiles();
 					}
 				}
-			});
-			copyButton.setBackground(adjustedColor(copyButton.getBackground(), 20, -20, 20));
-			buttonMap.put(COPY_FILE_BUTTON, copyButton);
-
-			renamePRGButton.setMnemonic('r');
-			renamePRGButton.setToolTipText("Rename a file in this disk.");
-			renamePRGButton.setMargin(BUTTON_MARGINS);
-			renamePRGButton.addActionListener(new ActionListener() {
-				public void actionPerformed(ActionEvent event) {
-					if (event.getSource() == renamePRGButton) {
-						DiskPanel diskPanel = getActiveDiskPanel();
-						if (diskPanel != null) {
-							diskPanel.renameFile();
-						}
+			}
+		});
+		copyButton = createButton(Resources.DROID64_BUTTON_COPY, 'c', Button.COPY_FILE_BUTTON, new ActionListener() {
+			@Override
+			public void actionPerformed(ActionEvent event) {
+				if (copyButton.getActionCommand().equals(event.getActionCommand())) {
+					DiskPanel disk1 = getActiveDiskPanel();
+					DiskPanel disk2 = getInactiveDiskPanel();
+					if (disk1 != null && disk2 != null) {
+						disk1.copyFile();
 					}
 				}
-			});
-			renamePRGButton.setBackground(adjustedColor(renamePRGButton.getBackground(), 20, -20, 20));
-			buttonMap.put(RENAME_FILE_BUTTON, renamePRGButton);
-
-			delPRGButton.setMnemonic('d');
-			delPRGButton.setToolTipText("Delete files from this disk.");
-			delPRGButton.setMargin(BUTTON_MARGINS);
-			delPRGButton.addActionListener(new ActionListener() {
-				public void actionPerformed(ActionEvent event) {
-					if (event.getSource() == delPRGButton) {
-						DiskPanel diskPanel = getActiveDiskPanel();
-						if (diskPanel != null) {
-							diskPanel.deleteFile();
-						}
+			}
+		});
+		renamePRGButton = createButton(Resources.DROID64_BUTTON_RENAME, 'r', Button.RENAME_FILE_BUTTON, new ActionListener() {
+			@Override
+			public void actionPerformed(ActionEvent event) {
+				if (renamePRGButton.getActionCommand().equals(event.getActionCommand())) {
+					DiskPanel diskPanel = getActiveDiskPanel();
+					if (diskPanel != null) {
+						diskPanel.renameFile();
 					}
 				}
-			});
-			delPRGButton.setBackground(adjustedColor(delPRGButton.getBackground(), 20, -20, 20));
-			buttonMap.put(DELETE_FILE_BUTTON, delPRGButton);
-
-			newFileButton.setMnemonic('w');
-			newFileButton.setToolTipText("Create a file on this disk.");
-			newFileButton.setMargin(BUTTON_MARGINS);
-			newFileButton.addActionListener(new ActionListener() {
-				public void actionPerformed(ActionEvent event) {
-					if (event.getSource() == newFileButton) {
-						DiskPanel diskPanel = getActiveDiskPanel();
-						if (diskPanel != null && diskPanel.isImageLoaded()) {
-							diskPanel.newFile();
-						} else {
-							showErrorMessage(parent, "noDisk");
-						}
+			}
+		});
+		delPRGButton = createButton(Resources.DROID64_BUTTON_DELETE, 'd', Button.DELETE_FILE_BUTTON, new ActionListener() {
+			@Override
+			public void actionPerformed(ActionEvent event) {
+				if (delPRGButton.getActionCommand().equals(event.getActionCommand())) {
+					DiskPanel diskPanel = getActiveDiskPanel();
+					if (diskPanel != null) {
+						diskPanel.deleteFile();
 					}
 				}
-			});
-			newFileButton.setBackground(adjustedColor(newFileButton.getBackground(), 20, -20, 20));
-			buttonMap.put(NEW_FILE_BUTTON, newFileButton);
+			}
+		});
+		newFileButton = createButton(Resources.DROID64_BUTTON_NEWFILE, 'w', Button.NEW_FILE_BUTTON, new ActionListener() {
+			@Override
+			public void actionPerformed(ActionEvent event) {
+				if (newFileButton.getActionCommand().equals(event.getActionCommand())) {
+					DiskPanel diskPanel = getActiveDiskPanel();
+					if (diskPanel != null && diskPanel.isImageLoaded()) {
+						diskPanel.newFile();
+					} else {
+						showErrorMessage(parent, LBL_NODISK);
+					}
+				}
+			}
+		});
 	}
 
 	private JPanel createConsolePanel() {
-		JPanel feedBackPanel = new JPanel();
+		JPanel consolePanel = new JPanel(new BorderLayout());
 		Border border = BorderFactory.createEtchedBorder(EtchedBorder.LOWERED);
-		feedBackPanel.setBorder(BorderFactory.createTitledBorder(border, "Output"));
-		feedBackPanel.setLayout(new BorderLayout());
-		consoleTextArea = new JTextArea(FEEDBACK_PANEL_ROWS, FEEDBACK_PANEL_COLS);
-		consoleTextArea.setToolTipText("The status report is displayed here.");
+		consolePanel.setBorder(BorderFactory.createTitledBorder(border, Settings.getMessage(Resources.DROID64_CONSOLE)));
+		consoleTextArea = new JTextArea();
 		consoleTextArea.setEditable(false);
 		consoleTextArea.setFont(new Font(Font.MONOSPACED, Font.PLAIN, consoleTextArea.getFont().getSize()));
-
-		feedBackPanel.add(new JScrollPane(consoleTextArea), BorderLayout.CENTER);
-		return feedBackPanel;
-	}
-
-	private String newDiskImageFileDialog(String directory) {
-		chooser = getImageFileChooser(directory, null, true, chooser);
-		if (chooser.showOpenDialog(new JFrame()) == JFileChooser.APPROVE_OPTION) {
-			directory = chooser.getSelectedFile().getParent();
-			return chooser.getSelectedFile()+"";
-		}
-		return null;
-	}
-
-	/**
-	 * Setup file dialog for disk images.
-	 * @param directory the directory to open dialog in
-	 * @param defaultName a name to be preselected, or null if no none
-	 * @param saveMode if the dialog should ask for saving new file or browse for existing files
-	 * @param chooser an optional already existing dialog to setup, or null to create a new.
-	 * @return JFileChooser
-	 */
-	public JFileChooser getImageFileChooser(String directory, String defaultName, boolean saveMode, JFileChooser chooser) {
-		if (chooser == null) {
-			chooser = new JFileChooser(directory);
-			FileFilter fileFilter = new FileFilter() {
-				public boolean accept(File f) {
-					if (f.isDirectory()) {
-						return true;
-					} else {
-						Map<String,List<String>> map = Settings.getFileExtensionMap();
-						for (String key : map.keySet()) {
-							for (String ext : map.get(key)) {
-								if (f.getName().toLowerCase().endsWith(ext.toLowerCase())) {
-									return true;
-								}
-							}
-						}
-						return false;
-					}
-				}
-				public String getDescription () { return "Disk images"; }
-			};
-			chooser.addChoosableFileFilter(fileFilter);
-			chooser.setFileFilter(fileFilter);
-			chooser.setMultiSelectionEnabled(false);
-		} else {
-			chooser.setCurrentDirectory(new File(directory));
-		}
-		if (defaultName != null) {
-			chooser.setSelectedFile(new File(defaultName));
-		}
-		if (saveMode) {
-			chooser.setDialogTitle("Save disk image");
-			chooser.setDialogType(JFileChooser.FILES_ONLY | JFileChooser.SAVE_DIALOG);
-		} else {
-			chooser.setDialogTitle("Load disk image");
-			chooser.setDialogType(JFileChooser.FILES_ONLY | JFileChooser.OPEN_DIALOG);
-		}
-		return chooser;
+		consolePanel.add(new JScrollPane(consoleTextArea), BorderLayout.CENTER);
+		return consolePanel;
 	}
 
 	public void appendConsole(String message) {
@@ -792,213 +657,148 @@ public class MainPanel {
 				caret.setUpdatePolicy(DefaultCaret.OUT_BOTTOM);
 			}
 		} else {
-			System.out.println(message);
+			System.out.println(message);	//NOSONAR
 		}
 	}
 
 	private void showErrorMessage(JFrame parent, String error){
-		if (error == "noDisk"){
+		if (LBL_NODISK.equals(error)) {
 			appendConsole("\nNo disk image file selected. Aborting.");
 			JOptionPane.showMessageDialog(parent,
-					"No disk loaded.\n"+
-							"Open a disk image file first.",
-							DroiD64.PROGNAME + " v" + DroiD64.VERSION + " - No disk",
-							JOptionPane.ERROR_MESSAGE);
+					Settings.getMessage(Resources.DROID64_INFO_NOIMAGELOADED),
+					DroiD64.PROGNAME + " - No disk",
+					JOptionPane.ERROR_MESSAGE);
 		}
-		if (error == "insertError"){
+		if (LBL_INSERTERROR.equals(error)) {
 			appendConsole("\nInserting error. Aborting.\n");
 			JOptionPane.showMessageDialog(parent,
 					"An error occurred while inserting file into disk.\n"+
 							"Look up console report message for further information.",
-							DroiD64.PROGNAME + " v" + DroiD64.PROGNAME + " - Failure while inserting file",
+							DroiD64.PROGNAME + " - Failure while inserting file",
 							JOptionPane.ERROR_MESSAGE );
 		}
 	}
 
+	protected static JMenuItem addMenuItem(JMenu menu, String propertyKey, int mnemonic, ActionListener listener) {
+		JMenuItem menuItem = new JMenuItem(Settings.getMessage(propertyKey), mnemonic);
+		menuItem.setActionCommand(propertyKey);
+		menuItem.addActionListener(listener);
+		menu.add (menuItem);
+		return menuItem;
+	}
+
 	/**
-	 * Create a help drag-down menu (just for testing)
+	 * Create a help drag-down menu
 	 * @return JMenu
 	 */
 	private JMenu createHelpMenu(JFrame parent) {
-		JMenu menu = new JMenu("Help");
+		final JFrame mainFrame = parent;
+		final MainPanel mainPanel = this;
+		JMenu menu = new JMenu(Settings.getMessage(Resources.DROID64_MENU_HELP));
 		menu.setMnemonic('h');
-		JMenuItem menuItem;
-		menuItem = new JMenuItem("About", 'a');
-		menu.add (menuItem);
-		menuItem.addActionListener(new ActionListener(){
-			public void actionPerformed(ActionEvent event){
-				if ( event.getActionCommand()== "About"){
+		ActionListener listener = new ActionListener() {
+			@Override
+			public void actionPerformed(ActionEvent event) {
+				String cmd = event.getActionCommand();
+				if (Resources.DROID64_MENU_HELP_ABOUT.equals(cmd)) {
 					showHelp();
-				}
-			}
-		});
-
-		menuItem = new JMenuItem("Bugs and To-Do", 'b');
-		menu.add (menuItem);
-		menuItem.addActionListener(new ActionListener(){
-			public void actionPerformed(ActionEvent event){
-				if ( event.getActionCommand()== "Bugs and To-Do"){
-					new BugsFrame(DroiD64.PROGNAME+" v"+DroiD64.VERSION+" - Bugs and ToDo");
-				}
-			}
-		});
-		final JFrame mainPanel = parent;
-		menuItem = new JMenuItem("Release notes", 'r');
-		menu.add (menuItem);
-		menuItem.addActionListener(new ActionListener(){
-			public void actionPerformed(ActionEvent event){
-				if ( event.getActionCommand()== "Release notes"){
-					new TextViewDialog(mainPanel, DroiD64.PROGNAME, "Release Notes", RELEASE_NOTES, "text/html");
-				}
-			}
-		});
-
-		menuItem = new JMenuItem("Contact", 'c');
-		menu.add (menuItem);
-		menuItem.addActionListener(new ActionListener(){
-			final static String msg =
-					"For more information about this program check out this homepage:\n" +
-							"http://droid64.sourceforge.net\n\n" +
-							"You can contact us for any reason concerning "+DroiD64.PROGNAME+" v"+DroiD64.VERSION+" by writing an email to\n" +
-							"hwetters@users.sourceforge.net or wolfvoz@users.sourceforge.net ";
-			public void actionPerformed(ActionEvent event){
-				if ( event.getActionCommand()== "Contact"){
-					// Use JTextArea to allow user to copy & paste our text
-					JTextArea info = new JTextArea(msg);
+				} else if (Resources.DROID64_MENU_HELP_TODO.equals(cmd)) {
+					new BugsFrame(DroiD64.PROGNAME+ " - Bugs and ToDo");
+				} else if (Resources.DROID64_MENU_HELP_RELEASENOTES.equals(cmd)) {
+					new TextViewDialog(mainFrame, DroiD64.PROGNAME, Settings.getMessage(Resources.DROID64_MENU_HELP_RELEASENOTES), getReleaseNotes(), Utility.MIMETYPE_HTML, mainPanel);
+				} else if (Resources.DROID64_MENU_HELP_MANUAL.equals(cmd)) {
+					new TextViewDialog(mainFrame, DroiD64.PROGNAME, Settings.getMessage(Resources.DROID64_MENU_HELP_MANUAL), getManual(), Utility.MIMETYPE_HTML, mainPanel);
+				} else if (Resources.DROID64_MENU_HELP_CONTACT.equals(cmd)) {
+					JTextArea info = new JTextArea(Settings.getMessage(Resources.DROID64_MENU_HELP_CONTACT_MSG));
 					info.setEditable(false);
-					JOptionPane.showMessageDialog(null, info, "Contact", JOptionPane.INFORMATION_MESSAGE);
+					JOptionPane.showMessageDialog(null, info, Settings.getMessage(Resources.DROID64_MENU_HELP_CONTACT), JOptionPane.INFORMATION_MESSAGE);
 				}
-			}
-		});
-		return menu;
+			}};
+			menu.add(addMenuItem(menu, Resources.DROID64_MENU_HELP_ABOUT, 'a', listener));
+			menu.add(addMenuItem(menu, Resources.DROID64_MENU_HELP_TODO, 'b', listener));
+			menu.add(addMenuItem(menu, Resources.DROID64_MENU_HELP_RELEASENOTES, 'r', listener));
+			menu.add(addMenuItem(menu, Resources.DROID64_MENU_HELP_MANUAL, 'm', listener));
+			menu.add(addMenuItem(menu, Resources.DROID64_MENU_HELP_CONTACT, 'c', listener));
+			return menu;
 	}
-
-	/**
-	 * Select a file name for saving a text file
-	 * @param directory
-	 * @return chosen file name
-	 */
-	private String openFileDialog(String directory) {
-		if (textFileChooser == null) {
-			textFileChooser = new JFileChooser(directory);
-			FileFilter fileFilter = new FileFilter() {
-				public boolean accept(File f) {
-					if (f.isDirectory()) {
-						return true;
-					} else {
-						if (f.getName().toLowerCase().endsWith(".txt")) {
-							return true;
-						}
-						return false;
-					}
-				}
-				public String getDescription () { return "Text"; }
-			};
-			textFileChooser.addChoosableFileFilter(fileFilter);
-			textFileChooser.setFileFilter(fileFilter);
-			textFileChooser.setMultiSelectionEnabled(false);
-			textFileChooser.setDialogTitle("Save text");
-		} else {
-			textFileChooser.setCurrentDirectory(new File(directory));
-		}
-		if (textFileChooser.showOpenDialog(new JFrame()) == JFileChooser.APPROVE_OPTION) {
-			directory = textFileChooser.getSelectedFile().getParent();
-			return textFileChooser.getSelectedFile()+"";
-		}
-		return null;
-	}
-
 
 	/**
 	 * Create a help drag-down menu (just for testing)
+	 * @param parent
 	 * @return JMenu
 	 */
 	private JMenu createProgramMenu(final JFrame parent) {
-		JMenu menu = new JMenu("Program");
+		JMenu menu = new JMenu(Settings.getMessage(Resources.DROID64_MENU_PROGRAM));
 		menu.setMnemonic('P');
-		JMenuItem menuItem = new JMenuItem("Settings", 's');
-		menu.add (menuItem);
-		menuItem.addActionListener(new ActionListener(){
-			public void actionPerformed(ActionEvent event){
-				if ( event.getActionCommand()== "Settings"){
+		ActionListener listener = new ActionListener() {
+			@Override
+			public void actionPerformed(ActionEvent event) {
+				String cmd = event.getActionCommand();
+				if (Resources.DROID64_MENU_PROGRAM_SETTINGS.equals(cmd)) {
 					showSettings(parent);
-				}
-			}
-		});
-		menu.addSeparator();
-		menuItem = new JMenuItem("Clear console", 'c');
-		menu.add (menuItem);
-		menuItem.addActionListener(new ActionListener(){
-			public void actionPerformed(ActionEvent event){
-				if ( event.getActionCommand()== "Clear console"){
+				} else if (Resources.DROID64_MENU_PROGRAM_CLEARCONSOLE.equals(cmd)) {
 					consoleTextArea.setText("");
-				}
-			}
-		});
-		menuItem = new JMenuItem("Save console", 'a');
-		menu.add (menuItem);
-		menuItem.addActionListener(new ActionListener(){
-			public void actionPerformed(ActionEvent event){
-				if ( event.getActionCommand()== "Save console") {
-					String fileName = openFileDialog(getActiveDiskPanel().getCurrentImagePath());
-					if (fileName != null) {
-						try {
-							writeFile(new File(fileName), consoleTextArea.getText());
-						} catch (CbmException e) {	}
-					}
-				}
-			}
-		});
-		menu.addSeparator();
-		menuItem = new JMenuItem("Exit", 'x');
-		menu.add (menuItem);
-		menuItem.addActionListener(new ActionListener(){
-			public void actionPerformed(ActionEvent event){
-				if ( event.getActionCommand()== "Exit"){
+				} else if (Resources.DROID64_MENU_PROGRAM_SAVECONSOLE.equals(cmd)) {
+					saveConsole();
+				} else if (Resources.DROID64_MENU_PROGRAM_EXIT.equals(cmd)) {
 					exitThisProgram();
 				}
 			}
-		});
+		};
+		addMenuItem(menu, Resources.DROID64_MENU_PROGRAM_SETTINGS, 's', listener);
+		menu.addSeparator();
+		addMenuItem(menu, Resources.DROID64_MENU_PROGRAM_CLEARCONSOLE, 'c', listener);
+		addMenuItem(menu, Resources.DROID64_MENU_PROGRAM_SAVECONSOLE, 'a', listener);
+		menu.addSeparator();
+		addMenuItem(menu, Resources.DROID64_MENU_PROGRAM_EXIT, 'x', listener);
 		return menu;
+	}
+
+	private void saveConsole() {
+		DiskPanel active = getActiveDiskPanel();
+		String fileName = FileDialogHelper.openTextFileDialog(active != null ? active.getCurrentImagePath() : null, "console.txt", true);
+		if (fileName != null) {
+			try {
+				Utility.writeFile(new File(fileName), consoleTextArea.getText());
+			} catch (CbmException e) {	//NOSONAR
+				appendConsole("Failed to save console.\n"+e.getMessage());
+			}
+		}
 	}
 
 	/**
 	 * Setup search menu. Requires database.
+	 * @param parent
 	 * @return JMenu
 	 */
 	private JMenu createSearchMenu(final JFrame parent) {
-		searchMenu = new JMenu("Search");
+		final MainPanel mainPanel = this;
+		searchMenu = new JMenu(Settings.getMessage(Resources.DROID64_MENU_SEARCH));
 		searchMenu.setMnemonic('S');
+
+
+
 		final JMenuItem searchMenuItem = new JMenuItem("Search...", 's');
 		searchMenu.add (searchMenuItem);
-		searchMenuItem.addActionListener(new ActionListener(){
-			public void actionPerformed(ActionEvent event){
-				if ( event.getSource() == searchMenuItem){
-					showSearch();
-				}
-			}
-		});
-
 		final JMenuItem scanMenuItem = new JMenuItem("Scan for disk images...", 'i');
 		searchMenu.add (scanMenuItem);
-		scanMenuItem.addActionListener(new ActionListener(){
-			public void actionPerformed(ActionEvent event){
-				if ( event.getSource() == scanMenuItem){
-					showScanForImages(parent);
-				}
-			}
-		});
-
 		final JMenuItem syncMenuItem = new JMenuItem("Sync database and files", 'y');
 		searchMenu.add (syncMenuItem);
-		syncMenuItem.addActionListener(new ActionListener(){
+		ActionListener listener = new ActionListener(){
+			@Override
 			public void actionPerformed(ActionEvent event){
-				if ( event.getSource() == syncMenuItem){
+				if (event.getSource() == searchMenuItem){
+					new SearchDialog(DroiD64.PROGNAME+" - Search", mainPanel);
+				} else if (event.getSource() == scanMenuItem){
+					showScanForImages(parent);
+				} else if (event.getSource() == syncMenuItem){
 					syncDatabase();
 				}
 			}
-		});
-
+		};
+		searchMenuItem.addActionListener(listener);
+		scanMenuItem.addActionListener(listener);
+		syncMenuItem.addActionListener(listener);
 		searchMenu.setEnabled(Settings.getUseDb());
 		searchMenu.setToolTipText(Settings.getUseDb() ? null : "You must configure and enable database to use search.");
 		searchMenu.setVisible(Settings.getUseDb());
@@ -1009,17 +809,11 @@ public class MainPanel {
 	 * Good bye?
 	 */
 	private void exitThisProgram() {
-		if (Settings.getAskQuit()) {
-			if (JOptionPane.showConfirmDialog(
-					null,
-					"Really quit?",
-					"Leaving this program...",
-					JOptionPane.OK_CANCEL_OPTION
-					) == JOptionPane.OK_OPTION) {
-				System.exit(0);
-			}
-		} else {
-			System.exit(0);
+		if (!Settings.getAskQuit() || JOptionPane.showConfirmDialog(
+				null, "Really quit?", "Leaving this program...",
+				JOptionPane.OK_CANCEL_OPTION) == JOptionPane.OK_OPTION) {
+			parent.dispose();
+			System.exit(0);	//NOSONAR
 		}
 	}
 
@@ -1028,15 +822,8 @@ public class MainPanel {
 	 */
 	private void showSettings(JFrame parent) {
 		doSettings(parent);
-		new SettingsDialog(DroiD64.PROGNAME+" v"+DroiD64.VERSION+" - Settings", this);
+		new SettingsDialog(DroiD64.PROGNAME+" - Settings", this);
 		doSettings(parent);
-	}
-
-	/**
-	 * Open search frame. Requires database.
-	 */
-	private void showSearch() {
-		new SearchDialog(DroiD64.PROGNAME+" v"+DroiD64.VERSION+" - Search", this);
 	}
 
 	/**
@@ -1056,6 +843,7 @@ public class MainPanel {
 				final String path = dir != null ? dir.getAbsolutePath() : null;
 				appendConsole("Scan for disk images in "+path);
 				Thread scanner = new Thread() {
+					@Override
 					public void run() {
 						try {
 							int numDisks = scanForD64Files(path);
@@ -1080,6 +868,10 @@ public class MainPanel {
 			appendConsole("Got "+diskList.size()+" disks.");
 			int deletedFileCount = 0;
 			for (Disk disk : diskList) {
+				if (disk.getHostName() != null && !disk.getHostName().equals(Utility.getHostName())) {
+					// saved for a different host.
+					continue;
+				}
 				File f = new File(disk.getFilePath() + File.separator + disk.getFileName());
 				if (!f.exists() || !f.isFile()) {
 					deletedFileCount++;
@@ -1089,7 +881,7 @@ public class MainPanel {
 				}
 			}
 			appendConsole("Sync done. Removed "+deletedFileCount+" disk from database.");
-		} catch (DatabaseException e) {
+		} catch (DatabaseException e) {	//NOSONAR
 			appendConsole("Sync failed: "+e.getMessage());
 		}
 	}
@@ -1098,7 +890,7 @@ public class MainPanel {
 	 * Apply settings to GUI
 	 */
 	private void doSettings(JFrame parent ) {
-		setLookAndFeel(parent, Settings.getLookAndFeel(), Settings.getColourChoice());
+		setLookAndFeel(parent, Settings.getLookAndFeel());
 		if (searchMenu != null) {
 			searchMenu.setEnabled(Settings.getUseDb());
 			searchMenu.setVisible(Settings.getUseDb());
@@ -1106,8 +898,8 @@ public class MainPanel {
 		setDefaultFonts();
 		if (Settings.getUseDb()) {
 			try {
-				DaoFactoryImpl.initialize(Settings.getJdbcDriver(), Settings.getJdbcUrl(), Settings.getJdbcUser(), Settings.getJdbcPassword(), Settings.getMaxRows());
-			} catch (DatabaseException e) {
+				DaoFactoryImpl.initialize(Settings.getJdbcDriver(), Settings.getJdbcUrl(), Settings.getJdbcUser(), Settings.getJdbcPassword(), Settings.getMaxRows(), Settings.getJdbcLimitType());
+			} catch (DatabaseException e) {	//NOSONAR
 				appendConsole("Load settings failed: "+e.getMessage());
 			}
 		}
@@ -1146,82 +938,74 @@ public class MainPanel {
 	}
 
 	private void showHelp() {
-		new ShowHelpFrame(DroiD64.PROGNAME+" v"+DroiD64.VERSION+" - About");
+		new ShowHelpFrame(DroiD64.PROGNAME+" - About");
 	}
 
 	public static String[] getLookAndFeelNames() {
 		String[] looks = new String[LOOK_AND_FEEL_CLASSES.length];
 		for (int i=0; i < looks.length; i++) {
-			String x[] = LOOK_AND_FEEL_CLASSES[i].split("[.]");
+			String[] x = LOOK_AND_FEEL_CLASSES[i].split("[.]");
 			looks[i] = x[x.length - 1];
 		}
 		return looks;
 	}
 
-	private void setLookAndFeel(JFrame parent, int lookAndFeel, int colorChoice){
-		//	Set look&feel (skin)
+	private void setLookAndFeel(JFrame parent, int lookAndFeel){
 		try {
 			String plaf = LOOK_AND_FEEL_CLASSES[lookAndFeel < LOOK_AND_FEEL_CLASSES.length && lookAndFeel >= 0 ? lookAndFeel: 1];
 			UIManager.setLookAndFeel(plaf);
-		} catch (UnsupportedLookAndFeelException e) {
-			appendConsole("Look and feel failed: "+e.getMessage());
-		} catch (ClassNotFoundException e) {
-			appendConsole("Look and feel failed: "+e.getMessage());
-		} catch (InstantiationException e) {
-			System.err.println(e.toString());
-		} catch (IllegalAccessException e) {
-			System.err.println(e.toString());
+		} catch (InstantiationException | IllegalAccessException | UnsupportedLookAndFeelException | ClassNotFoundException e) {
+			appendConsole("Look and feel failed: "+e);
 		}
-
-		// Color theme
-		Iterator<?> it = colorHashMap.entrySet().iterator();
-		while (it.hasNext()) {
-			@SuppressWarnings("rawtypes")
-			Map.Entry entry = (Map.Entry)it.next();
+		try {
+			URL iconURL = getClass().getResource("/favicon.png");
+			if (iconURL != null) {
+				ImageIcon icon = new ImageIcon(iconURL);
+				parent.setIconImage(icon.getImage());
+			}
+		} catch (Exception e) {
+			appendConsole("Icon image failed: "+e);
+		}
+		for (Map.Entry<?,?> entry : colorHashMap.entrySet()) {
 			Object key = entry.getKey();
 			Object value = entry.getValue();
 			if (value instanceof javax.swing.plaf.ColorUIResource) {
 				ColorUIResource cr = (ColorUIResource) value;
 				switch (Settings.getColourChoice()) {
-				// gray (normal, no change to default values)
-				case 0 :
+				case 0:	// gray (normal, no change to default values)
 					UIManager.put(key, value);
 					break;
-					// red
-				case 1 :
+				case 1:		// red
 					putColor(key, cr.getRed()+COLOUR_POWER_1, cr.getGreen()-COLOUR_POWER_1, cr.getBlue()-COLOUR_POWER_1);
 					break;
-					// green
-				case 2 :
+				case 2:		// green
 					putColor(key, cr.getRed()-COLOUR_POWER_1, cr.getGreen()+COLOUR_POWER_1, cr.getBlue()-COLOUR_POWER_1);
 					break;
-					// blue
-				case 3 :
+				case 3:		// blue
 					putColor(key, cr.getRed()-COLOUR_POWER_1, cr.getGreen()-COLOUR_POWER_1, cr.getBlue()+COLOUR_POWER_1);
 					break;
-					// gray-light
-				case 4 :
+				case 4:		// gray-light
 					putColor(key, cr.getRed()+COLOUR_POWER_2, cr.getGreen()+COLOUR_POWER_2, cr.getBlue()+COLOUR_POWER_2 + 10);
 					break;
-				} // switch
-			} // if
-		} //while
+				case 5:		// gray-light
+					putColor(key, cr.getRed()-COLOUR_POWER_2, cr.getGreen()-COLOUR_POWER_2, cr.getBlue()-COLOUR_POWER_2 + 10);
+					break;
+				case 6:		// cyan
+					putColor(key, cr.getRed()-COLOUR_POWER_1, cr.getGreen()+COLOUR_POWER_2, cr.getBlue()+COLOUR_POWER_2 + 10);
+					break;
+				default:	// Unknown
+					break;
+				}
+			}
+		}
 		setDefaultFonts();
 		SwingUtilities.updateComponentTreeUI(parent);
-		parent.pack();
 		parent.invalidate();
 		parent.repaint();
 	}
 
 	private void putColor(Object key, int red, int green, int blue) {
-
-		red = red < 0 ? 0 : red;
-		red = red > 255 ? 255 : red;
-		green = green < 0 ? 0 : green;
-		green = green > 255 ? 255 : green;
-		blue = blue < 0 ? 0 : blue;
-		blue = blue > 255 ? 255 : blue;
-		UIManager.put(key, new ColorUIResource(red > 255 ? 255 : red, green > 255 ? 255 : green,  blue > 255 ? 255 : blue));
+		UIManager.put(key, new ColorUIResource(Utility.trimIntByte(red), Utility.trimIntByte(green), Utility.trimIntByte(blue)));
 	}
 
 	private void saveDefaultValues(){
@@ -1247,6 +1031,22 @@ public class MainPanel {
 		return parent;
 	}
 
+	private void setMainWindowSize(JFrame frame) {
+		frame.pack();
+		frame.setMinimumSize(new Dimension(64, 64));
+		int[] winSizePos = Settings.getWindow();
+		if (winSizePos.length < 4l) {
+			Dimension dim = Toolkit.getDefaultToolkit().getScreenSize();
+			frame.setLocation(
+					(int)((dim.width - frame.getSize().getWidth()) / 4),
+					(int)((dim.height - frame.getSize().getHeight()) / 4)
+					);
+		} else {
+			frame.setSize(winSizePos[0], winSizePos[1]);
+			frame.setLocation(winSizePos[2], winSizePos[3]);
+		}
+	}
+
 	/**
 	 * Recursively scan dirName for D64 images and add to database.
 	 * @param dirName directory to start searching in.
@@ -1264,11 +1064,14 @@ public class MainPanel {
 			} else if (files[i].isFile()) {
 				String name = files[i].getName();
 				boolean found = false;
-				Map<String,List<String>> map = Settings.getFileExtensionMap();
-				for (String key : map.keySet()) {
-					for (String ext : map.get(key)) {
+				Map<Integer,List<String>> map = Settings.getFileExtensionMap();
+				for (Entry<Integer,List<String>> entry : map.entrySet()) {
+					for (String ext : entry.getValue()) {
 						if (name.toLowerCase().endsWith(ext.toLowerCase())) {
 							found = true;
+							String fileName = dirName + File.separator + name;
+							saveDiskToDatabase(fileName, dirName, name);
+							diskCount++;
 							break;
 						}
 					}
@@ -1276,27 +1079,25 @@ public class MainPanel {
 						break;
 					}
 				}
-				if (found) {
-					String fileName = dirName + File.separator + name;
-					try {
-						DiskImage diskImage =  DiskImage.getDiskImage(fileName);
-						diskImage.readBAM();
-						diskImage.readDirectory();
-						Disk disk = diskImage.getDisk();
-						disk.setFilePath(dirName);
-						disk.setFileName(name);
-						DaoFactory.getDaoFactory().getDiskDao().save(disk);
-						diskCount++;
-						appendConsole("Saved info for " + fileName);
-					} catch (DatabaseException e) {
-						appendConsole(fileName +" : "+e.getMessage());
-					} catch (CbmException e) {
-						appendConsole(fileName +" : "+e.getMessage());
-					}
-				}
 			}
 		}
 		return diskCount;
+	}
+
+	private void saveDiskToDatabase(String fileName, String dirName, String name) {
+		try {
+			DiskImage diskImage =  DiskImage.getDiskImage(fileName);
+			diskImage.readBAM();
+			diskImage.readDirectory();
+			Disk disk = diskImage.getDisk();
+			disk.setFilePath(dirName);
+			disk.setFileName(name);
+			disk.setHostName(Utility.getHostName());
+			DaoFactory.getDaoFactory().getDiskDao().save(disk);
+			appendConsole("Saved info for " + fileName);
+		} catch (DatabaseException | CbmException e) {	//NOSONAR
+			appendConsole(fileName +" : "+e.getMessage());
+		}
 	}
 
 	public void setPluginButtonLabel(int num, String label) {
@@ -1305,72 +1106,28 @@ public class MainPanel {
 		}
 	}
 
-	private void writeFile(File outFile, String data) throws CbmException {
-		if (outFile == null || data == null) {
-			throw new CbmException("Required data is missing.");
+	private static String getReleaseNotes() {
+		if (releaseNotes == null) {
+			releaseNotes = getResource("resources/releasenotes.html");
 		}
-		try {
-			PrintWriter out = new PrintWriter(outFile);
-			out.println(data);
-			out.close();
-			appendConsole("Writo to file: " + outFile.getAbsolutePath());
-		} catch (Exception e) {
-			appendConsole("Failed to write to file: " + e.getMessage());
-			throw new CbmException("Failed to write to file. "+e.getMessage());
-		}
+		return releaseNotes;
 	}
 
-	private final static String RELEASE_NOTES =
-			"<html><dl><dt><b>Version 0.05b:</b></dt><dd><ul>" +
-					"<li> Refactored code.</li>" +
-					"<li> New look & feel.</li>" +
-					"<li> Gzipped images.</li>" +
-					"<li> Database support.</li>" +
-					"</ul></dd><dt><b>Version 0.065b:</b></dt><dd><ul>" +
-					"<li> D71, D81 and T64 read support.</li>" +
-					"<li> CP/M read support (D64, D71, D81).</li>" +
-					"<li< Click sector in BAM to see hex dump.</li>" +
-					"<li> View text, hexdump and BASIC from files.</li>" +
-					"<li> Unload image.</li>" +
-					"<li> View Koala images.</li>" +
-					"<li> Bug fix for insert prg into D64.</li>" +
-					"<li> Merged the two consoles into one shared.</li>" +
-					"<li> Clear console menu option.</li>" +
-					"<li> Implemented delete files from D64.</li>"+
-					"</ul></dd><dt><b>Version 0.1b:</b></dt><dd><ul>" +
-					"<li> Merged buttons panels into one shared set of buttons.</li>"+
-					"<li> Refactored settings.</li>" +
-					"<li> D81 partition read support.</li>" +
-					"<li> Double click file to open hex view or D81 partition.</li>" +
-					"<li> Validation of D64, D71 and D81.</li>" +
-					"<li> Move disk image files up and down.</li>" +
-					"<li> Browse local file system.</li>" +
-					"<li> Color settings.</li>" +
-					"<li> Change size of console.</li>" +
-					"<li> Change look and feel from settings GUI.</li>" +
-					"<li> Colors on buttons.</li>" +
-					"<li> Save console to file."+
-					"<li> View BASIC V7 (i.e. C128).</li>" +
-					"<li> D71 and D81 write support.</li>" +
-					"<li> PostgreSQL database support.</li>" +
-					"<li> Show SQL for setting up database.</li>" +
-					"<li> Many bug fixes.</li>" +
-					"</ul></dd><dt><b>Version 0.11b:</b></dt><dd><ul>" +
-					"<li> Edit BAM mode added.</li>" +
-					"<li> Show C64 font when (re-)naming files and disks.</li>" +
-					"<li> Printing added (file list, texts, hexdumps, images).</li>" +
-					"<li> View texts using C64 font mode.</li>" +
-					"</ul></dd><dt><b>Version 0.12b:</b></dt><dd><ul>" +
-					"<li> D67 (Commodore 2040) support added.</li>" +
-					"<li> D80 (Commodore 8050) readonly support added.</li>" +
-					"<li> D82 (Commodore 8250) readonly support added.</li>" +
-					"<li> LNX archive readonly support added.</li>" +
-					"<li> Settings for file extensions.</li>" +
-					"<li> Settings bug fix.</li>" +
-					"<li> Support browsing zip files.</li>" +
-					"<li> Disable buttons for unapplicable functions.</li>" +
-					"<li> Reworked plugin settings so arguments can be used.</li>" +
-					"</ul></dd></dl></html>"
-					;
+	private static String getManual() {
+		if (manual == null) {
+			manual = getResource("resources/manual.html");
+		}
+		return manual;
+	}
+
+	private static String getResource(String resourceFile) {
+		try (InputStream in = Settings.class.getResourceAsStream(resourceFile); Scanner scanner = new Scanner(in, "utf-8")) {
+			String text = scanner.useDelimiter("\\Z").next();
+			scanner.close();
+			return text;
+		} catch (Exception e) {	//NOSONAR
+			return "Failed to read " + resourceFile + " resource: \n"+e.getMessage();
+		}
+	}
 
 }

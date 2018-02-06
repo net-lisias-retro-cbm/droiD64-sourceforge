@@ -18,7 +18,7 @@ package droid64.d64;
  *   You should have received a copy of the GNU General Public License
  *   along with this program; if not, write to the Free Software
  *   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
- *   
+ *
  *   eMail: wolfvoz@users.sourceforge.net
  *   http://droid64.sourceforge.net
  *</pre>
@@ -29,65 +29,56 @@ public class CbmTrack {
 	private int sectors;
 	private int sectorsIn;
 	private int offset;
-	
-	public CbmTrack(){
-	}
-	
+
 	public CbmTrack(int sectors, int sectorsIn, int offset){
-		this.sectors = sectors;
-		this.sectorsIn = sectorsIn;
-		this.offset = offset;
-	}
-	
-	public void setAllValues(int sectors, int sectorsIn, int offset){
 		this.sectors = sectors;
 		this.sectorsIn = sectorsIn;
 		this.offset = offset;
 	}
 
 	/**
-	 * @return
+	 * @return offset
 	 */
 	public int getOffset() {
 		return offset;
 	}
 
 	/**
-	 * @return
+	 * @return sectors
 	 */
 	public int getSectors() {
 		return sectors;
 	}
 
 	/**
-	 * @return
+	 * @return sectors in
 	 */
 	public int getSectorsIn() {
 		return sectorsIn;
 	}
 
 	/**
-	 * @param d
+	 * @param d offset
 	 */
 	public void setOffset(int d) {
 		offset = d;
 	}
 
 	/**
-	 * @param b
+	 * @param b sectors
 	 */
 	public void setSectors(int b) {
 		sectors = b;
 	}
 
 	/**
-	 * @param b
+	 * @param b sectors in
 	 */
 	public void setSectorsIn(int b) {
 		sectorsIn = b;
 	}
 
-	/** {@inheritDoc} */
+	@Override
 	public String toString() {
 		StringBuilder builder = new StringBuilder();
 		builder.append("CbmTrack[");

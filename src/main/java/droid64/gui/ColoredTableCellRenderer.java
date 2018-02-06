@@ -19,7 +19,7 @@ package droid64.gui;
  *   You should have received a copy of the GNU General Public License
  *   along with this program; if not, write to the Free Software
  *   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
- *   
+ *
  *   eMail: wolfvoz@users.sourceforge.net
  *   http://droid64.sourceforge.net
  *</pre>
@@ -43,9 +43,9 @@ public class ColoredTableCellRenderer extends DefaultTableCellRenderer {
 	private static final Color FREE_COLOR = new Color(200,255,200);	// green
 	private static final Color INVALID_COLOR = new Color(100,100,100);	// grey
 	private static final Color RESERVED_COLOR = new Color(100,100,255);	// blue
-	
+
+	@Override
 	public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
-		super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
 		setHorizontalAlignment(SwingConstants.CENTER);
 		JLabel label = new JLabel(column > 0 ? "" : value.toString());
 		label.setOpaque(true);
@@ -53,7 +53,7 @@ public class ColoredTableCellRenderer extends DefaultTableCellRenderer {
 		label.setFont(table.getFont());
 		label.setForeground(table.getForeground());
 		label.setBackground(table.getBackground());
-		column = table.convertColumnIndexToModel(column);    
+		int idXColumn = table.convertColumnIndexToModel(column);
 		if (value instanceof String) {
 			if (CbmBam.USED.equals(value)) {
 				label.setBackground(USED_COLOR);
@@ -61,11 +61,11 @@ public class ColoredTableCellRenderer extends DefaultTableCellRenderer {
 				label.setBackground(FREE_COLOR);
 			} else if (CbmBam.RESERVED.equals(value)) {
 				label.setBackground(RESERVED_COLOR);
-			} else if (column > 0) {
-				label.setBackground(INVALID_COLOR);				
+			} else if (idXColumn > 0) {
+				label.setBackground(INVALID_COLOR);
 			}
-			value = " ";
 		}
 		return label;
 	}
+
 }

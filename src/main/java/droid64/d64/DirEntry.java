@@ -1,6 +1,7 @@
 package droid64.d64;
 
 import java.io.File;
+import java.io.Serializable;
 import java.util.zip.ZipEntry;
 
 /**<pre style='font-family:sans-serif;'>
@@ -22,15 +23,16 @@ import java.util.zip.ZipEntry;
  *   You should have received a copy of the GNU General Public License
  *   along with this program; if not, write to the Free Software
  *   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
- *   
+ *
  *   eMail: wolfvoz@users.sourceforge.net
  *   http://droid64.sourceforge.net
  *</pre>
  * @author wolf
  */
-public class DirEntry {
-//	{ "Nr", "Bl", "Name", "Ty", "Fl", "Tr", "Se" };
+public class DirEntry implements Serializable {
+	// Num, Blk, Name, Type, Flag, Trk, Sec
 
+	private static final long serialVersionUID = 1L;
 	private int number;
 	private int blocks;
 	private String name;
@@ -42,9 +44,6 @@ public class DirEntry {
 	private boolean isFile = true;
 	private boolean isImageFile = false;
 	private File zipFile;
-	
-	public DirEntry() {
-	}
 
 	public DirEntry(CbmFile file, int fileNum) {
 		number = fileNum;
@@ -52,25 +51,23 @@ public class DirEntry {
 			CpmFile cpm = (CpmFile) file;
 			blocks = cpm.getRecordCount();
 			name = cpm.getCpmName();
-			type = cpm.getCpmNameExt();			
+			type = cpm.getCpmNameExt();
 			flags =  (cpm.isReadOnly() ? "R" : "-") + (cpm.isHidden() ? "H" : "-") + (cpm.isArchived() ? "A" : "-");
 			track = cpm.getTrack();
 			sector = cpm.getSector();
-		} else if (file instanceof CbmFile) {
-			CbmFile cbm = (CbmFile) file;
+		} else  {
+			CbmFile cbm = file;
 			blocks = cbm.getSizeInBlocks();
-			type = DiskImage.getFileType(cbm.getFileType());
+			type = CbmFile.getFileType(cbm.getFileType());
 			name= " \"" + cbm.getName() + "\"";
 			flags = (cbm.isFileLocked() ? "<" : "") + (cbm.isFileClosed() ? "" : "*");
 			track = cbm.getTrack();
 			sector = cbm.getSector();
-		} else {
-			name = file.getName();
 		}
 	}
-	
+
 	public DirEntry(File file, int fileNum) {
-		number = fileNum;		
+		number = fileNum;
 		name = file.getName();
 		blocks = (int) file.length();
 		isFile = !file.isDirectory();
@@ -92,117 +89,120 @@ public class DirEntry {
 	public File getZipFile() {
 		return zipFile;
 	}
-	
+
 	public boolean isImageFile() {
 		return isImageFile;
 	}
-	
-	/** {@inheritDoc} */
+
+	@Override
 	public String toString() {
 		return String.format("%3d %3d \"%16s\" %3s%3s %2d %2d", number, blocks, name!=null ? name : "", type!=null?type:"", flags!=null?flags:"", track, sector);
 	}
-	
+
 	/**
-	 * @return
+	 * @return num blocks
 	 */
 	public int getBlocks() {
 		return blocks;
 	}
 
 	/**
-	 * @return
+	 * @return flags
 	 */
 	public String getFlags() {
 		return flags;
 	}
 
 	/**
-	 * @return
+	 * @return name
 	 */
 	public String getName() {
 		return name;
 	}
 
-/**
- * @return
- */
-public int getNumber() {
-	return number;
-}
+	/**
+	 * @return number
+	 */
+	public int getNumber() {
+		return number;
+	}
 
 	/**
-	 * @return
+	 * @return sector
 	 */
 	public int getSector() {
 		return sector;
 	}
 
 	/**
-	 * @return
+	 * @return track
 	 */
 	public int getTrack() {
 		return track;
 	}
 
 	/**
-	 * @return
+	 * @return type
 	 */
 	public String getType() {
 		return type;
 	}
 
 	/**
-	 * @param i
+	 * @param i blocks
 	 */
 	public void setBlocks(int i) {
 		blocks = i;
 	}
 
 	/**
-	 * @param string
+	 * @param string flags
 	 */
 	public void setFlags(String string) {
 		flags = string;
 	}
 
 	/**
-	 * @param string
+	 * @param string name
 	 */
 	public void setName(String string) {
 		name = string;
 	}
 
 	/**
-	 * @param i
+	 * @param i number
 	 */
 	public void setNumber(int i) {
 		number = i;
 	}
 
 	/**
-	 * @param i
+	 * @param i sector
 	 */
 	public void setSector(int i) {
 		sector = i;
 	}
 
 	/**
-	 * @param i
+	 * @param i track
 	 */
 	public void setTrack(int i) {
 		track = i;
 	}
 
 	/**
-	 * @param string
+	 * @param string type
 	 */
 	public void setType(String string) {
 		type = string;
 	}
 
+	/**
+	 * @return is file
+	 */
 	public boolean isFile() {
 		return isFile;
-		
+
 	}
-	
+
 }

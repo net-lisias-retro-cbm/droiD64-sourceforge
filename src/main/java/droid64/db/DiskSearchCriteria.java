@@ -8,12 +8,14 @@ public class DiskSearchCriteria {
 
 	private String diskLabel;
 	private String fileName;
-	private Integer fileSizeMin, fileSizeMax;
+	private Integer fileSizeMin;
+	private Integer fileSizeMax;
 	private Integer fileType;
 	private String diskPath;
 	private String diskFileName;
 	private Integer imageType;
-	
+	private String hostName;
+
 	public String getFileName() {
 		return fileName;
 	}
@@ -44,18 +46,18 @@ public class DiskSearchCriteria {
 	public void setDiskLabel(String diskLabel) {
 		this.diskLabel = diskLabel;
 	}
-	
+
 	public void setDiskPath(String diskPath) {
 		this.diskPath = diskPath;
 	}
 	public String getDiskPath() {
 		return diskPath;
-	}	
+	}
 
 	public void setDiskFileName(String diskFileName) {
 		this.diskFileName = diskFileName;
 	}
-	
+
 	public String getDiskFileName() {
 		return diskFileName;
 	}
@@ -63,24 +65,33 @@ public class DiskSearchCriteria {
 	public Integer getImageType() {
 		return imageType;
 	}
-	
+
 	public void setImageType(Integer imageType) {
 		this.imageType = imageType;
 	}
-	
+
+	public String getHostName() {
+		return hostName;
+	}
+
+	public void setHostName(String hostName) {
+		this.hostName = hostName;
+	}
+
 	/**
 	 * Has search criteria.
 	 * @return false if all values are null or empty.
 	 */
 	public boolean hasCriteria() {
-		return !( (fileName==null || fileName.trim().isEmpty()) && 
-				  (diskLabel==null || diskLabel.trim().isEmpty()) && 
-				  (diskPath==null || diskPath.trim().isEmpty()) && 
-				  (diskFileName==null || diskFileName.trim().isEmpty()) && 
-				  (imageType==null) &&
-				  fileSizeMin==null && fileSizeMax==null && fileType == null);
+		return !( (fileName==null || fileName.trim().isEmpty()) &&
+				(diskLabel==null || diskLabel.trim().isEmpty()) &&
+				(diskPath==null || diskPath.trim().isEmpty()) &&
+				(diskFileName==null || diskFileName.trim().isEmpty()) &&
+				(hostName==null || hostName.trim().isEmpty()) &&
+				(imageType==null) &&
+				fileSizeMin==null && fileSizeMax==null && fileType == null);
 	}
-	
+
 	@Override
 	public String toString() {
 		StringBuilder builder = new StringBuilder();
@@ -92,8 +103,9 @@ public class DiskSearchCriteria {
 		builder.append(" .fileSizeMin=").append(fileSizeMin);
 		builder.append(" .fileSizeMax=").append(fileSizeMax);
 		builder.append(" .imageType=").append(imageType);
+		builder.append(" .hostName=").append(hostName);
 		builder.append(" .fileType=").append(fileType).append("]");
 		return builder.toString();
 	}
-	
+
 }
