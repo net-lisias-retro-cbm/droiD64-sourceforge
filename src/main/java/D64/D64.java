@@ -203,8 +203,6 @@ public class D64 {
 	private int firstTrack;	//Track number of first track (may be above one for subdirectories on 1581 disks)}
 	private int lastTrack;	//Track number of last track plus one (may be below the physical end of disk for subdirectories on 1581 disks)}
 
-	private int maxTrack;	//Track number of physically last track plus one}
-
 	private int dirTrack;	//Track number of directory track}
 	private int dirTrack2;	//Track number of secondary directory track (for 1571 disks); 255 (a non-existent track), if not available}
 
@@ -214,7 +212,7 @@ public class D64 {
 	private int sector;	//Sector number of current block of file}
 	
 	private String feedbackMessage;
-
+	
 
 
 
@@ -970,7 +968,7 @@ public class D64 {
 	@param
 	@return when True, a sector was found; otherwise no more sectors left
 	*/
-	private boolean firstCopyBlock(){
+	private boolean findFirstCopyBlock(){
 		boolean found;
 		int maxSector;
 		int distance;
@@ -982,18 +980,18 @@ public class D64 {
 		  if (isGeosFormat()){
 			track_ = 1;
 			sector = 0;
-			found = nextCopyBlock();
+			found = findNextCopyBlock();
 		  }
 		  else{
 			distance = 1;	//If it's a normal disk then we start off with tracks just besides the directory track}
 
 			while ((found == false) && (distance < 128)) {	//Search until we find a free block or moved too far from the directory track}
 			 track_ =  (dirTrack - distance);	//Check the track below the directory track first}
-			 if ((track_ >= firstTrack) && (track_ < lastTrack)) found = isTrackFree(track_);	//If the track is inside the valid range then check if there's a free sector on it}
+			 if ((track_ >= firstTrack) && (track_ <= lastTrack)) found = isTrackFree(track_);	//If the track is inside the valid range then check if there's a free sector on it}
         
 			 if ( found == false){
 				track_ = (dirTrack + distance);	//If no luck then check the track above the directory track}
-				if (track_ < lastTrack) found = isTrackFree(track_);	//If the track is inside the valid range then check if there's a free sector on it}
+				if (track_ <= lastTrack) found = isTrackFree(track_);	//If the track is inside the valid range then check if there's a free sector on it}
 			 }
       
 			 if ( found == false) distance++;	//If no luck either then move one track away from the directory track and try again}
@@ -1037,14 +1035,14 @@ public class D64 {
 	@param
 	@return when True, a sector was found; otherwise no more sectors left
 	*/
-	private boolean nextCopyBlock(){
+	private boolean findNextCopyBlock(){
 		  boolean Found;
 		  int Tries;
 		  int MaxSector;
 		  int CurSector;
 		  int CurTrack;
 
-		  if ((track_ == 0) || (track_ >= maxTrack)){
+		  if ((track_ == 0) || (track_ > lastTrack)){
 		   //If we somehow already ran off the disk then there are no more free sectors left}
 			Found = false;
 		  }
@@ -1101,7 +1099,7 @@ public class D64 {
 						track_ = (dirTrack + 1); //If we ran off the disk then step back to the track just above the directory track and zero the sector number}
 						sector = 0;
 						//If there are no tracks available above the directory track then there are no tries left; otherwise just decrease the number of tries}
-						if (track_ < lastTrack) Tries --; else Tries = 0;
+						if (track_ <= lastTrack) Tries --; else Tries = 0;
 					  }
 					}
 
@@ -1110,7 +1108,7 @@ public class D64 {
 					 /*
 					  if (track_ = dirTrack2) track_++;	//Skip the secondary directory track on the way}
 					*/
-					  if (track_ == lastTrack) {
+					  if (track_ > lastTrack) {
 						track_ = (dirTrack - 1);	//If we ran off the disk then step back to the track just below the directory track and zero the sector number}
 						sector = 0;
 					   //If there are no tracks available below the directory track then there are no tries left; otherwise just decrease the number of tries}
@@ -1347,7 +1345,7 @@ public class D64 {
 		feedbackMessage =  feedbackMessage + "Need to write "+data_remain+" bytes of data.\n";
 		feedbackMessage =  feedbackMessage + "Soft-interleave is set to "+interleave+".\n";
 		
-		success = firstCopyBlock();
+		success = findFirstCopyBlock();
 		
 		if (success) {
 			dest_track = track_;
@@ -1368,7 +1366,7 @@ public class D64 {
 			
 			markBAMused(this_track, this_sector);
 
-			success = nextCopyBlock();
+			success = findNextCopyBlock();
 						
 			if (success) {
 				fillSector(this_track, this_sector, 253, data_posi, track_, sector);
@@ -1731,9 +1729,7 @@ private void writeSingleDirectoryEntry(int where){
 		copyToDirTrack = false;
 		
 		firstTrack = 1;
-		lastTrack = 36;
-		
-		maxTrack = 37;
+		lastTrack = 35;
 		
 		dirTrack = 18;
 		
@@ -1933,13 +1929,6 @@ public boolean renameD64(String filename, String newDiskName, String newDiskID){
 	}
 
 	/**
-	 * @return
-	 */
-	public int getMaxTrack() {
-		return maxTrack;
-	}
-
-	/**
 	 * @param b
 	 */
 	public void setDirTrack(int b) {
@@ -1972,13 +1961,6 @@ public boolean renameD64(String filename, String newDiskName, String newDiskID){
 	 */
 	public void setLastTrack(int b) {
 		lastTrack = b;
-	}
-
-	/**
-	 * @param b
-	 */
-	public void setMaxTrack(int b) {
-		maxTrack = b;
 	}
 
 	/**
@@ -2144,6 +2126,24 @@ public byte[] getCbmDisk() {
 	 */
 	public void setBufferCbmFile(CbmFile file) {
 		bufferCbmFile = file;
+	}
+
+	/**
+	 * @return
+	 */
+	public int getBlocksFree() {
+		int blocksFree = 0;
+		
+		for (int thisTrack = 1; thisTrack <= lastTrack; thisTrack++) {
+			if (thisTrack != 18) {
+				blocksFree = blocksFree + bam.getFreeSectors(thisTrack);
+				//System.out.println("thisTrack = "+thisTrack+" ["+bam.getFreeSectors(thisTrack)+"], ");
+			}
+		}
+		
+		//System.out.println("Reading BlocksFree from BAM... "+blocksFree+" Blocks Free.");
+		
+		return blocksFree;
 	}
 
 }

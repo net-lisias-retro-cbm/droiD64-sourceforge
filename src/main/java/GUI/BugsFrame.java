@@ -47,13 +47,10 @@ public class BugsFrame extends JFrame {
 	private Container cp;
 	private JButton okButton;
 	
-	final static private String myDate = "15.07.2004";
+	final static private String myDate = "20.07.2004";
 	
 	final static private String bugsMessage = 
-		"writing PRGs:\n"+
-		"CopyFiles may cause overfull disks.\n" +
-		"File which have corrupt file size entries will mess up blocks free message (?).\n"+
-		"This will lead to overfull disks when copying files.\n"+
+		"None known. Do intensive testing, find some and mail them to me please.\n"+
 		"\n";
 	
 	final static private String todoMessage = 

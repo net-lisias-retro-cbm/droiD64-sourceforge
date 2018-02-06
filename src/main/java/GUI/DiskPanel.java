@@ -502,7 +502,6 @@ public class DiskPanel extends JPanel implements TableModelListener {
 		int filenumber;
 		int entry_number = 0;
 		String this_entry;
-		blocks_free = 644;
 
 		updateD64File();
 
@@ -543,8 +542,6 @@ public class DiskPanel extends JPanel implements TableModelListener {
 					+ "/"
 					+ d64.getCbmFile(filenumber).getSector();
 
-			blocks_free = blocks_free - d64.getCbmFile(filenumber).getSizeInBlocks();
-			
 			dirEntry = new DirEntry();
 			dirEntry.setNumber(filenumber + 1);
 			dirEntry.setBlocks(d64.getCbmFile(filenumber).getSizeInBlocks());
@@ -567,7 +564,7 @@ public class DiskPanel extends JPanel implements TableModelListener {
 				+ d64.getBam().getDisk_name()
 				+ ","
 				+ d64.getBam().getDisk_ID()
-				+ "\" "+blocks_free+" BLOCKS FREE ["
+				+ "\" "+d64.getBlocksFree()+" BLOCKS FREE ["
 				+ d64.getFilenumber_max() + "]"
 				);
 
@@ -582,15 +579,16 @@ public class DiskPanel extends JPanel implements TableModelListener {
 
 	private void showBAM() {
 		int[] preAND = { 1, 2, 4, 8, 16, 32, 64, 128 };
-		String[][] bamEntry = new String[40][22];
+		String[][] bamEntry = new String[35][22];
 
 		int cnt;
 		int track_number;
 		int bit;
 		int bit_counter;
 		String diskName;
+		int myLastTrack = 35; // 40
 
-		for (int i = 0; i <= 39; i++) {
+		for (int i = 0; i <= (myLastTrack-1); i++) {
 			for (int j = 1; j <= 21; j++) {
 				bamEntry[i][j] = " ";
 			}
@@ -604,7 +602,7 @@ public class DiskPanel extends JPanel implements TableModelListener {
 				+ d64.getBam().getDisk_ID()
 				+ "\"";
 				
-		for (track_number = 1; track_number <= 40; track_number++) {
+		for (track_number = 1; track_number <= myLastTrack; track_number++) {
 			bit_counter = 0;
 			bamEntry[track_number-1][0] = track_number+"";
 			for (cnt = 1; cnt <= 3; cnt++) {
@@ -662,19 +660,8 @@ public class DiskPanel extends JPanel implements TableModelListener {
 				//thisCbmFile = d64.getCbmFile(i).getDirPosition();
 				thisCbmFile = i;
 				feedBackMessage =
-//				feedBackMessage + "[" + i + "] " + data[i][2] + " DirPosition = "+thisCbmFile+"\n";
 					feedBackMessage + "[" + i + "] " + tm.getValueAt(i,2) + " DirPosition = "+thisCbmFile+"\n";
 
-				//System.out.println("[" + i + "] " + data[i][2] + " DirPosition = "+thisCbmFile+" ["+d64.getCbmFile(thisCbmFile).getName()+"]");
-
-				/*
-				//check if file fits on disk
-				if (d64.getCbmFile(thisCbmFile).getSizeInBlocks() > otherDiskPanel.blocks_free) {
-					showErrorMessage("insertError");
-					return;
-				}
-				*/
-				
 				// load the PRG file and write its data into d64.saveData, write its size into d64.saveDataSize
 				success = d64.writeSaveData(thisCbmFile);
 				feedBackMessage = feedBackMessage + d64.getFeedbackMessage();
@@ -707,7 +694,6 @@ public class DiskPanel extends JPanel implements TableModelListener {
 				}
 				else {
 					feedBackMessage = feedBackMessage + "Failure while copying PRG file.\n";
-					//showErrorMessage("insertError");
 				}
 				
 			}
@@ -721,13 +707,17 @@ public class DiskPanel extends JPanel implements TableModelListener {
 				feedBackMessage = feedBackMessage + "Failure while writing D64 file.\n";
 				showErrorMessage("insertError");
 			}
-			otherDiskPanel.reloadD64();
-			otherDiskPanel.textArea.setText(otherDiskPanel.feedBackMessage);
 		}
 		else {
 			showErrorMessage("insertError");
 		}
+		otherDiskPanel.reloadD64();
+		otherDiskPanel.textArea.setText(otherDiskPanel.feedBackMessage);
 
+		// we have to reload the current D64, because the selection will mess up otherwise (exceptions...)
+		clearDirTable();
+		showDirectory();
+//		reloadD64();
 		textArea.setText(feedBackMessage);
 		
 	}
@@ -920,7 +910,7 @@ public class DiskPanel extends JPanel implements TableModelListener {
 		}
 
 			textArea.setText(feedBackMessage);
-
+			
 			reloadD64();
 		}
 

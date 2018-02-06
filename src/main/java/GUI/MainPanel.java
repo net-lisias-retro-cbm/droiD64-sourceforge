@@ -58,7 +58,7 @@ public class MainPanel extends JFrame
 	private SettingsFrame settingsFrame;
 
 	private static final String PROGNAME = "droiD64";
-	private static final String VERSION = "0.02b";
+	private static final String VERSION = "0.03b";
 	
 	private String Progname_ = PROGNAME;
 	private String Version_ = VERSION;
@@ -283,9 +283,9 @@ public class MainPanel extends JFrame
 	}
 		
 
-	public static void main(String[] args) {
-		MainPanel program = new MainPanel();
-	}
+//	public static void main(String[] args) {
+//		MainPanel program = new MainPanel();
+//	}
 
 
 	private void setLookAndFeel(int lookAndFeelChoice, int colorChoice){

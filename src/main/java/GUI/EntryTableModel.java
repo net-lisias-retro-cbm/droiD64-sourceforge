@@ -30,7 +30,7 @@ import java.util.Vector;
 
 import javax.swing.table.AbstractTableModel;
 
-import D64.*;
+import D64.DirEntry;
 
 class EntryTableModel extends AbstractTableModel {
 	protected static int NUM_COLUMNS = 7;
