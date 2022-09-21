@@ -15,6 +15,9 @@ public class Resources {
 	public static final String DROID64_BUTTON_LOADDISK = "droid64.button.loaddisk";
 	public static final String DROID64_BUTTON_NEWDISK = "droid64.button.newdisk";
 	public static final String DROID64_BUTTON_NEWFILE = "droid64.button.newfile";
+	public static final String DROID64_BUTTON_MKDIR = "droid64.button.mkdir";
+	public static final String DROID64_BUTTON_MD5 = "droid64.button.md5";
+	public static final String DROID64_BUTTON_SEARCH = "droid64.button.search";
 	public static final String DROID64_BUTTON_RENAMEDISK = "droid64.button.renamedisk";
 	public static final String DROID64_BUTTON_RENAME = "droid64.button.rename";
 	public static final String DROID64_BUTTON_SETTINGS = "droid64.button.settings";
@@ -27,6 +30,7 @@ public class Resources {
 	public static final String DROID64_BUTTON_VIEWHEX = "droid64.button.viewhex";
 	public static final String DROID64_BUTTON_VIEWIMAGE = "droid64.button.viewimage";
 	public static final String DROID64_BUTTON_VIEWTEXT = "droid64.button.viewtext";
+	public static final String DROID64_BUTTON_MIRROR = "droid64.button.mirror";
 	//
 	public static final String DROID64_CONSOLE = "droid64.console";
 	public static final String DROID64_ERROR_NOIMAGEMOUNTED = "droid64.error.noimagemounted";
@@ -43,6 +47,7 @@ public class Resources {
 	public static final String DROID64_MENU_DISK_PRINTDIR = "droid64.menu.disk.printdir";
 	public static final String DROID64_MENU_DISK_RENAMEDISK = "droid64.menu.disk.renamedisk";
 	public static final String DROID64_MENU_DISK_RENAMEFILE = "droid64.menu.disk.renamefile";
+	public static final String DROID64_MENU_DISK_RELOAD = "droid64.menu.disk.reload";
 	public static final String DROID64_MENU_DISK_SHOWBAM = "droid64.menu.disk.showbam";
 	public static final String DROID64_MENU_DISK_UNLOAD = "droid64.menu.disk.unload";
 	public static final String DROID64_MENU_DISK_VIEWBASIC = "droid64.menu.disk.viewbasic";
@@ -62,6 +67,9 @@ public class Resources {
 	public static final String DROID64_MENU_PROGRAM_SAVECONSOLE = "droid64.menu.program.saveconsole";
 	public static final String DROID64_MENU_PROGRAM_SETTINGS = "droid64.menu.program.settings";
 	public static final String DROID64_MENU_SEARCH = "droid64.menu.search";
+	// BAM
+	public static final String DROID64_BAM_ALLOCATE = "droid64.bam.menu.allocate";
+	public static final String DROID64_BAM_FREE = "droid64.bam.menu.free";
 	//
 	public static final String DROID64_NODISK = "droid64.nodisk";
 	public static final String DROID64_NOFILE = "droid64.nofile";
@@ -76,10 +84,13 @@ public class Resources {
 
 	public static final String DROID64_HEXVIEW_SAVEHEX = "droid64.hexview.savehex";
 	public static final String DROID64_HEXVIEW_SAVEASM = "droid64.hexview.saveasm";
+	public static final String DROID64_HEXVIEW_SAVEDATA = "droid64.hexview.savedata";
 
 	// Settings
+	public static final String JDBC_FEATURE_MESSAGE = "jdbc.feature.message";
 	public static final String JDBC_POSTGRESQL_URL = "jdbc.postgresql.url";
 	public static final String JDBC_MYSQL_URL = "jdbc.mysql.url";
+	public static final String PLUGIN_ARGUMENTS_TOOLTIP = "plugin.arguments.tooltip";
 
 	// Settings dialog
 	public static final String DROID64_SETTINGS_FOREGROUND = "droid64.settings.foreground";
@@ -100,10 +111,13 @@ public class Resources {
 	public static final String DROID64_SETTINGS_EXT_D80 = "droid64.settings.ext.d80";
 	public static final String DROID64_SETTINGS_EXT_D81 = "droid64.settings.ext.d81";
 	public static final String DROID64_SETTINGS_EXT_D82 = "droid64.settings.ext.d82";
+	public static final String DROID64_SETTINGS_EXT_D88 = "droid64.settings.ext.d88";
 	public static final String DROID64_SETTINGS_EXT_T64 = "droid64.settings.ext.t64";
 	public static final String DROID64_SETTINGS_EXT_LNX = "droid64.settings.ext.lnx";
 	public static final String DROID64_SETTINGS_CONFIRMEXIT = "droid64.settings.confirmexit";
 	public static final String DROID64_SETTINGS_CONFIRMEXIT_TOOLTIP = "droid64.settings.confirmexit.tooltip";
+	public static final String DROID64_SETTINGS_HIDECONSOLE = "droid64.settings.hideconsole";
+	public static final String DROID64_SETTINGS_HIDECONSOLE_TOOLTIP = "droid64.settings.hideconsole.tooltip";
 	public static final String DROID64_SETTINGS_LOOKFEEL = "droid64.settings.lookfeel";
 	public static final String DROID64_SETTINGS_LOOKFEEL_TOOLTIP = "droid64.settings.lookfeel.tooltip";
 	public static final String DROID64_SETTINGS_GRIDSPACING_TOOLTIP = "droid64.settings.gridspacing.tooltip";

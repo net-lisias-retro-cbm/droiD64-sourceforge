@@ -36,8 +36,8 @@ import javax.imageio.ImageIO;
 public class CbmPicture {
 
 	/** Image data */
-	private byte[] data;
-	private String name;
+	private final byte[] data;
+	private final String name;
 	/** C64 color map */
 	private static final int[] COLORS = {
 			0x000000, 0xffffff, 0x68372b, 0x70a4b2, 0x6f3d86, 0x588d43, 0x352879, 0xb8c76f,
@@ -57,11 +57,12 @@ public class CbmPicture {
 	 */
 	public CbmPicture(byte[] data, String name) {
 		this.name = name;
-		this.data = data;
 		if (data == null || data.length == 0) {
 			this.data = new byte[0];
-		} else if (data.length < KOALA_SIZE && !isGif() && !isJpeg() && !isPng()) {
+		} else if (data.length < KOALA_SIZE && !isGif(data) && !isJpeg(data) && !isPng(data)) {
 			this.data = decompress(data);
+		} else {
+			this.data = data;
 		}
 	}
 
@@ -71,7 +72,7 @@ public class CbmPicture {
 	 */
 	public BufferedImage getImage() throws IOException {
 		BufferedImage image;
-		if (isGif() || isJpeg() || isPng()) {
+		if (isGif(data) || isJpeg(data) || isPng(data)) {
 			InputStream in = new ByteArrayInputStream(data);
 			image = ImageIO.read(in);
 			in.close();
@@ -177,13 +178,13 @@ public class CbmPicture {
 		return true;
 	}
 
-	private boolean isGif() {
+	private boolean isGif(byte[] data) {
 		final byte[] gifMatch1 = new byte[] { 0x47, 0x49, 0x46, 0x38, 0x37, 0x61 };
 		final byte[] gifMatch2 = new byte[] { 0x47, 0x49, 0x46, 0x38, 0x39, 0x61 };
 		return byteArrayStartsWith(data, gifMatch1) || byteArrayStartsWith(data, gifMatch2);
 	}
 
-	private boolean isJpeg() {
+	private boolean isJpeg(byte[] data) {
 		if (data.length < 4) {
 			return false;
 		}
@@ -191,7 +192,7 @@ public class CbmPicture {
 				&& (data[data.length - 2] & 0xff) == 0xff && (data[data.length - 1] & 0xff) == 0xd9;
 	}
 
-	private boolean isPng() {
+	private boolean isPng(byte[] data) {
 		final byte[] pngMatch = new byte[] { (byte)(0x89 & 0xff), 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a };
 		return byteArrayStartsWith(data, pngMatch);
 	}

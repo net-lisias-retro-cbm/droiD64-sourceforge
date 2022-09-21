@@ -193,7 +193,7 @@ public class D67 extends DiskImage {
 			int filenumber = 0;
 			do {
 				if (track >= D67Constants.D67_TRACKS.length || sector >=  getMaxSectors(track)) {
-					feedbackMessage.append("Error: Sector ").append(track).append("/").append(sector).append(" is not within image.\n");
+					feedbackMessage.append("Error: Sector ").append(track).append('/').append(sector).append(" is not within image.\n");
 					break;
 				}
 				int dataPosition = getSectorOffset(track, sector);
@@ -218,7 +218,7 @@ public class D67 extends DiskImage {
 			}
 			filesUsedCount = filenumber;
 		} catch (ArrayIndexOutOfBoundsException e) {	//NOSONAR
-			feedbackMessage.append("Error: Sector ").append(track).append("/").append(sector).append(" is outside of image.\n");
+			feedbackMessage.append("Error: Sector ").append(track).append('/').append(sector).append(" is outside of image.\n");
 		}
 		validate(new ArrayList<Integer>());
 	}
@@ -298,11 +298,11 @@ public class D67 extends DiskImage {
 			int blockPos = getSectorOffset(thisTrack, thisSector);
 			int nextTrack  = getCbmDiskValue(blockPos + 0);
 			int nextSector = getCbmDiskValue(blockPos + 1);
-			feedbackMessage.append(thisTrack).append("/").append(thisSector).append(Utility.SPACE);
+			feedbackMessage.append(thisTrack).append('/').append(thisSector).append(Utility.SPACE);
 			if (nextTrack > 0) {
 				out.write(cbmDisk, blockPos + 2, BLOCK_SIZE - 2);
 			} else {
-				feedbackMessage.append("\nRemaining bytes: ").append(nextSector).append("\n");
+				feedbackMessage.append("\nRemaining bytes: ").append(nextSector).append('\n');
 				out.write(cbmDisk, blockPos + 2, nextSector - 2 + 1);
 			}
 			thisTrack = nextTrack;
@@ -362,7 +362,7 @@ public class D67 extends DiskImage {
 			}
 		}
 		if (block != null) {
-			feedbackMessage.append("firstCopyBlock: The first block will be ").append(block.track).append("/").append(block.sector).append(".\n");
+			feedbackMessage.append("firstCopyBlock: The first block will be ").append(block.track).append('/').append(block.sector).append(".\n");
 		} else {
 			feedbackMessage.append("firstCopyBlock: Error: Disk is full!\n");
 		}
@@ -591,7 +591,7 @@ public class D67 extends DiskImage {
 				if (found) {
 					nextTrack = thisTrack;
 					allocSector(thisTrack, thisSector, nextTrack, nextSector);
-					feedbackMessage.append("Allocated additonal directory sector (").append(nextTrack).append("/").append(nextSector).append(") for dir entry ").append(dirEntryNumber).append(".\n");
+					feedbackMessage.append("Allocated additonal directory sector (").append(nextTrack).append('/').append(nextSector).append(") for dir entry ").append(dirEntryNumber).append(".\n");
 				} else {
 					feedbackMessage.append( "Error: no more directory sectors. Can't add file.\n");
 					return false;
@@ -644,7 +644,7 @@ public class D67 extends DiskImage {
 				int entryPos = getSectorOffset(thisTrack, thisSector);
 				thisTrack  = getCbmDiskValue(entryPos + 0);
 				thisSector = getCbmDiskValue(entryPos + 1);
-				feedbackMessage.append("LongDirectory: "+num+" dirEntrys remain, next: Track "+thisTrack+", Sector "+thisSector+"\n");
+				feedbackMessage.append("LongDirectory: ").append(num).append(" dirEntrys remain, next: Track ").append(thisTrack).append(", Sector ").append(thisSector).append('\n');
 				num = num - 8;
 			}
 		}
@@ -664,7 +664,7 @@ public class D67 extends DiskImage {
 			feedbackMessage.append("Not yet implemented for CP/M format.\n");
 			return ;
 		}
-		feedbackMessage.append("writeSingleDirectoryEntry: dirpos="+cbmFile.getDirPosition()+"\n");
+		feedbackMessage.append("writeSingleDirectoryEntry: dirpos=").append(cbmFile.getDirPosition()).append('\n');
 		cbmFile.toBytes(cbmDisk, where);
 	}
 
@@ -790,7 +790,7 @@ public class D67 extends DiskImage {
 			}
 			buf.append(this.cbmFile[i]);
 		}
-		buf.append("]").append(" filesUsedCount=").append(filesUsedCount).append("]");
+		buf.append(']').append(" filesUsedCount=").append(filesUsedCount).append(']');
 		return buf.toString();
 	}
 
@@ -847,15 +847,11 @@ public class D67 extends DiskImage {
 		validateDirEntries(BAM_TRACK, BAM_SECTOR, bamEntry);
 		// follow each file and check data blocks
 		for (int n=0; n < cbmFile.length; n++) {
-			if (cbmFile[n].getFileType() == CbmFile.TYPE_DEL) {
-				continue;
-			} else if (cbmFile[n].getFileType() == CbmFile.TYPE_CBM) {
+			if (cbmFile[n].getFileType() == CbmFile.TYPE_CBM) {
 				getValidationErrorList().add(new ValidationError(cbmFile[n].getTrack(), cbmFile[n].getSector(), ValidationError.ERROR_PARTITIONS_UNSUPPORTED, cbmFile[n].getName()));
 				errors++;
-			} else {
-				if (cbmFile[n].getTrack() != 0) {
-					validateFileData(cbmFile[n].getTrack(), cbmFile[n].getSector(), bamEntry, n);
-				}
+			} else if (cbmFile[n].getFileType() != CbmFile.TYPE_DEL && cbmFile[n].getTrack() != 0) {
+				validateFileData(cbmFile[n].getTrack(), cbmFile[n].getSector(), bamEntry, n);
 			}
 		}
 		// iterate BAM and verify used blocks is matching what we got when following data chains above.
@@ -869,17 +865,17 @@ public class D67 extends DiskImage {
 	private void validateBam(int trk, Boolean[][] bamEntry, List<Integer> repairList, int bamOffset) {
 		int freeSectors = 0;
 		for (int sec = 0; sec < getMaxSectors(trk); sec++) {
-			Boolean bamFree = Boolean.valueOf(isSectorFree(trk,sec));
+			boolean bamFree = isSectorFree(trk,sec);
 			Boolean fileFree = bamEntry[trk][sec];
-			if (bamFree) {
+			if (Boolean.TRUE.equals(bamFree)) {
 				freeSectors++;
 			}
-			if (fileFree == null && bamFree || bamFree.equals(fileFree)) {
+			if (fileFree == null && bamFree || bamFree == Boolean.TRUE.equals(fileFree)) {
 				// OK
 			} else if (Boolean.FALSE.equals(fileFree) && !Boolean.FALSE.equals(bamFree)) {
 				if (repairList.contains(Integer.valueOf(ValidationError.ERROR_USED_SECTOR_IS_FREE))) {
 					markSectorUsed(trk, sec);
-					feedbackMessage.append("Info: marked sector ").append(trk).append("/").append(sec).append(" as used.\n");
+					feedbackMessage.append("Info: marked sector ").append(trk).append('/').append(sec).append(" as used.\n");
 				} else {
 					getValidationErrorList().add(new ValidationError(trk,sec, ValidationError.ERROR_USED_SECTOR_IS_FREE));
 					errors++;
@@ -887,7 +883,7 @@ public class D67 extends DiskImage {
 			} else if (trk != BAM_TRACK){
 				if (repairList.contains(Integer.valueOf(ValidationError.ERROR_UNUSED_SECTOR_IS_ALLOCATED))) {
 					markSectorFree(trk, sec);
-					feedbackMessage.append("Info: marked sector ").append(trk).append("/").append(sec).append(" as free.\n");
+					feedbackMessage.append("Info: marked sector ").append(trk).append('/').append(sec).append(" as free.\n");
 				} else {
 					getValidationErrorList().add(new ValidationError(trk,sec, ValidationError.ERROR_UNUSED_SECTOR_IS_ALLOCATED));
 					warnings++;
@@ -982,10 +978,36 @@ public class D67 extends DiskImage {
 		} while (track != 0);
 	}
 
+
+
 	@Override
-	public void readPartition(int track, int sector, int numBlocks) throws CbmException {
-		throw new CbmException("D67 images does not support partitions.");
+	public int getNextSector(int track, int sector) {
+		if (track < getTrackCount() && sector < D67Constants.D67_TRACKS[track].getSectors()) {
+			return sector + 1;
+		}
+		return this.getFirstSector();
 	}
 
+	@Override
+	public TrackSector getSector(int offset) {
+		if (offset < 0 || offset >= D67_SIZE) {
+			return null;
+		}
+		int t;
+		int blockNum = offset / BLOCK_SIZE;
+		for (t=1; t<D67Constants.D67_TRACKS.length; t++) {
+			if (D67Constants.D67_TRACKS[t].getSectorsIn()>blockNum) {
+				t--;
+				break;
+			}
+		}
+		int s = blockNum - D67Constants.D67_TRACKS[t].getSectorsIn();
+		return new TrackSector(t,s);
+	}
+
+	@Override
+	public int getFirstSector() {
+		return DEFAULT_ZERO;
+	}
 }
 

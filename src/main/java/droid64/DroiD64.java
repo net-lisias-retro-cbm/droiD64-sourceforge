@@ -36,7 +36,7 @@ import droid64.gui.Settings;
 public class DroiD64 {
 
 	public static final String PROGNAME = "droiD64";
-	public static final String TITLE = "Beta Version Warning: MAY HAVE ERRORS! USE ONLY ON BACKUPS! LOOK AT \"BUGS AND TO-DO\"!";
+	public static final String TITLE = "Alpha Version Warning: MAY HAVE ERRORS! USE ONLY ON BACKUPS! LOOK AT \"BUGS AND TO-DO\"!";
 	public static final String VERSION = Settings.getMessage(Resources.DROID_VERSION);
 
 	private DroiD64() {

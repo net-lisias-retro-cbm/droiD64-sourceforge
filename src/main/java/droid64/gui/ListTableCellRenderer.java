@@ -14,7 +14,8 @@ public class ListTableCellRenderer extends DefaultTableCellRenderer {
 
 	private static final long serialVersionUID = 1L;
 
-	private EntryTableModel model;
+	private final EntryTableModel model;
+
 	public ListTableCellRenderer(EntryTableModel model) {
 		this.model = model;
 	}

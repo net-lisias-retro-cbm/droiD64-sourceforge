@@ -27,13 +27,14 @@ import javax.swing.BorderFactory;
 import javax.swing.JButton;
 import javax.swing.JComboBox;
 import javax.swing.JComponent;
-import javax.swing.JDialog;
 import javax.swing.JLabel;
 import javax.swing.JMenu;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
+import javax.swing.JPopupMenu;
 import javax.swing.JScrollPane;
 import javax.swing.JTable;
+import javax.swing.ListSelectionModel;
 import javax.swing.TransferHandler;
 import javax.swing.event.TableModelEvent;
 import javax.swing.event.TableModelListener;
@@ -51,6 +52,7 @@ import droid64.d64.D71;
 import droid64.d64.D80;
 import droid64.d64.D81;
 import droid64.d64.D82;
+import droid64.d64.D88;
 import droid64.d64.DirEntry;
 import droid64.d64.DiskImage;
 import droid64.d64.T64;
@@ -96,16 +98,16 @@ public class DiskPanel extends JPanel implements TableModelListener {
 
 	private DiskPanel otherDiskPanel;
 	private DiskImage diskImage = null;
-	private EntryTableModel tableModel;
-	private MainPanel mainPanel;
+	private final EntryTableModel tableModel = new EntryTableModel();
+	private final JTable table = new JTable(tableModel);
+	private final MainPanel mainPanel;
 
 	/** Disk label from loaded disk image */
-	private JLabel diskLabel;
+	private final JLabel diskLabel = new JLabel(Settings.getMessage(Resources.DROID64_NODISK));
 	/** Name (path) of current directory or loaded image */
 	private JComboBox<String> diskName;
 
-	private JTable table;
-	private JPanel diskLabelPane;
+	private final JPanel diskLabelPane = new JPanel();
 
 	/** True when a disk image is loaded */
 	private boolean imageLoaded = false;
@@ -122,13 +124,14 @@ public class DiskPanel extends JPanel implements TableModelListener {
 	/** This is the row of the last opened file in the file list */
 	private Integer openedRow = null;
 
-	private List<String> diskNameHistory = new ArrayList<>();
+	private final List<String> diskNameHistory = new ArrayList<>();
 
-	public DiskPanel(final MainPanel mainPanel) {
+	public DiskPanel(final MainPanel mainPanel)  {
 		this.mainPanel = mainPanel;
-		tableModel = new EntryTableModel();
+
 		tableModel.setMode(EntryTableModel.MODE_LOCAL);
 		rowHeight = Settings.getFontSize() + 2;
+
 		JPanel dirPanel = drawDirPanel();
 		setTableColors();
 		setLayout(new BorderLayout());
@@ -174,7 +177,7 @@ public class DiskPanel extends JPanel implements TableModelListener {
 				try {
 					handleDropEvent(diskPanel, event);
 				} catch (Exception e) {	//NOSONAR
-					mainPanel.appendConsole("Failed to open dropped item.\n"+e.getMessage()+"\n");
+					mainPanel.appendConsole("Failed to open dropped item.\n"+e.getMessage()+'\n');
 				}
 			}
 		});
@@ -190,15 +193,15 @@ public class DiskPanel extends JPanel implements TableModelListener {
 			@Override
 			public Transferable createTransferable(JComponent comp) {
 				JTable dropTable = (JTable) comp;
-				int row = dropTable.getSelectedRow();
 				if (!imageLoaded) {
+					int row = dropTable.getSelectedRow();
 					String value = getLocalFilename(row);
 					if (new File(value).exists()) {
 						return new StringSelection(value);
 					}
 					return null;
 				} else {
-					return new StringSelection((String) dropTable.getValueAt(row, 1));
+					return new StringSelection(getSelectedAsString(dropTable));
 				}
 			}
 
@@ -210,6 +213,33 @@ public class DiskPanel extends JPanel implements TableModelListener {
 		table.setDragEnabled(true);
 	}
 
+	private String getSelectedAsString(JTable table) {
+		StringBuilder b = new StringBuilder();
+		if (imageLoaded) {
+			b.append(String.format("%s \"%-16s\" %s%n",
+					diskImage.getBam().getDiskDosType(), diskImage.getBam().getDiskName(), diskImage.getBam().getDiskId()));
+		}
+		for (int row = 0; row < table.getRowCount(); row++) {
+			if (table.isRowSelected(row)) {
+				if (imageLoaded) {
+					b.append(diskImage.getCbmFile(row).asDirString()).append('\n');
+				} else {
+					for (int c=0; c<table.getColumnCount(); c++) {
+						if (c > 0) {
+							b.append('\t');
+						}
+						b.append(table.getValueAt(row, c));
+					}
+					b.append('\n');
+				}
+			}
+		}
+		if (imageLoaded) {
+			b.append(diskImage.getBlocksFree()).append(" BLOCKS FREE.\n");
+		}
+		return b.toString();
+	}
+
 	private void handleDropEvent(final DiskPanel diskPanel, DropTargetDropEvent event) throws UnsupportedFlavorException, IOException {
 		Transferable trans = event.getTransferable();
 		if (trans.isDataFlavorSupported(DataFlavor.javaFileListFlavor)) {
@@ -217,7 +247,7 @@ public class DiskPanel extends JPanel implements TableModelListener {
 			@SuppressWarnings("unchecked")
 			List<File> fileList = (List<File>) trans.getTransferData(DataFlavor.javaFileListFlavor);
 			for (File file : fileList) {
-				mainPanel.appendConsole("Dropped file "+file+"\n");
+				mainPanel.appendConsole("Dropped file "+file+'\n');
 				doubleClickedLocalfile(file, -1);
 				diskPanel.setActive(true);
 			}
@@ -235,13 +265,13 @@ public class DiskPanel extends JPanel implements TableModelListener {
 		final TableColumnModel columnModel = tableModel.getTableColumnModel();
 		tableModel.addTableModelListener(this);
 
-		table = new JTable(tableModel);
 		table.setColumnModel(columnModel);
 		table.setDefaultRenderer(Object.class, new ListTableCellRenderer(tableModel));
 		table.setGridColor(Settings.getDirColorBg());
 		table.setRowHeight(rowHeight);
 		table.setBackground(Settings.getDirColorBg());
 		table.setForeground(Settings.getDirColorFg());
+		table.setSelectionMode(ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
 		table.addKeyListener(new KeyListener() {
 			@Override
 			public void keyTyped(KeyEvent ev) { /* Not used */ }
@@ -258,9 +288,8 @@ public class DiskPanel extends JPanel implements TableModelListener {
 			@Override
 			public void mousePressed(MouseEvent me) {
 				setActive(true);
-				int clickCount = me.getClickCount();
 				int row = table.rowAtPoint(me.getPoint());
-				if (clickCount == 2 && row >= 0) {
+				if (me.getClickCount() == 2 && row >= 0) {
 					doubleClickedRow(row);
 				}
 			}
@@ -273,12 +302,31 @@ public class DiskPanel extends JPanel implements TableModelListener {
 			}
 		};
 
-		diskLabel = new JLabel(Settings.getMessage(Resources.DROID64_NODISK));
+		JPopupMenu popMenu = new JPopupMenu();
+		GuiHelper.addMenuItem(popMenu, Resources.DROID64_MENU_DISK_MD5, '5', event -> calcMd5Checksum());
+		GuiHelper.addMenuItem(popMenu, Resources.DROID64_MENU_DISK_VIEWBASIC, 'b', event -> basicViewFile());
+		GuiHelper.addMenuItem(popMenu, Resources.DROID64_MENU_DISK_VIEWHEX, 'h', event -> hexViewFile());
+		GuiHelper.addMenuItem(popMenu, Resources.DROID64_MENU_DISK_VIEWIMAGE, 'i', event -> imageViewFile());
+		GuiHelper.addMenuItem(popMenu, Resources.DROID64_MENU_DISK_VIEWTEXT, 't', event -> showFile());
+		GuiHelper.addMenuItem(popMenu, Resources.DROID64_MENU_DISK_COPYFILE, 'c', event -> copyFile());
+		GuiHelper.addMenuItem(popMenu, Resources.DROID64_MENU_DISK_RENAMEFILE, 'r', event -> renameFile());
+
+		JMenu pluginMenu = new JMenu("Plugins");
+		pluginMenu.setMnemonic('p');
+		for ( ExternalProgram ep : Settings.getExternalPrograms()) {
+			if (ep != null) {
+				GuiHelper.addMenuItem(pluginMenu, ep.getLabel(), null, event ->	doExternalProgram(ep));
+			}
+		}
+		popMenu.add(pluginMenu);
+		GuiHelper.addMenuItem(popMenu, Resources.DROID64_MENU_DISK_RELOAD, 'r', event -> reloadDiskImage(true));
+
+		table.setComponentPopupMenu(popMenu);
+
 		diskLabel.setBackground(Settings.getDirColorBg());
 		diskLabel.setForeground(Settings.getDirColorFg());
 		diskLabel.addMouseListener(mousePressedToActivate);
 
-		diskLabelPane = new JPanel();
 		diskLabelPane.setBackground(Settings.getDirColorBg());
 		diskLabelPane.setForeground(Settings.getDirColorFg());
 		diskLabelPane.add(diskLabel);
@@ -291,8 +339,7 @@ public class DiskPanel extends JPanel implements TableModelListener {
 		diskName.addKeyListener(createDiskNameKeyListener());
 		diskName.addActionListener(ev -> {
 			String selected = (String) diskName.getSelectedItem();
-			File dir = new File(selected);
-			if (dir.isDirectory()) {
+			if (new File(selected).isDirectory()) {
 				setDiskName(selected);
 				loadLocalDirectory(selected);
 			}
@@ -318,6 +365,7 @@ public class DiskPanel extends JPanel implements TableModelListener {
 
 		JScrollPane scrollPane = new JScrollPane(table);
 		scrollPane.addMouseListener(mousePressedToActivate);
+		scrollPane.setComponentPopupMenu(popMenu);
 
 		JPanel dirPanel = new JPanel(new BorderLayout());
 		dirPanel.add(diskLabelPane, BorderLayout.NORTH);
@@ -356,7 +404,6 @@ public class DiskPanel extends JPanel implements TableModelListener {
 			public void keyTyped(KeyEvent ev) { /* Not used */ }
 			@Override
 			public void keyPressed(KeyEvent ev) {
-				/* Not used */
 				if (!active) {
 					setActive(true);
 				}
@@ -420,31 +467,32 @@ public class DiskPanel extends JPanel implements TableModelListener {
 		try {
 			openedRow = null;
 			if (imageLoaded) {
-				CbmFile file = diskImage.getCbmFile(row);
-				doubleClickedImageFileEntry(file, row);
+				doubleClickedImageFileEntry(diskImage.getCbmFile(row), row);
 			} else if (zipFileLoaded) {
 				String entryName = (String) table.getValueAt(row, 1);
 				doubleClickedZipFile(entryName, row);
 			} else {
-				File file;
 				if (PARENT_DIR.equals(table.getValueAt(row, 1))) {
-					file = new File(currentImagePath).getParentFile();
+					doubleClickedLocalfile(new File(currentImagePath).getParentFile(), row);
 				} else {
-					file = new File(getLocalFilename(row));
+					doubleClickedLocalfile(new File(getLocalFilename(row)), row);
 				}
-				doubleClickedLocalfile(file, row);
 			}
-		} catch (CbmException e) {	//NOSONAR
-			mainPanel.appendConsole("\n"+e.getMessage());
+		} catch (Exception e) {	//NOSONAR
+			mainPanel.appendConsole("DiskPanel: " + e.getClass().getName() + ": " + e.getMessage());
 		}
 		mainPanel.setButtonState();
 	}
 
 	private void doubleClickedImageFileEntry(CbmFile file, int row) throws CbmException {
 		if (file != null && file.getFileType() == CbmFile.TYPE_CBM) {
+			// Open partition
 			clearDirTable();
 			diskImage.readPartition(file.getTrack(), file.getSector(), file.getSizeInBlocks());
+			mainPanel.appendConsole("doubleClickedImageFileEntry: "+diskImage.getFeedbackMessage());
 			showDirectory();
+
+			setDiskName(diskImageFileName + File.separator + file.getName());
 		} else if (file != null){
 			hexViewFile(row);
 		}
@@ -537,7 +585,7 @@ public class DiskPanel extends JPanel implements TableModelListener {
 					diskImage.writeImage(imgFileName);
 					mainPanel.appendConsole("Write temporary image to "+imgFileName);
 				} catch (IOException e) {	//NOSONAR
-					mainPanel.appendConsole("Failed to create image tempfile from zip file.\n"+e.getMessage());
+					GuiHelper.showException(mainPanel.getParent(), "Error", e, "Failed to create image tempfile from zip file.");
 					return;
 				}
 			} else {
@@ -584,9 +632,7 @@ public class DiskPanel extends JPanel implements TableModelListener {
 					tableModel.updateDirEntry(null);
 				}
 			}
-			String label = String.format("%s \"%s,%s\" %d BLOCKS FREE [%d]",
-					diskImage.getBam().getDiskDosType(), diskImage.getBam().getDiskName(), diskImage.getBam().getDiskId(), diskImage.getBlocksFree(), diskImage.getFilesUsedCount());
-			diskLabel.setText(label);
+			diskLabel.setText(getDiskLabel());
 			tableModel.setMode(diskImage.isCpmImage() ? EntryTableModel.MODE_CPM : EntryTableModel.MODE_CBM);
 			TableColumnModel tcm = table.getTableHeader().getColumnModel();
 			for (int i=0; i< tcm.getColumnCount(); i++) {
@@ -598,6 +644,15 @@ public class DiskPanel extends JPanel implements TableModelListener {
 			repaint();
 		} else {
 			mainPanel.appendConsole("no image loaded");
+		}
+	}
+
+	private String getDiskLabel() {
+		if (imageLoaded) {
+			return String.format("%s \"%s,%s\" %d BLOCKS FREE [%d]",
+				diskImage.getBam().getDiskDosType(), diskImage.getBam().getDiskName(), diskImage.getBam().getDiskId(), diskImage.getBlocksFree(), diskImage.getFilesUsedCount());
+		} else {
+			return Utility.EMPTY;
 		}
 	}
 
@@ -660,7 +715,7 @@ public class DiskPanel extends JPanel implements TableModelListener {
 			DirEntry parent = new DirEntry(file.getParentFile(), 1);
 			parent.setName(PARENT_DIR);
 			tableModel.updateDirEntry(parent);
-			list.forEach(entry -> tableModel.updateDirEntry(entry));
+			list.forEach(tableModel::updateDirEntry);
 			tableModel.setMode(EntryTableModel.MODE_LOCAL);
 			TableColumnModel tcm = table.getTableHeader().getColumnModel();
 			for (int i=0; i< tcm.getColumnCount(); i++) {
@@ -675,7 +730,7 @@ public class DiskPanel extends JPanel implements TableModelListener {
 			table.revalidate();
 			repaint();
 		} catch (CbmException e) {	//NOSONAR
-			mainPanel.appendConsole("loadZipFile: "+e.getMessage());
+			GuiHelper.showException(mainPanel.getParent(), "Error", e, "Failed to open zip file.");
 		}
 	}
 
@@ -687,7 +742,7 @@ public class DiskPanel extends JPanel implements TableModelListener {
 		String[][] bamTab = diskImage.getBamTable();
 		if (bamTab != null && bamTab.length > 0) {
 			String name = String.format("%s \"%s,%s\"", diskImage.getBam().getDiskDosType(), diskImage.getBam().getDiskName(), diskImage.getBam().getDiskId());
-			new BAMFrame(DroiD64.PROGNAME+" - BAM of this disk image", name, bamTab, diskImageFileName, diskImage, isWritableImageLoaded(), mainPanel);
+			new BAMPanel(mainPanel).show(name, bamTab, diskImageFileName, diskImage, isWritableImageLoaded());
 			diskImage.readBAM();
 		} else {
 			mainPanel.appendConsole("No BAM available.");
@@ -711,7 +766,7 @@ public class DiskPanel extends JPanel implements TableModelListener {
 				try {
 					DaoFactory.getDaoFactory().getDiskDao().save(disk);
 				} catch (DatabaseException e) {	//NOSONAR
-					mainPanel.appendConsole("\n"+e.getMessage());
+					GuiHelper.showException(mainPanel.getParent(), "Error", e, "Failed to update database.");
 				}
 			}
 		} else {
@@ -835,7 +890,7 @@ public class DiskPanel extends JPanel implements TableModelListener {
 				}
 			}
 		} catch (CbmException e) {	//NOSONAR
-			mainPanel.appendConsole("Error: Failed to copy files. \n" + e.getMessage());
+			GuiHelper.showException(mainPanel.getParent(), "Error", e, "Failed to copy file.");
 		}
 		if (filesCopied) {
 			otherDiskPanel.reloadDiskImage(true);
@@ -860,7 +915,7 @@ public class DiskPanel extends JPanel implements TableModelListener {
 				}
 				reloadDiskImage(true);
 			} catch (CbmException e) { //NOSONAR
-				mainPanel.appendConsole("Failed to add file.\n"+e.getMessage());
+				GuiHelper.showException(mainPanel.getParent(), "Error", e, "Failed to add file.");
 			}
 		} else if (!zipFileLoaded) {
 			File targetFile = new File(currentImagePath + File.separator + file.getName());
@@ -885,7 +940,7 @@ public class DiskPanel extends JPanel implements TableModelListener {
 				return Files.readAllBytes(file.toPath());
 			}
 		} catch (CbmException | IOException e) {	//NOSONAR
-			mainPanel.appendConsole("Failed to get file data : " + e.getMessage());
+			GuiHelper.showException(mainPanel.getParent(), "Error", e, "Failed to get file data.");
 		}
 		return new byte[0];
 	}
@@ -921,7 +976,7 @@ public class DiskPanel extends JPanel implements TableModelListener {
 			return;
 		}
 		String name = imageLoaded ? diskImage.getCbmFile(fileNum).getName() : getLocalFilename(fileNum);
-		new HexViewDialog(DroiD64.PROGNAME+" - Hex view", name, data, data.length, mainPanel, true);
+		new HexViewPanel(DroiD64.PROGNAME+" - Hex view", mainPanel, name, data, data.length, true).showDialog();
 	}
 
 	public void basicViewFile() {
@@ -932,7 +987,7 @@ public class DiskPanel extends JPanel implements TableModelListener {
 				byte[] data = getFileData(i);
 				String basic = BasicParser.parseCbmBasicPrg(data);
 				if (basic != null && !basic.isEmpty()) {
-					new TextViewDialog((JDialog) null, DroiD64.PROGNAME+" - BASIC view", name, basic, false, Utility.MIMETYPE_TEXT, mainPanel);
+					new TextViewPanel(mainPanel).show(basic, DroiD64.PROGNAME+" - BASIC view", name, Utility.MIMETYPE_TEXT);
 				} else {
 					mainPanel.appendConsole("Failed to parse BASIC.");
 				}
@@ -956,10 +1011,10 @@ public class DiskPanel extends JPanel implements TableModelListener {
 				}
 			}
 			if (!imgList.isEmpty()) {
-				new ViewImageFrame(DroiD64.PROGNAME+" - Image view", imgList, imgNameList, mainPanel);
+				new ViewImagePanel(DroiD64.PROGNAME+" - Image view", mainPanel).show(imgList, imgNameList);
 			}
 		} catch (IOException e) {	//NOSONAR
-			mainPanel.appendConsole("Image view failed " + e.getMessage());
+			GuiHelper.showException(mainPanel.getParent(), "Error", e, "Failed to view image.");
 		}
 	}
 
@@ -970,7 +1025,7 @@ public class DiskPanel extends JPanel implements TableModelListener {
 				mainPanel.appendConsole("View '" + name + "'");
 				byte[] data = getFileData(i);
 				if (data.length > 0) {
-					new TextViewDialog(DroiD64.PROGNAME+" - Text", name, data, mainPanel);
+					new TextViewPanel(mainPanel).show(data, DroiD64.PROGNAME+" - Text", name);
 				}
 			}
 		}
@@ -978,10 +1033,9 @@ public class DiskPanel extends JPanel implements TableModelListener {
 
 	protected void newDiskImage() {
 		mainPanel.appendConsole("New disk image.");
-		RenameResult result = new RenameResult();
-		new RenameDiskImageDialog(DroiD64.PROGNAME+" - New disk", Utility.EMPTY, Utility.EMPTY, true, mainPanel, result);
-		if (result.isSuccess()) {
-			mainPanel.appendConsole("New Diskname is: \""+result.getDiskName()+", "+result.getDiskID()+"\".");
+		RenameResult result = new RenameDiskImagePanel(mainPanel).showDialog(DroiD64.PROGNAME+" - New disk");
+		if (result != null) {
+			mainPanel.appendConsole("New Diskname is: \"" + result.getDiskName() + ", " + result.getDiskID() + "\".");
 			String defaultName = Settings.checkFileNameExtension(result.getDiskType(), result.isCompressedDisk(), result.getDiskName());
 			String imgName = FileDialogHelper.openImageFileDialog(currentImagePath, defaultName, true);
 			if (imgName == null) {
@@ -1015,6 +1069,9 @@ public class DiskPanel extends JPanel implements TableModelListener {
 		} else if (result.getDiskType() == DiskImage.D82_IMAGE_TYPE) {
 			diskImage = new D82();
 			diskImage.setImageFormat(DiskImage.D82_IMAGE_TYPE);
+		} else if (result.getDiskType() == DiskImage.D88_IMAGE_TYPE) {
+			diskImage = new D88();
+			diskImage.setImageFormat(DiskImage.D88_IMAGE_TYPE);
 		} else if (result.getDiskType() == DiskImage.T64_IMAGE_TYPE) {
 			diskImage = new T64();
 			diskImage.setImageFormat(DiskImage.T64_IMAGE_TYPE);
@@ -1034,10 +1091,8 @@ public class DiskPanel extends JPanel implements TableModelListener {
 		if (diskImage == null || diskImage.getBam() == null) {
 			return;
 		}
-		RenameResult result = new RenameResult();
-		new RenameDiskImageDialog(DroiD64.PROGNAME+" - Rename disk",
-				diskImage.getBam().getDiskName(), diskImage.getBam().getDiskId(), false, mainPanel, result);
-		if (result.isSuccess()) {
+		RenameResult result = new RenameDiskImagePanel(mainPanel).showDialog(DroiD64.PROGNAME+" - Rename disk", diskImage);
+		if (result != null) {
 			mainPanel.appendConsole("New diskname is: \""+result.getDiskName()+", "+result.getDiskID()+"\".");
 			diskImage.renameImage(diskImageFileName, result.getDiskName(), result.getDiskID());
 			mainPanel.appendConsole(diskImage.getFeedbackMessage());
@@ -1051,16 +1106,24 @@ public class DiskPanel extends JPanel implements TableModelListener {
 		}
 		Integer errors = diskImage.validate(new ArrayList<Integer>());
 		mainPanel.appendConsole(diskImage.getFeedbackMessage());
-		if (errors != null) {
+		if (errors != null && errors > 0) {
 			Integer warnings = diskImage.getWarnings();
 			mainPanel.appendConsole("Validated disk and found "+errors+" errors and "+warnings+" warnings.");
-			new ValidationFrame(diskImage.getValidationErrorList(), isVisible() ? this : null);
+			new ValidationPanel(mainPanel.getParent()).show(diskImage.getValidationErrorList(), this);
+		} else {
+			mainPanel.appendConsole("Disk validated without finding any warnings or errors.");
 		}
 	}
 
 	public void unloadDisk() {
-		mainPanel.appendConsole("Unload disk.");
 		if (isImageLoaded()) {
+			if (diskImage.isPartitionOpen()) {
+				mainPanel.appendConsole("Unload partition.");
+				diskImage.setCurrentPartition(null);
+				reloadDiskImage(true);
+				return;
+			}
+			mainPanel.appendConsole("Unload disk.");
 			diskImage = null;
 			setDiskName(null);
 			diskImageFileName = Utility.EMPTY;
@@ -1076,6 +1139,7 @@ public class DiskPanel extends JPanel implements TableModelListener {
 				openedRow = null;
 			}
 		} else {
+			mainPanel.appendConsole("Load parent.");
 			String dir = getCurrentImagePath();
 			File dirfile = dir != null ? new File(dir) : null;
 			if (dirfile != null && dirfile.getParent() != null) {
@@ -1096,40 +1160,45 @@ public class DiskPanel extends JPanel implements TableModelListener {
 		boolean filesRenamed = false;
 		for (int i = 0; i < table.getRowCount(); i++) {
 			if (table.isRowSelected(i)) {
-				if (imageLoaded) {
-					CbmFile cbmFile = diskImage.getCbmFile(i);
-					String filename = cbmFile.getName();
-					mainPanel.appendConsole("RenameFile: " + filename);
-					RenameResult result = new RenameResult();
-					new RenameFileDialog(DroiD64.PROGNAME+" - Rename file ", filename, cbmFile.getFileType(), mainPanel, result);
-					if (result.isSuccess()) {
-						filesRenamed = true;
-						mainPanel.appendConsole("New filename is: \""+result.getFileName()+"\" "+CbmFile.getFileType(result.getFileType())+".\n" +
-								"["+cbmFile.getDirPosition()+"] \"" + filename + "\"");
-						diskImage.renameFile(i, result.getFileName(), result.getFileType());
-						mainPanel.appendConsole(diskImage.getFeedbackMessage());
-					}
-				} else {
-					// local file
-					String filename = (String) tableModel.getValueAt(i, 1);
-					mainPanel.appendConsole("RenameFile: '" + filename + "'");
-					File oldFile = new File(currentImagePath + File.separator + filename);
-					if (oldFile.isFile()) {
-						RenameResult result = new RenameResult();
-						new RenameFileDialog(DroiD64.PROGNAME+" - Rename file ", filename, mainPanel, result);
-						if (result.isSuccess() && !filename.equals(result.getFileName())) {
-							File newFile = new File(currentImagePath + File.separator + result.getFileName());
-							if (!newFile.exists()) {
-								filesRenamed = true;
-								mainPanel.appendConsole("New filename is: \""+result.getFileName()+"\"");
-								if (!oldFile.renameTo(newFile)) {
-									mainPanel.appendConsole("Error: Failed to rename "+newFile.getName());
+				try {
+					RenameResult result = null;
+					if (imageLoaded) {
+						CbmFile cbmFile = diskImage.getCbmFile(i);
+						String filename = cbmFile.getName();
+						mainPanel.appendConsole("RenameFile: \"" + filename + '"');
+						result = new RenameFilePanel(mainPanel.getParent()).show(DroiD64.PROGNAME+" - Rename file ", cbmFile);
+						if (result != null) {
+							filesRenamed = true;
+							mainPanel.formatConsole("New filename is: \"%s\" %s.\n[%d] \"%s\"", result.getFileName(), CbmFile.getFileType(result.getFileType()), cbmFile.getDirPosition(), filename);
+							diskImage.renameFile(i, result.getFileName(), result.getFileType());
+							mainPanel.appendConsole(diskImage.getFeedbackMessage());
+						}
+					} else {
+						// local file
+						String filename = (String) tableModel.getValueAt(i, 1);
+						mainPanel.appendConsole("RenameFile: \"" + filename + '"');
+						File oldFile = new File(currentImagePath + File.separator + filename);
+						if (oldFile.isFile()) {
+							result = new RenameFilePanel(mainPanel.getParent()).show(DroiD64.PROGNAME+" - Rename file ", oldFile);
+							if (result != null && !filename.equals(result.getFileName())) {
+								File newFile = new File(currentImagePath + File.separator + result.getFileName());
+								if (!newFile.exists()) {
+									filesRenamed = true;
+									mainPanel.appendConsole("New filename is: \"" + result.getFileName() + '"');
+									if (!oldFile.renameTo(newFile)) {
+										mainPanel.appendConsole("Error: Failed to rename "+newFile.getName());
+									}
+								} else {
+									mainPanel.appendConsole("Error: File "+newFile.getName()+" already exists.");
 								}
-							} else {
-								mainPanel.appendConsole("Error: File "+newFile.getName()+" already exists.");
 							}
 						}
 					}
+					if (result == null) {
+						break;
+					}
+				} catch (CbmException e) {
+					GuiHelper.showException(mainPanel.getParent(), "Error", e, "Failed to rename file.");
 				}
 			}
 		}
@@ -1147,12 +1216,59 @@ public class DiskPanel extends JPanel implements TableModelListener {
 			mainPanel.appendConsole("Error: add new files to Zip files not supported.");
 			return;
 		}
-		RenameResult result = new RenameResult();
-		new RenameFileDialog(DroiD64.PROGNAME+" - New file ", Utility.EMPTY, CbmFile.TYPE_DEL, mainPanel, result);
-		if (result.isSuccess()) {
-			newFile(result);
-			reloadDiskImage(true);
+		try {
+			RenameResult result = new RenameFilePanel(mainPanel.getParent()).show(DroiD64.PROGNAME+" - New file ", "", CbmFile.TYPE_DEL, imageLoaded, false);
+			if (result != null) {
+				newFile(result);
+				reloadDiskImage(true);
+			}
+		} catch (CbmException e) {
+			GuiHelper.showException(mainPanel.getParent(), "Error", e, "Failed to create file.");
 		}
+	}
+
+	public void mkdir() {
+		if (imageLoaded && !diskImage.supportsDirectories()) {
+			mainPanel.appendConsole("Error: Makedir not supported.");
+			return;
+		}
+
+		RenameResult result = null;
+		try {
+			if (imageLoaded) {
+				result = new RenameFilePanel(mainPanel.getParent()).show(DroiD64.PROGNAME+" - New Partition ", "", CbmFile.TYPE_CBM, true, true);
+			} else {
+				result = new RenameFilePanel(mainPanel.getParent()).show(DroiD64.PROGNAME+" - Makedir ", null, CbmFile.TYPE_CBM, false, false);
+			}
+		} catch (CbmException e) {
+			GuiHelper.showException(mainPanel.getParent(), "Error", e, "Mkdir failed.");
+		}
+		if (result == null) {
+			return;
+		}
+		mainPanel.appendConsole("mkdir: "+result.getFileName());
+		if (imageLoaded) {
+			try {
+				if (null == diskImage.makedir(result.getFileName(), result.getPartitionSectorCount(), result.getDiskID())) {
+					mainPanel.appendConsole("Error: failed to create dir " + result.getFileName() + ".");
+				} else {
+					diskImage.writeImage(diskImageFileName);
+				}
+				mainPanel.appendConsole(diskImage.getFeedbackMessage());
+			} catch (CbmException e) {
+				GuiHelper.showException(mainPanel.getParent(), "Partition error", e, "Failed creating partition %s.",result.getFileName());
+			}
+		} else {
+			File dir = new File(currentImagePath + File.separator + result.getFileName());
+			if (dir.exists()) {
+				GuiHelper.showErrorMessage(mainPanel.getParent(), "Makedir failed", "Folder with name %s already exists.",dir);
+			} else {
+				if (!dir.mkdir()) {
+					GuiHelper.showErrorMessage(mainPanel.getParent(), "Makedir error", "Failed to create dir %s.",dir);
+				}
+			}
+		}
+		reloadDiskImage(true);
 	}
 
 	protected void newFile(RenameResult result) {
@@ -1181,7 +1297,7 @@ public class DiskPanel extends JPanel implements TableModelListener {
 						mainPanel.appendConsole(diskImage.getFeedbackMessage());
 						deletedFiles = true;
 					} catch (CbmException e) {
-						mainPanel.appendConsole("Error: "+e.getMessage());
+						GuiHelper.showException(mainPanel.getParent(), "Error", e, "Failed to delete %s.", name);
 					}
 				} else {
 					File file = new File(name);
@@ -1189,7 +1305,7 @@ public class DiskPanel extends JPanel implements TableModelListener {
 						Files.delete(file.toPath());
 						deletedFiles = true;
 					} catch (IOException e) {
-						mainPanel.appendConsole("Failed to delete "+file);
+						GuiHelper.showException(mainPanel.getParent(), "Error", e, "Deleting %s failed.", file);
 					}
 				}
 			}
@@ -1212,13 +1328,20 @@ public class DiskPanel extends JPanel implements TableModelListener {
 	}
 
 	public void reloadDiskImage(boolean updateList){
-		mainPanel.appendConsole("reloadDiskImage "+imageLoaded+"\n");
+		mainPanel.appendConsole("reloadDiskImage "+imageLoaded+'\n');
 		if (imageLoaded ){
+			Integer currentPartition;
 			try {
+				currentPartition = diskImage != null ? diskImage.getCurrentPartition() : null;
 				diskImage = DiskImage.getDiskImage(diskImageFileName);
 				setDiskName(diskImageFileName);
 				clearDirTable();
 				updateImageFile();
+				if (currentPartition != null) {
+					diskImage.setCurrentPartition(currentPartition);
+					diskImage.readBAM();
+					diskImage.readDirectory();
+				}
 				if (updateList) {
 					showDirectory();
 				}
@@ -1315,7 +1438,7 @@ public class DiskPanel extends JPanel implements TableModelListener {
 		};
 	}
 
-	private void openOtherPanel() {
+	protected void openOtherPanel() {
 		if (otherDiskPanel.isImageLoaded() || otherDiskPanel.isZipFileLoaded()) {
 			openDiskImage(otherDiskPanel.getDiskImageFileName(), true);
 		} else  {
@@ -1402,7 +1525,7 @@ public class DiskPanel extends JPanel implements TableModelListener {
 				job.print();
 			}
 		} catch (Exception e) { // NOSONAR
-			mainPanel.appendConsole(e.getMessage());
+			GuiHelper.showException(mainPanel.getParent(), "Error", e, "Failed to print.");
 		}
 	}
 
@@ -1443,6 +1566,7 @@ public class DiskPanel extends JPanel implements TableModelListener {
 			case DiskImage.D80_IMAGE_TYPE:
 			case DiskImage.D81_IMAGE_TYPE:
 			case DiskImage.D82_IMAGE_TYPE:
+			case DiskImage.D88_IMAGE_TYPE:
 			case DiskImage.T64_IMAGE_TYPE:
 				return true;
 			default:
@@ -1548,4 +1672,11 @@ public class DiskPanel extends JPanel implements TableModelListener {
 		return diskImage.getValidationErrorList();
 	}
 
+	public boolean supportsDirectories() {
+		return !imageLoaded || diskImage.supportsDirectories();
+	}
+
+	public int getImageLength() {
+		return diskImage!=null ? diskImage.size() : -1;
+	}
 }

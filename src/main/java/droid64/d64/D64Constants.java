@@ -25,8 +25,8 @@ public class D64Constants {
 			new CbmTrack(21,	210,	  53760	),	// $0d200}  11
 			new CbmTrack(21,	231,	  59136	),	// $0e700}  12
 			new CbmTrack(21,	252,	  64512	),	// $0fc00}  13
-			new CbmTrack(21,	237,	  69888	),	// $11100}  14
-			new CbmTrack(21,	295,	  75264	),	// $12600}  15
+			new CbmTrack(21,	273,	  69888	),	// $11100}  14
+			new CbmTrack(21,	294,	  75264	),	// $12600}  15
 			new CbmTrack(21,	315,	  80640	),	// $13b00}  16
 			new CbmTrack(21,	336,	  86016	),	// $15000}  17
 			new CbmTrack(19,	357,	  91392	),	// $16500}  18

@@ -5,6 +5,7 @@ import java.awt.Font;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import droid64.d64.Utility;
 
@@ -58,8 +59,8 @@ public class Parameter {
 	private static final String DOT = ".";
 	private static final String STRING_LIST_SPLIT_EXPR = "\\s*[;]\\s*";
 
-	private String name;
-	private int type;
+	private final String name;
+	private final int type;
 	private Object value;
 
 	public Parameter(String name, int type, Object value) {
@@ -96,13 +97,7 @@ public class Parameter {
 	}
 
 	private boolean stringsEqual(String s1, String s2) {
-		if (s1 == s2) {
-			return true;
-		}
-		if (s1 == null || s2 == null) {
-			return false;
-		}
-		return s1.equals(s2);
+		return s1 != null ? s1.equals(s2) : s2 == null;
 	}
 
 	public void parseValue(String lineValue) {
@@ -182,7 +177,7 @@ public class Parameter {
 		buf.append(" .name=").append(name);
 		buf.append(" .type=").append(type);
 		buf.append(" .value=").append(value);
-		buf.append("]");
+		buf.append(']');
 		return buf.toString();
 	}
 
@@ -322,7 +317,7 @@ public class Parameter {
 		switch (type) {
 		case Parameter.COLOR_PARAM :
 			Color c = getColorValue();
-			return name + EQ + c.getRed() + "," + c.getGreen() + "," + c.getBlue() + LF;
+			return name + EQ + c.getRed() + ',' + c.getGreen() + ',' + c.getBlue() + LF;
 		case Parameter.FONT_PARAM:
 			return name + EQ + getFontAsString(getFontValue()) + LF;
 		case Parameter.STRING_LIST_PARAM:
@@ -360,15 +355,7 @@ public class Parameter {
 	}
 
 	public String getStringListParamAsString() {
-		List<String> list = getStringListValue();
-		StringBuilder buf = new StringBuilder();
-		for (String str : list) {
-			if (buf.length() > 0) {
-				buf.append(DELIM);
-			}
-			buf.append(str);
-		}
-		return buf.toString();
+		return getStringListValue().stream().collect(Collectors.joining(DELIM));
 	}
 
 }

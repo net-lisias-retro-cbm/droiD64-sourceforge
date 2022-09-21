@@ -28,18 +28,18 @@ public class TrackSector {
 
 	@Override
 	public String toString() {
-		return "[" + track + ":" + sector + "]";
+		return "[" + track + ':' + sector + ']';
 	}
 
 	public void toString(StringBuilder buf) {
-		buf.append("[").append(track).append("/").append(sector).append("]");
+		buf.append('[').append(track).append('/').append(sector).append(']');
 	}
 
 	@Override
 	public boolean equals(Object obj) {
 		if (obj == this) {
 			return true;
-		} else if (obj == null || !(obj instanceof TrackSector)) {
+		} else if (!(obj instanceof TrackSector)) {
 			return false;
 		} else {
 			TrackSector other = (TrackSector) obj;

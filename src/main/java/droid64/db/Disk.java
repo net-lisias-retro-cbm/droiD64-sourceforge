@@ -124,7 +124,7 @@ public class Disk extends Value {
 		builder.append(" .fileList=").append(fileList);
 		builder.append(" .hostName=").append(hostName);
 		builder.append(" .state=").append(getState());
-		builder.append("]");
+		builder.append(']');
 		return builder.toString();
 	}
 

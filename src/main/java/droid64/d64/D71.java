@@ -137,40 +137,10 @@ public class D71 extends DiskImage {
 	public void readDirectory() {
 		if (isCpmImage()) {
 			readCpmDirectory(D71Constants.C128_DS_DIR_TRACK, D71Constants.C128_DS_DIR_SECTORS, false);
-			return;
+		} else {
+			readDirectory(DIR_TRACK, DIR_SECT, FILE_NUMBER_LIMIT);
+			validate(new ArrayList<>());
 		}
-		boolean fileLimitReached = false;
-		int track = DIR_TRACK;
-		int sector = DIR_SECT;
-		int dirPosition = 0;
-		int filenumber = 0;
-		do {
-			if (track >= D71Constants.D71_TRACKS.length) {
-				feedbackMessage.append("Error: Track ").append(track).append(" is not within image.\n");
-				break;
-			}
-			int dataPosition = getSectorOffset(track, sector);
-			for (int i = 0; i < DIR_ENTRIES_PER_SECTOR; i ++) {
-				cbmFile[filenumber] = new CbmFile(cbmDisk, dataPosition + (i * DIR_ENTRY_SIZE));
-				if (!cbmFile[filenumber].isFileScratched()) {
-					cbmFile[filenumber].setDirPosition(dirPosition);
-					if (filenumber < FILE_NUMBER_LIMIT)  {
-						filenumber++;
-					} else {
-						// Too many files in directory check
-						fileLimitReached = true;
-					}
-				}
-				dirPosition++;
-			}
-			track = getCbmDiskValue(dataPosition + 0);
-			sector = getCbmDiskValue(dataPosition + 1);
-		} while (track != 0 && !fileLimitReached);
-		if (fileLimitReached) {
-			feedbackMessage.append("Error: Too many entries in directory (more than ").append(FILE_NUMBER_LIMIT).append(")!\n");
-		}
-		filesUsedCount = filenumber;
-		validate(new ArrayList<Integer>());
 	}
 
 	/**
@@ -245,11 +215,11 @@ public class D71 extends DiskImage {
 			int blockPos = getSectorOffset(thisTrack, thisSector);
 			int nextTrack  = getCbmDiskValue(blockPos + 0);
 			int nextSector = getCbmDiskValue(blockPos + 1);
-			feedbackMessage.append(thisTrack).append("/").append(thisSector).append(Utility.SPACE);
+			feedbackMessage.append(thisTrack).append('/').append(thisSector).append(Utility.SPACE);
 			if (nextTrack > 0) {
 				out.write(cbmDisk, blockPos + 2, BLOCK_SIZE - 2);
 			} else {
-				feedbackMessage.append("\nRemaining bytes: ").append(nextSector).append("\n");
+				feedbackMessage.append("\nRemaining bytes: ").append(nextSector).append('\n');
 				out.write(cbmDisk, blockPos + 2, nextSector - 2 + 1);
 			}
 			thisTrack = nextTrack;
@@ -278,7 +248,7 @@ public class D71 extends DiskImage {
 		int thisSector;
 		int dataPos = 0;
 		while (dataRemain >= 0 && block != null) {
-			feedbackMessage.append(dataRemain).append(" bytes remain: block ").append(block.track).append("/").append(block.sector).append("\n");
+			feedbackMessage.append(dataRemain).append(" bytes remain: block ").append(block.track).append('/').append(block.sector).append('\n');
 			thisTrack = block.track;
 			thisSector = block.sector;
 			markSectorUsed(thisTrack, thisSector);
@@ -415,7 +385,7 @@ public class D71 extends DiskImage {
 			}
 		}
 		if (block != null) {
-			feedbackMessage.append("firstCopyBlock: The first block will be ").append(block.track).append("/").append(block.sector).append(".\n");
+			feedbackMessage.append("firstCopyBlock: The first block will be ").append(block.track).append('/').append(block.sector).append(".\n");
 		} else {
 			feedbackMessage.append("firstCopyBlock: Error: Disk is full!\n");
 		}
@@ -551,7 +521,7 @@ public class D71 extends DiskImage {
 				int entryPos = getSectorOffset(thisTrack, thisSector);
 				thisTrack  = getCbmDiskValue(entryPos + 0x00);
 				thisSector = getCbmDiskValue(entryPos + 0x01);
-				feedbackMessage.append("LongDirectory: "+entryNum+" dirEntrys remain, next block: "+thisTrack+"/"+thisSector+"\n");
+				feedbackMessage.append("LongDirectory: ").append(entryNum).append(" dirEntrys remain, next block: ").append(thisTrack).append('/').append(thisSector).append('\n');
 				entryNum = entryNum - 8;
 			}
 		}
@@ -609,7 +579,7 @@ public class D71 extends DiskImage {
 			feedbackMessage.append("Not yet implemented for CP/M format.\n");
 			return ;
 		}
-		feedbackMessage.append("writeSingleDirectoryEntry: dirpos="+cbmFile.getDirPosition()+"\n");
+		feedbackMessage.append("writeSingleDirectoryEntry: dirpos=").append(cbmFile.getDirPosition()).append('\n');
 		cbmFile.toBytes(cbmDisk, where);
 	}
 
@@ -679,7 +649,7 @@ public class D71 extends DiskImage {
 						setCbmDiskValue(getSectorOffset(thisTrack, thisSector) + 0x01, nextSector);
 						setCbmDiskValue(getSectorOffset(nextTrack, nextSector) + 0x00, 0);
 						setCbmDiskValue(getSectorOffset(nextTrack, nextSector) + 0x01, -1);
-						feedbackMessage.append("Allocated additonal directory sector (").append(nextTrack).append("/").append(nextSector).append(") for dir entry ").append(dirEntryNumber).append(".\n");
+						feedbackMessage.append("Allocated additonal directory sector (").append(nextTrack).append('/').append(nextSector).append(") for dir entry ").append(dirEntryNumber).append(".\n");
 					} else {
 						feedbackMessage.append( "Error: no more directory sectors. Can't add file.\n");
 						return false;
@@ -786,11 +756,6 @@ public class D71 extends DiskImage {
 	}
 
 	@Override
-	public void readPartition(int track, int sector, int numBlocks) throws CbmException {
-		throw new CbmException("D71 images does not support partitions.");
-	}
-
-	@Override
 	public Integer validate(List<Integer> repairList) {
 		// init to null
 		Boolean[][] bamEntry = new Boolean[getTrackCount() + 1][getMaxSectorCount()];
@@ -810,7 +775,6 @@ public class D71 extends DiskImage {
 			if (cbmFile[n].getFileType() == CbmFile.TYPE_CBM) {
 				getValidationErrorList().add(new ValidationError(track, sector, ValidationError.ERROR_PARTITIONS_UNSUPPORTED, cbmFile[n].getName()));
 				errors++;
-				continue;
 			} else if (cbmFile[n].getFileType() != CbmFile.TYPE_DEL) {
 				track = cbmFile[n].getTrack();
 				sector = cbmFile[n].getSector();
@@ -909,6 +873,34 @@ public class D71 extends DiskImage {
 			track = getCbmDiskValue(getSectorOffset(tmpTrack, tmpSector) + 0x00);
 			sector = getCbmDiskValue(getSectorOffset(tmpTrack, tmpSector) + 0x01);
 		} while (track != 0);
+	}
+
+	@Override
+	public int getNextSector(int track, int sector) {
+		if (track < getTrackCount() && sector < D71Constants.D71_TRACKS[track].getSectors()) {
+			return D71Constants.D71_TRACKS[track].getSectors() + 1;
+		}
+		return this.getFirstSector();
+	}
+
+	@Override
+	public TrackSector getSector(int offset) {
+		if (offset < 0 || offset >= D71_SIZE) {
+			return null;
+		}
+		int blockNum = offset / BLOCK_SIZE;
+		int t;
+		for (t = 1; t < D71Constants.D71_TRACKS.length && blockNum >=
+		D71Constants.D71_TRACKS[t].getSectorsIn() + D71Constants.D71_TRACKS[t].getSectors(); t++) {
+			// nothing
+		}
+		int s = blockNum - D71Constants.D71_TRACKS[t].getSectorsIn();
+		return new TrackSector(t, s);
+	}
+
+	@Override
+	public int getFirstSector() {
+		return DEFAULT_ZERO;
 	}
 
 }

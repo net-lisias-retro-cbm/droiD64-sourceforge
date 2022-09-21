@@ -104,7 +104,7 @@ public class SearchResultRow implements Serializable {
 		builder.append(" .type=").append(type);
 		builder.append(" .size=").append(size);
 		builder.append(" .hostName=").append(hostName);
-		builder.append("]");
+		builder.append(']');
 		return builder.toString();
 	}
 

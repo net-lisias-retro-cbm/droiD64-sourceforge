@@ -96,7 +96,7 @@ public class ValidationError implements Serializable {
 		buf.append(" .errorCode=").append(errorCode);
 		buf.append(" .fileName=").append(fileName);
 		buf.append(" .errorText=").append( ERROR_TEXTS[errorCode < ERROR_TEXTS.length ? errorCode : 0]);
-		buf.append("]");
+		buf.append(']');
 		return buf.toString();
 	}
 

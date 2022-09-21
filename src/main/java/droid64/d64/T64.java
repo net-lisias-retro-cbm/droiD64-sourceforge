@@ -124,7 +124,7 @@ public class T64 extends DiskImage {
 			int dataStart = cf.getOffSet();
 			int dataEnd = cf.getOffSet() + cf.getSizeInBytes();
 			if (cbmDisk.length <  dataEnd || dataStart < 0) {
-				throw new CbmException("T64 file ["+number+"] ends at 0x"+Integer.toHexString(dataEnd)+" outside image of size "+Integer.toHexString(cbmDisk.length)+".");
+				throw new CbmException("T64 file ["+number+"] ends at 0x"+Integer.toHexString(dataEnd)+" outside image of size "+Integer.toHexString(cbmDisk.length)+'.');
 			}
 			byte[] data = new byte[cf.getSizeInBytes() + 2];
 			if (cf.getSizeInBytes() <= 0) {
@@ -189,18 +189,13 @@ public class T64 extends DiskImage {
 		int pos = 0x40 + cf.getDirPosition() * DIR_ENTRY_SIZE;
 		int num = cf.getDirPosition();
 		if (cbmDisk[pos] != 0) {
-			feedbackMessage.append("deleteFile ["+num+"]: " +cf.getName() + "\n");
+			feedbackMessage.append("deleteFile [").append(num).append("]: ").append(cf.getName()).append('\n');
 			filesUsedCount = filesUsedCount > 0 ? filesUsedCount - 1 : 0;
 			cbmDisk[pos] = 0;
 			cbmFile[num].setFileType(0);
 		} else {
-			feedbackMessage.append("deleteFile ["+num+"]: already deleted. "+cf.getName()+ " \n");
+			feedbackMessage.append("deleteFile [").append(num).append("]: already deleted. ").append(cf.getName()).append('\n');
 		}
-	}
-
-	@Override
-	public void readPartition(int track, int sector, int numBlocks) throws CbmException {
-		throw new CbmException("T64 images does not support partitions.");
 	}
 
 	@Override
@@ -334,4 +329,38 @@ public class T64 extends DiskImage {
 		}
 	}
 
+	@Override
+	public int getNextSector(int track, int sector) {
+		return sector;
+	}
+
+	@Override
+	public TrackSector getSector(int offset) {
+		return null;
+	}
+
+	@Override
+	public int getBlocksFree() {
+		return DEFAULT_ZERO;
+	}
+
+	@Override
+	public int getFirstSector() {
+		return DEFAULT_ZERO;
+	}
+
+	@Override
+	public int getMaxSectors(int trackNumber) {
+		return DEFAULT_ZERO;
+	}
+
+	@Override
+	public int getTrackCount() {
+		return DEFAULT_ZERO;
+	}
+
+	@Override
+	public int getMaxSectorCount() {
+		return DEFAULT_ZERO;
+	}
 }

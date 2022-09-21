@@ -42,6 +42,8 @@ public class ColoredTableCellRenderer extends DefaultTableCellRenderer {
 	private static final long serialVersionUID = 1L;
 	private static final Color USED_COLOR = new Color(255,200,200);	// red
 	private static final Color FREE_COLOR = new Color(200,255,200);	// green
+	private static final Color FREE_PART_COLOR = new Color(100,200,100);	// dark green
+	private static final Color USED_PART_COLOR = new Color(200,100,100);	// dark red
 	private static final Color INVALID_COLOR = new Color(100,100,100);	// grey
 	private static final Color RESERVED_COLOR = new Color(100,100,255);	// blue
 
@@ -62,8 +64,15 @@ public class ColoredTableCellRenderer extends DefaultTableCellRenderer {
 				label.setBackground(FREE_COLOR);
 			} else if (CbmBam.RESERVED.equals(value)) {
 				label.setBackground(RESERVED_COLOR);
+			} else if (CbmBam.FREE_PART.equals(value)) {
+				label.setBackground(FREE_PART_COLOR);
+			} else if (CbmBam.USED_PART.equals(value)) {
+				label.setBackground(USED_PART_COLOR);
 			} else if (idXColumn > 0) {
 				label.setBackground(INVALID_COLOR);
+			}
+			if (isSelected) {
+				label.setBackground(label.getBackground().darker());
 			}
 		}
 		return label;

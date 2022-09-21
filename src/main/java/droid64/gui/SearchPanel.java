@@ -1,7 +1,6 @@
 package droid64.gui;
 
 import java.awt.BorderLayout;
-import java.awt.Container;
 import java.awt.FlowLayout;
 import java.awt.Font;
 import java.awt.GridBagConstraints;
@@ -15,13 +14,14 @@ import javax.swing.JComboBox;
 import javax.swing.JComponent;
 import javax.swing.JDialog;
 import javax.swing.JFormattedTextField;
-import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTable;
 import javax.swing.JTextField;
 import javax.swing.ListSelectionModel;
+import javax.swing.SwingUtilities;
+import javax.swing.WindowConstants;
 import javax.swing.table.DefaultTableColumnModel;
 import javax.swing.table.TableColumn;
 import javax.swing.text.NumberFormatter;
@@ -41,37 +41,35 @@ import droid64.db.SearchResultRow;
  *
  * @author Henrik
  */
-public class SearchDialog extends JDialog {
+public class SearchPanel extends JPanel {
 
 	private static final long serialVersionUID = 1L;
-	private MainPanel mainPanel;
-	private SearchResultTableModel tableModel = new SearchResultTableModel();
+	private final MainPanel mainPanel;
+	private final SearchResultTableModel tableModel = new SearchResultTableModel();
 
-	private JTextField fileNameText = new JTextField(Utility.EMPTY, 20);
-	private JTextField diskLabelText = new JTextField(Utility.EMPTY, 20);
-	private JTextField diskPathText = new JTextField(Utility.EMPTY, 20);
-	private JTextField diskFileNameText = new JTextField(Utility.EMPTY, 20);
-	private JTextField hostNameText = new JTextField(Utility.EMPTY, 20);
-	private JFormattedTextField fileSizeMinField = getNumericField(10, 8);
-	private JFormattedTextField fileSizeMaxField = getNumericField(250, 8);
+	private final JTextField fileNameText = new JTextField(Utility.EMPTY, 20);
+	private final JTextField diskLabelText = new JTextField(Utility.EMPTY, 20);
+	private final JTextField diskPathText = new JTextField(Utility.EMPTY, 20);
+	private final JTextField diskFileNameText = new JTextField(Utility.EMPTY, 20);
+	private final JTextField hostNameText = new JTextField(Utility.EMPTY, 20);
+	private final JFormattedTextField fileSizeMinField = getNumericField(10, 8);
+	private final JFormattedTextField fileSizeMaxField = getNumericField(250, 8);
+	private final JButton closeButton = new JButton("Close");
+	private final String title;
 
 	/**
 	 * Constructor
-	 * @param topText String
+	 * @param title String
 	 * @param mainPanel MainPanel
 	 */
-	public SearchDialog (String topText, MainPanel mainPanel) {
-		setTitle(topText);
-		setModal(true);
+	public SearchPanel (String title, MainPanel mainPanel) {
+		this.title = title;
 		this.mainPanel = mainPanel;
-		Container cp = getContentPane();
-		cp.setLayout(new BorderLayout());
-		cp.add(drawSearchPanel(), BorderLayout.CENTER);
-		GuiHelper.setLocation(this, 0.25f, 0.10f);
-		pack();
-		GuiHelper.setSize(this, 0.40f, 0.75f);
-		setVisible(mainPanel != null);
-		setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+		setLayout(new BorderLayout());
+		add(drawSearchPanel(), BorderLayout.CENTER);
+
+		GuiHelper.setPreferredSize(this, 2, 2);
+		addHierarchyListener(e -> GuiHelper.hierarchyListenerResizer(SwingUtilities.getWindowAncestor(this)));
 	}
 
 	/**
@@ -159,14 +157,12 @@ public class SearchDialog extends JDialog {
 		final JTable table = new JTable(tableModel, columnModel);
 		// Buttons
 		final JButton searchButton = new JButton(Settings.getMessage(Resources.DROID64_SEARCH_SEARCH));
-		final JButton closeButton = new JButton(Settings.getMessage(Resources.DROID64_SEARCH_CLOSE));
 		final JButton openSelectedLeftButton = new JButton(Settings.getMessage(Resources.DROID64_SEARCH_OPENLEFT));
 		final JButton openSelectedRightButton = new JButton(Settings.getMessage(Resources.DROID64_SEARCH_OPENRIGHT));
 		openSelectedLeftButton.setEnabled(false);
 		openSelectedRightButton.setEnabled(false);
 
 		searchButton.addActionListener(ae -> search(fileTypeBox.getSelectedIndex(), imageTypeBox.getSelectedIndex()));
-		closeButton.addActionListener(ae -> dispose());
 		openSelectedLeftButton.addActionListener(ae -> openSelected(mainPanel.getLeftDiskPanel(), table));
 		openSelectedRightButton.addActionListener(ae -> openSelected(mainPanel.getRightDiskPanel(), table));
 		// Button panel
@@ -278,4 +274,13 @@ public class SearchDialog extends JDialog {
 		}
 	}
 
+	public void showDialog() {
+		final JDialog dialog = new JDialog(mainPanel.getParent(), title, true);
+		dialog.setContentPane(this);
+		dialog.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
+		closeButton.addActionListener(e -> dialog.dispose());
+		dialog.pack();
+		dialog.setLocationRelativeTo(mainPanel.getParent());
+		dialog.setVisible(true);
+	}
 }

@@ -1,29 +1,31 @@
 package droid64.gui;
 
 import java.awt.BorderLayout;
-import java.awt.Dimension;
-import java.awt.FlowLayout;
 import java.awt.Font;
 import java.awt.Frame;
 import java.awt.GraphicsEnvironment;
 import java.awt.GridLayout;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Optional;
 
 import javax.swing.BorderFactory;
 import javax.swing.BoxLayout;
-import javax.swing.JButton;
+import javax.swing.DefaultListModel;
 import javax.swing.JCheckBox;
-import javax.swing.JDialog;
 import javax.swing.JList;
+import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTextArea;
 import javax.swing.ListSelectionModel;
+import javax.swing.SwingUtilities;
 import javax.swing.border.Border;
 import javax.swing.border.CompoundBorder;
 import javax.swing.border.EmptyBorder;
 import javax.swing.border.EtchedBorder;
 
-public class FontChooser extends JDialog {
+public class FontChooser extends JPanel {
 
 	private static final long serialVersionUID = 1L;
 
@@ -33,54 +35,34 @@ public class FontChooser extends JDialog {
 	private static final Integer[] FONT_SIZES = { 8, 10, 11, 12, 14, 16, 18, 20, 24, 28, 36, 40, 48, 60, 72 };
 	/** Index of default font size */
 	private static final int DEFAULT_SIZE_INDEX = 4;
-
 	/** Selected font */
 	private Font resultFont;
-
+	/** Available font names */
+	private final List<String> fontList = Arrays.asList(GraphicsEnvironment.getLocalGraphicsEnvironment().getAvailableFontFamilyNames());
+	/** Font name model */
+	private final DefaultListModel<String> fontNameModel = new DefaultListModel<>();
 	/** Font name list */
-	private JList<String> fontNameList;
+	private final JList<String> fontNameList = new JList<>(fontNameModel);
 	/** Font size list */
-	private JList<Integer> fontSizeList;
+	private final JList<Integer> fontSizeList = new JList<>(FONT_SIZES);
 	/** Bold check box */
-	private JCheckBox boldBox;
+	private final JCheckBox boldBox = new JCheckBox("Bold");
 	/** Italic check box */
-	private JCheckBox italicBox;
+	private final JCheckBox italicBox = new JCheckBox("Italic");
 	/** Preview selected font */
-	private JTextArea previewArea;
+	private final JTextArea previewArea = new JTextArea(PREVIEW_TEXT);
 
-	public FontChooser(final Frame owner, final String title, final Font currentFont) {
-		super(owner, title, true);
-		String[] fontList = GraphicsEnvironment.getLocalGraphicsEnvironment().getAvailableFontFamilyNames();
+	private final Frame owner;
+	private final String title;
 
-		int nameIdx = 0;
-		int sizeIdx = DEFAULT_SIZE_INDEX;
-		if (currentFont != null) {
-			for (int i=0; i < fontList.length; i++) {
-				if (fontList[i].equals(currentFont.getName())) {
-					nameIdx = i;
-					break;
-				}
-			}
-			for (int i=0; i < FONT_SIZES.length; i++) {
-				if (FONT_SIZES[i].equals(currentFont.getSize())) {
-					sizeIdx = i;
-					break;
-				}
-			}
-		}
-		fontNameList = new JList<>(fontList);
+	public FontChooser(final Frame owner, final String title) {
+		this.owner = owner;
+		this.title = title;
+
+		fontList.forEach(fontNameModel::addElement);
 		fontNameList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
-		fontNameList.setSelectedIndex(nameIdx);
-		fontNameList.ensureIndexIsVisible(nameIdx);
-		fontNameList.addListSelectionListener(event -> updatePreviewFont());
-
-		fontSizeList = new JList<>(FONT_SIZES);
 		fontSizeList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
-		fontSizeList.setSelectedIndex(sizeIdx);
-		fontNameList.ensureIndexIsVisible(sizeIdx);
-		fontSizeList.addListSelectionListener(event -> updatePreviewFont());
 
-		previewArea = new JTextArea(PREVIEW_TEXT);
 		previewArea.setEditable(false);
 		previewArea.setSize(200, 50);
 		previewArea.setLineWrap(true);
@@ -93,7 +75,7 @@ public class FontChooser extends JDialog {
 
 		JPanel topRight = new JPanel(new GridLayout(1, 2));
 		topRight.add(new JScrollPane(fontSizeList), BorderLayout.WEST);
-		topRight.add(new JScrollPane(drawFontAttrPanel(currentFont)), BorderLayout.EAST);
+		topRight.add(new JScrollPane(drawFontAttrPanel()), BorderLayout.EAST);
 
 		JPanel panel = new JPanel(new BorderLayout());
 		panel.add(new JScrollPane(fontNameList), BorderLayout.CENTER);
@@ -102,18 +84,43 @@ public class FontChooser extends JDialog {
 
 		setLayout(new BorderLayout());
 		add(panel, BorderLayout.CENTER);
-		add(drawButtonPanel(), BorderLayout.SOUTH);
-		setMinimumSize(new Dimension(16, 16));
 
-		updatePreviewFont();
-		GuiHelper.setLocation(this, 0.5f, 0.5f);
+		fontNameList.addListSelectionListener(event -> updatePreviewFont());
+		fontSizeList.addListSelectionListener(event -> updatePreviewFont());
+		addHierarchyListener(e -> GuiHelper.hierarchyListenerResizer(SwingUtilities.getWindowAncestor(this)));
 	}
 
-	private JPanel drawFontAttrPanel(Font currentFont) {
-		boldBox = new JCheckBox("Bold", currentFont != null && (currentFont.getStyle() & Font.BOLD) != 0);
+	public Font show(Font currentFont) {
+		boldBox.setSelected(currentFont != null && (currentFont.getStyle() & Font.BOLD) != 0);
+		italicBox.setSelected(currentFont != null && (currentFont.getStyle() & Font.ITALIC) != 0);
+
+		int nameIdx = 0;
+		int sizeIdx = DEFAULT_SIZE_INDEX;
+		if (currentFont != null) {
+			int fn = fontList.indexOf(currentFont.getName());
+			if (fn >= 0) {
+				nameIdx = fn;
+			}
+			for (int i=0; i < FONT_SIZES.length; i++) {
+				if (FONT_SIZES[i].equals(currentFont.getSize())) {
+					sizeIdx = i;
+					break;
+				}
+			}
+		}
+		fontNameList.setSelectedIndex(nameIdx);
+		fontSizeList.setSelectedIndex(sizeIdx);
+		updatePreviewFont();
+
+		if (JOptionPane.OK_OPTION == JOptionPane.showConfirmDialog(owner, this, title, JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE)) {
+			return resultFont;
+		}
+		return null;
+	}
+
+	private JPanel drawFontAttrPanel() {
 		boldBox.setMnemonic('b');
 		boldBox.addItemListener(event -> updatePreviewFont());
-		italicBox = new JCheckBox("Italic", currentFont != null && (currentFont.getStyle() & Font.ITALIC) != 0);
 		italicBox.setMnemonic('i');
 		italicBox.addItemListener(event -> updatePreviewFont());
 		JPanel fontAttrPanel = new JPanel();
@@ -123,43 +130,20 @@ public class FontChooser extends JDialog {
 		return fontAttrPanel;
 	}
 
-	private JPanel drawButtonPanel() {
-		JButton okButton = new JButton("OK");
-		okButton.addActionListener(event -> {
-			setVisible(false);
-			dispose();
-		});
-		JButton cancelButton = new JButton("Cancel");
-		cancelButton.addActionListener(event -> {
-			resultFont = null;
-			setVisible(false);
-			dispose();
-		});
-		JPanel buttonPanel = new JPanel(new FlowLayout());
-		buttonPanel.add(okButton);
-		buttonPanel.add(cancelButton);
-		return buttonPanel;
-	}
-
 	/**
 	 * Update preview field with the current font
 	 */
 	private void updatePreviewFont() {
+		int nameIdx = fontNameList.getSelectedIndex();
 		String resultName = fontNameList.getSelectedValue();
-		int resultSize = fontSizeList.getSelectedValue();
+		fontNameList.ensureIndexIsVisible(nameIdx);
+
+		int resultSize = Optional.ofNullable(fontSizeList.getSelectedValue()).orElse(12);
 		int attrs = boldBox.isSelected() ? Font.BOLD : Font.PLAIN;
 		if (italicBox.isSelected()) {
 			attrs |= Font.ITALIC;
 		}
 		resultFont = new Font(resultName, attrs, resultSize);
 		previewArea.setFont(resultFont);
-		pack();
-	}
-
-	/**
-	 * @return the selected font, or null if none was selected.
-	 */
-	public Font getSelectedFont() {
-		return resultFont;
 	}
 }

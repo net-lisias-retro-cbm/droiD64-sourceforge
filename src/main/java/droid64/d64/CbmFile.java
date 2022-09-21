@@ -153,10 +153,10 @@ public class CbmFile implements Comparable<CbmFile>, Serializable {
 	public CbmFile(byte[] data, int position) {
 		dirTrack = data[position + 0x00] & 0xff;
 		dirSector = data[position + 0x01] & 0xff;
-		fileScratched = (data[position + 0x02] & 0xff) == 0 ? true : false;
+		fileScratched = (data[position + 0x02] & 0xff) == 0;
 		fileType = data[position + 0x02] & 0x07;
-		fileLocked = (data[position + 0x02] & 0x40) == 0 ? false : true;
-		fileClosed = (data[position + 0x02] & 0x80) == 0 ? false : true;
+		fileLocked = (data[position + 0x02] & 0x40) != 0;
+		fileClosed = (data[position + 0x02] & 0x80) != 0;
 		track = data[position + 0x03] & 0xff;
 		sector = data[position + 0x04] & 0xff;
 		StringBuilder buf = new StringBuilder();
@@ -181,6 +181,13 @@ public class CbmFile implements Comparable<CbmFile>, Serializable {
 	 */
 	public static String getFileType(int type) {
 		return  type < CbmFile.FILE_TYPES.length ? CbmFile.FILE_TYPES[type] : null;
+	}
+
+	/**
+	 * @return string array of file type names
+	 */
+	public static String[] getFileTypes() {
+		return Arrays.copyOf(FILE_TYPES, FILE_TYPES.length);
 	}
 
 	/**
@@ -209,7 +216,7 @@ public class CbmFile implements Comparable<CbmFile>, Serializable {
 		StringBuilder builder = new StringBuilder();
 		builder.append("CbmFile [");
 		toString(builder);
-		builder.append("]");
+		builder.append(']');
 		return builder.toString();
 	}
 

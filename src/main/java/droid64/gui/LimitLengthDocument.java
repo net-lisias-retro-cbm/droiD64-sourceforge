@@ -9,6 +9,11 @@ public class LimitLengthDocument extends PlainDocument {
 	private static final long serialVersionUID = 1L;
 	private int limit;
 
+	public LimitLengthDocument() {
+		super();
+		this.limit = Integer.MAX_VALUE;
+	}
+
 	public LimitLengthDocument(int limit) {
 		super();
 		this.limit = limit;
@@ -19,7 +24,7 @@ public class LimitLengthDocument extends PlainDocument {
 		this.limit = limit;
 		try {
 			insertString(0, text,  new SimpleAttributeSet());
-		} catch (BadLocationException e) {}	//NOSONAR
+		} catch (BadLocationException e) { /* ignore */ }
 	}
 
 	@Override
@@ -37,7 +42,14 @@ public class LimitLengthDocument extends PlainDocument {
 			AttributeSet attrs = new SimpleAttributeSet();
 			super.replace(0, getLength(), text, attrs);
 			insertString(0, text, attrs);
-		} catch (BadLocationException e) {}	//NOSONAR
+		} catch (BadLocationException e) { /* ignore */ }
 	}
 
+	public int size() {
+		return super.getLength();
+	}
+
+	public void setLimit(int limit) {
+		this.limit = limit;
+	}
 }

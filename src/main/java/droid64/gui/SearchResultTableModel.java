@@ -10,14 +10,14 @@ import droid64.db.SearchResultRow;
 
 /**
  * Table model to handle search results.
- * @see SearchDialog
+ * @see SearchPanel
  * @author Henrik
  */
 public class SearchResultTableModel extends AbstractTableModel {
 
 	private static final long serialVersionUID = 1L;
 	/** Search results in a Vector of SearchResultRow */
-	private List<SearchResultRow> data = new ArrayList<>();
+	private final List<SearchResultRow> data = new ArrayList<>();
 	/** Table headers */
 	private static final String[] COL_HEADS =	{ "Path", "Disk", "Label", "File", "Type", "Size", "Host" };
 
@@ -38,7 +38,7 @@ public class SearchResultTableModel extends AbstractTableModel {
 	@Override
 	public Object getValueAt(int rowIndex, int columnIndex) {
 		try {
-			if (rowIndex >= data.size()) {
+			if (rowIndex >= data.size() || rowIndex < 0) {
 				return Utility.EMPTY;
 			}
 			SearchResultRow row = data.get(rowIndex);

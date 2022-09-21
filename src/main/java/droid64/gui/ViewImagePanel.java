@@ -2,23 +2,24 @@ package droid64.gui;
 
 import java.awt.BorderLayout;
 import java.awt.Color;
-import java.awt.Container;
 import java.awt.GridBagConstraints;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
-import java.awt.image.BufferedImage;
 import java.awt.print.PrinterException;
 import java.awt.print.PrinterJob;
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 
 import javax.imageio.ImageIO;
 import javax.swing.BorderFactory;
 import javax.swing.JButton;
-import javax.swing.JFrame;
+import javax.swing.JDialog;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
+import javax.swing.SwingUtilities;
+import javax.swing.WindowConstants;
 
 /**<pre style='font-family:sans-serif;'>
  * Created on 2015-Oct-15
@@ -45,82 +46,78 @@ import javax.swing.JScrollPane;
  * @author Henrik
  * </pre>
  */
-public class ViewImageFrame extends JFrame {
+public class ViewImagePanel extends JPanel {
 
 	private static final long serialVersionUID = 1L;
 	private List<byte[]> dataList;
 	private List<String> nameList;
 	private int currentIndex = 0;
-	private MainPanel mainPanel;
+	private final MainPanel mainPanel;
+	private final ImagePanel imgPanel = new ImagePanel();
+	private final String title;
+	private final JButton closeButton = new JButton("Close");
 
-	public ViewImageFrame(String title, List<byte[]> dataList, List<String> nameList, MainPanel mainPanel) throws IOException {
+	public ViewImagePanel(String title, MainPanel mainPanel) {
 		this.mainPanel = mainPanel;
-		if (dataList == null || dataList.isEmpty()) {
-			dispose();
-		} else {
-			this.dataList = dataList;
-			this.nameList = nameList;
-			setTitle(title);
-			setup();
-		}
+		this.title = title;
+		initGUI();
+		addHierarchyListener(e -> GuiHelper.hierarchyListenerResizer(SwingUtilities.getWindowAncestor(this)));
 	}
 
-	private void setup() throws IOException {
-		Container cp = getContentPane();
-		cp.setLayout(new BorderLayout());
-		JPanel panel = new JPanel();
-		cp.add(new JScrollPane(panel), BorderLayout.CENTER);
+	public void show(List<byte[]> dataList, List<String> nameList) throws IOException {
+		this.dataList = dataList != null ? dataList : new ArrayList<>();
+		this.nameList = nameList != null ? nameList : new ArrayList<>();
+		currentIndex = 0;
+		imgPanel.setImage(getNextImage());
 
-		final CbmPicture picture = getNextImage();
-		final BufferedImage image = picture.getImage();
-		final ImagePanel imgPanel = drawImagePanel(panel, image, picture);
+		final JDialog dialog = new JDialog(mainPanel.getParent(), title, true);
+		dialog.setContentPane(this);
+		dialog.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
 
-		JButton okButton = new JButton("OK");
-		okButton.setMnemonic('o');
-		okButton.addActionListener(ae -> dispose());
+		closeButton.addActionListener(e -> dialog.dispose());
+
+		dialog.pack();
+		dialog.setLocationRelativeTo(mainPanel.getParent());
+		dialog.setVisible(true);
+	}
+
+	private void initGUI() {
+		setLayout(new BorderLayout());
+		add(new JScrollPane(drawImagePanel()), BorderLayout.CENTER);
 
 		JButton printButton = new JButton("Print");
 		printButton.setMnemonic('p');
 		printButton.setToolTipText("Print");
-		printButton.addActionListener(ae -> print(image, picture.getName()));
+		printButton.addActionListener(ae -> print(imgPanel));
 
 		JButton saveButton = new JButton("Save PNG");
 		saveButton.setMnemonic('s');
-		saveButton.setEnabled(image != null);
-		saveButton.addActionListener(ae -> saveImage(image, imgPanel));
+		saveButton.addActionListener(ae -> saveImage(imgPanel));
 
 		JPanel buttonPanel = new JPanel();
 		buttonPanel.add(printButton);
 		buttonPanel.add(saveButton);
-		buttonPanel.add(okButton);
-		cp.add(buttonPanel, BorderLayout.SOUTH);
+		buttonPanel.add(closeButton);
 
-		GuiHelper.setLocation(this, 3, 3);
-		pack();
-		setVisible(mainPanel != null);
-		setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+		add(buttonPanel, BorderLayout.SOUTH);
 	}
 
-	private ImagePanel drawImagePanel(JPanel parentPanel, BufferedImage image, CbmPicture picture) throws IOException {
-		final ImagePanel imgPanel = new ImagePanel(picture);
-		if (image != null) {
-			GridBagConstraints gbc = new GridBagConstraints();
-			gbc.fill = GridBagConstraints.VERTICAL;
-			imgPanel.setBorder(BorderFactory.createLineBorder(Color.BLACK));
-			if (dataList.size() > 1) {
-				imgPanel.addMouseListener(new MouseAdapter() {
-					@Override
-					public void mouseClicked(MouseEvent e) {
-						clickedImage(imgPanel);
-					}
-				});
+	private JPanel drawImagePanel() {
+		JPanel panel = new JPanel();
+		GridBagConstraints gbc = new GridBagConstraints();
+		gbc.fill = GridBagConstraints.VERTICAL;
+		imgPanel.setBorder(BorderFactory.createLineBorder(Color.BLACK));
+		imgPanel.addMouseListener(new MouseAdapter() {
+			@Override
+			public void mouseClicked(MouseEvent e) {
+				clickedImage();
 			}
-			GuiHelper.addToGridBag(0, 0, 0.0, 0.0, gbc, parentPanel, imgPanel);
-		}
-		return imgPanel;
+		});
+		GuiHelper.addToGridBag(0, 0, 0.0, 0.0, gbc, panel, imgPanel);
+		return panel;
 	}
 
-	private void clickedImage(ImagePanel imgPanel) {
+	private void clickedImage() {
 		try {
 			imgPanel.setImage(getNextImage());
 		} catch (IOException e) {
@@ -128,11 +125,11 @@ public class ViewImageFrame extends JFrame {
 		}
 	}
 
-	private void saveImage(BufferedImage image, ImagePanel imgPanel) {
+	private void saveImage(ImagePanel imgPanel) {
 		try {
 			String filename = FileDialogHelper.openTextFileDialog("Save PNG file", null, imgPanel.getName(), true, new String[]{ ".png" });
 			if (filename != null) {
-				ImageIO.write(image, "png", new File(filename));
+				ImageIO.write(imgPanel.getImage(), "png", new File(filename));
 			}
 		} catch (IOException e) {	//NOSONAR
 			mainPanel.appendConsole("Failed to save PNG image.\n"+e.getMessage());
@@ -140,6 +137,9 @@ public class ViewImageFrame extends JFrame {
 	}
 
 	private CbmPicture getNextImage() {
+		if (dataList == null || dataList.isEmpty()) {
+			return null;
+		}
 		currentIndex = currentIndex % dataList.size();
 		byte[] data = dataList.get(currentIndex);
 		String name = currentIndex < nameList.size() ? nameList.get(currentIndex) : null;
@@ -148,11 +148,10 @@ public class ViewImageFrame extends JFrame {
 		return cbm;
 	}
 
-	private void print(BufferedImage image, String title) {
+	private void print(ImagePanel imgPanel) {
 		PrinterJob job = PrinterJob.getPrinterJob();
-		job.setPageable(new PrintPageable(image, title, mainPanel));
-		boolean doPrint = job.printDialog();
-		if (doPrint) {
+		job.setPageable(new PrintPageable(imgPanel.getImage(), imgPanel.getName(), mainPanel));
+		if (job.printDialog()) {
 			try {
 				job.print();
 			} catch (PrinterException e) {	//NOSONAR

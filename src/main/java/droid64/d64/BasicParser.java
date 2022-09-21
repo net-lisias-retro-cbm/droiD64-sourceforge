@@ -113,14 +113,14 @@ public class BasicParser {
 			if (op2 >=0 && op2 < BASIC_V7_CE_TOKENS.length && BASIC_V7_CE_TOKENS[op2] != null) {
 				buf.append(BASIC_V7_CE_TOKENS[op2]);
 			} else {
-				buf.append("0xCE").append(Integer.toHexString(op2)).append(")");
+				buf.append("0xCE").append(Integer.toHexString(op2)).append(')');
 			}
 		} else if (op == 0xfe) {
 			int op2 = iter.nextInt8();
 			if (op2 >=0 && op2 < BASIC_V7_FE_TOKENS.length && BASIC_V7_FE_TOKENS[op2] != null) {
 				buf.append(BASIC_V7_FE_TOKENS[op2]);
 			} else {
-				buf.append("0xFE").append(Integer.toHexString(op2)).append(")");
+				buf.append("0xFE").append(Integer.toHexString(op2)).append(')');
 			}
 		} else {
 			buf.append(BASIC_V7_TOKENS[op - 0x80]);

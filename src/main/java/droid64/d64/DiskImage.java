@@ -7,6 +7,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Optional;
 
 import droid64.db.Disk;
 import droid64.db.DiskFile;
@@ -40,6 +41,10 @@ import droid64.gui.Settings;
 public abstract class DiskImage implements Serializable {
 
 	private static final long serialVersionUID = 1L;
+
+	public static final int DEFAULT_ZERO = 0;
+	public static final int DEFAULT_ONE = 1;
+
 	/** Unknown or undefined image type */
 	public static final int UNKNOWN_IMAGE_TYPE      = 0;
 	/** Normal D64 (C1541 5.25") image */
@@ -66,15 +71,17 @@ public abstract class DiskImage implements Serializable {
 	public static final int D67_IMAGE_TYPE          = 11;
 	/** Lynx */
 	public static final int LNX_IMAGE_TYPE          = 12;
+	/** Normal D88 (C8280 8") image */
+	public static final int D88_IMAGE_TYPE          = 13;
 
 	/** String array to convert imageType to String name */
 	protected static final String[] IMAGE_TYPE_NAMES = {
 			"Unknown", "D64", "D71", "D81", "T64",
 			"CP/M D64 (C64)" , "CP/M D64 (C128)", "CP/M D71", "CP/M D81",
-			"D82", "D80", "D67", "LNX" };
+			"D82", "D80", "D67", "LNX", "D88" };
 
 	/** Size of a disk block */
-	protected static final int BLOCK_SIZE = 256;
+	public static final int BLOCK_SIZE = 256;
 	/** CP/M used byte marker. Single density disks are filled with this value from factory. CP/M use this to detect empty disks are blank. */
 	public static final byte UNUSED = (byte) 0xe5;
 	/** Max size of a PRG file */
@@ -133,35 +140,43 @@ public abstract class DiskImage implements Serializable {
 	protected Integer warnings = null;
 	private List<ValidationError> validationErrorList = new ArrayList<>();
 
+	public int getFirstTrack() {
+		return DEFAULT_ONE;
+	}
+
+	public abstract int getFirstSector();
+
 	/**
 	 * Get number of sectors on specified track
 	 * @param trackNumber track number
 	 * @return number of sectors on specified track.
 	 */
-	public int getMaxSectors(int trackNumber) {
-		return 0;
-	}
+	public abstract int getMaxSectors(int trackNumber);
 	/**
 	 * Get numbers of tracks on image.
 	 * @return number of tracks.
 	 */
-	public int getTrackCount() {
-		return 0;
-	}
+	public abstract int getTrackCount();
+
 	/**
 	 * Get maximum number of sectors on any track.
 	 * @return maximum number of sectors
 	 */
-	public int getMaxSectorCount() {
-		return 0;
+	public abstract int getMaxSectorCount();
+
+	/**
+	 * @return The sector number of the highest sector. Usually maxSectorCount + firstSector
+	 */
+	public int getLastSector() {
+		return getMaxSectorCount() + getFirstSector();
 	}
+
+
 	/**
 	 * Get number of free blocks.
 	 * @return blocks free
 	 */
-	public int getBlocksFree() {
-		return 0;
-	}
+	public abstract int getBlocksFree();
 
 	/**
 	 * Reads image file.
@@ -186,7 +201,9 @@ public abstract class DiskImage implements Serializable {
 	 * @param numBlocks number of blocks
 	 * @throws CbmException if partition is not supported on the image.
 	 */
-	public abstract void readPartition(int track, int sector, int numBlocks) throws CbmException;
+	public void readPartition(int track, int sector, int numBlocks) throws CbmException {
+		throw new CbmException("No partition support in " + getClass().getSimpleName() + ".");
+	}
 
 	/**
 	 * Get data of a single file.
@@ -282,36 +299,37 @@ public abstract class DiskImage implements Serializable {
 	}
 
 	public static DiskImage getDiskImage(String filename, byte[] imageData) throws CbmException {
-		String name = filename.toLowerCase();
-		Map<Integer,List<String>> map = Settings.getFileExtensionMap();
-		for (Entry<Integer, List<String>> entry : map.entrySet()) {
-			for (String ext : entry.getValue()) {
-				if (name.endsWith(ext.toLowerCase())) {
-					switch (entry.getKey()) {
-					case DiskImage.D64_IMAGE_TYPE:
-						return new D64(imageData);
-					case DiskImage.D67_IMAGE_TYPE:
-						return new D67(imageData);
-					case DiskImage.D71_IMAGE_TYPE:
-						return new D71(imageData);
-					case DiskImage.D81_IMAGE_TYPE:
-						return new D81();
-					case DiskImage.T64_IMAGE_TYPE:
-						return new T64(imageData);
-					case DiskImage.D80_IMAGE_TYPE:
-						return new D80(imageData);
-					case DiskImage.D82_IMAGE_TYPE:
-						return new D82(imageData);
-					case DiskImage.LNX_IMAGE_TYPE:
-						return new LNX(imageData);
-					default:
-						// Try next
-					}
-				}
-			}
+		switch (getImageType(filename.toLowerCase())) {
+		case DiskImage.D64_IMAGE_TYPE:
+			return new D64(imageData);
+		case DiskImage.D67_IMAGE_TYPE:
+			return new D67(imageData);
+		case DiskImage.D71_IMAGE_TYPE:
+			return new D71(imageData);
+		case DiskImage.D81_IMAGE_TYPE:
+			return new D81(imageData);
+		case DiskImage.T64_IMAGE_TYPE:
+			return new T64(imageData);
+		case DiskImage.D80_IMAGE_TYPE:
+			return new D80(imageData);
+		case DiskImage.D82_IMAGE_TYPE:
+			return new D82(imageData);
+		case DiskImage.LNX_IMAGE_TYPE:
+			return new LNX(imageData);
+		case DiskImage.D88_IMAGE_TYPE:
+			return new D88(imageData);
+		default:
+			throw new CbmException("Unknown file format.");
 		}
-		throw new CbmException("Unknown file format.");
 	}
+
+	public static int getImageType(String fileName) {
+		final String name = fileName.toLowerCase();
+		Optional<Entry<Integer, List<String>>> opt = Settings.getFileExtensionMap().entrySet().stream().filter(
+				entry -> entry.getValue().stream().anyMatch(ext -> name.endsWith(ext.toLowerCase()))).findFirst();
+		return opt.isPresent() ? opt.get().getKey() : DiskImage.UNKNOWN_IMAGE_TYPE;
+	}
+
 
 	/**
 	 * Load disk image from file. Use file name extension to identify type of disk image.
@@ -320,36 +338,28 @@ public abstract class DiskImage implements Serializable {
 	 * @throws CbmException if image could not be loaded (file missing, file corrupt out of memory etc).
 	 */
 	public static DiskImage getDiskImage(String filename) throws CbmException {
-		String name = filename.toLowerCase();
-		Map<Integer,List<String>> map = Settings.getFileExtensionMap();
-		for (Entry<Integer, List<String>> entry : map.entrySet()) {
-			for (String ext : entry.getValue()) {
-				if (name.endsWith(ext.toLowerCase())) {
-					switch (entry.getKey()) {
-					case DiskImage.D64_IMAGE_TYPE:
-						return new D64().readImage(filename);
-					case DiskImage.D67_IMAGE_TYPE:
-						return new D67().readImage(filename);
-					case DiskImage.D71_IMAGE_TYPE:
-						return new D71().readImage(filename);
-					case DiskImage.D81_IMAGE_TYPE:
-						return new D81().readImage(filename);
-					case DiskImage.T64_IMAGE_TYPE:
-						return new T64().readImage(filename);
-					case DiskImage.D80_IMAGE_TYPE:
-						return new D80().readImage(filename);
-					case DiskImage.D82_IMAGE_TYPE:
-						return new D82().readImage(filename);
-					case DiskImage.LNX_IMAGE_TYPE:
-						return new LNX().readImage(filename);
-					default:
-						// Try next extension
-						break;
-					}
-				}
-			}
+		switch (getImageType(filename)) {
+		case DiskImage.D64_IMAGE_TYPE:
+			return new D64().readImage(filename);
+		case DiskImage.D67_IMAGE_TYPE:
+			return new D67().readImage(filename);
+		case DiskImage.D71_IMAGE_TYPE:
+			return new D71().readImage(filename);
+		case DiskImage.D81_IMAGE_TYPE:
+			return new D81().readImage(filename);
+		case DiskImage.T64_IMAGE_TYPE:
+			return new T64().readImage(filename);
+		case DiskImage.D80_IMAGE_TYPE:
+			return new D80().readImage(filename);
+		case DiskImage.D82_IMAGE_TYPE:
+			return new D82().readImage(filename);
+		case DiskImage.LNX_IMAGE_TYPE:
+			return new LNX().readImage(filename);
+		case DiskImage.D88_IMAGE_TYPE:
+			return new D88().readImage(filename);
+		default:
+			throw new CbmException("Unknown file format.");
 		}
-		throw new CbmException("Unknown file format.");
 	}
 
 	/**
@@ -362,7 +372,7 @@ public abstract class DiskImage implements Serializable {
 	 */
 	protected DiskImage readImage(String filename, int expectedFileSize, String type) throws CbmException {
 		feedbackMessage = new StringBuilder();
-		feedbackMessage.append("Trying to load "+type+" image ").append(filename).append("\n");
+		feedbackMessage.append("Trying to load ").append(type).append(" image ").append(filename).append('\n');
 		this.cbmDisk = null;
 		if (Utility.isGZipped(filename)) {
 			feedbackMessage.append("GZIP compressed file detected.\n");
@@ -504,9 +514,9 @@ public abstract class DiskImage implements Serializable {
 		CpmFile tempFile = null;
 		String name = Utility.getCpmString(cbmDisk, pos + 0x01, 8);
 		String nameExt = Utility.getCpmString(cbmDisk, pos + 0x09, 3);
-		boolean readOnly = (cbmDisk[pos + 0x09] & 0x80 ) == 0x80 ? true : false;
-		boolean hidden   = (cbmDisk[pos + 0x0a] & 0x80 ) == 0x80 ? true : false;
-		boolean archive  = (cbmDisk[pos + 0x0b] & 0x80 ) == 0x80 ? true : false;
+		boolean readOnly = (cbmDisk[pos + 0x09] & 0x80 ) == 0x80;
+		boolean hidden   = (cbmDisk[pos + 0x0a] & 0x80 ) == 0x80;
+		boolean archive  = (cbmDisk[pos + 0x0b] & 0x80 ) == 0x80;
 		int extNum       =  cbmDisk[pos + 0x0c] & 0xff | ((cbmDisk[pos + 0x0e] & 0xff) << 8);
 		int s1           =  cbmDisk[pos + 0x0d] & 0xff;	// Last Record Byte Count
 		int rc           =  cbmDisk[pos + 0x0f] & 0xff;	// Record Count
@@ -590,20 +600,19 @@ public abstract class DiskImage implements Serializable {
 	 */
 	public Disk getDisk() {
 		Disk disk = new Disk();
-		disk.setLabel(getBam().getDiskName());
+		disk.setLabel(Utility.rinseCtrlChars(getBam().getDiskName()));
 		disk.setImageType(imageFormat);
 		disk.setErrors(errors);
 		disk.setWarnings(warnings);
 		for (int filenumber = 0; filenumber <= getFilesUsedCount() - 1;	filenumber++) {
-			if (getCbmFile(filenumber) != null) {
-				boolean isLocked = getCbmFile(filenumber).isFileLocked();
-				boolean isClosed = getCbmFile(filenumber).isFileClosed();
+			CbmFile cf =  getCbmFile(filenumber);
+			if (cf != null) {
 				DiskFile file = new DiskFile();
-				file.setName(getCbmFile(filenumber).getName());
-				file.setSize(getCbmFile(filenumber).getSizeInBlocks());
-				file.setFileType(getCbmFile(filenumber).getFileType());
+				file.setName(cf.getName());
+				file.setSize(cf.getSizeInBlocks());
+				file.setFileType(cf.getFileType());
 				file.setFileNum(filenumber);
-				file.setFlags((isLocked ? DiskFile.FLAG_LOCKED : 0) | (isClosed ? 0 : DiskFile.FLAG_NOT_CLOSED));
+				file.setFlags((cf.isFileLocked() ? DiskFile.FLAG_LOCKED : 0) | (cf.isFileClosed() ? 0 : DiskFile.FLAG_NOT_CLOSED));
 				disk.getFileList().add(file);
 			}
 		}
@@ -688,6 +697,9 @@ public abstract class DiskImage implements Serializable {
 		} else if (this instanceof LNX) {
 			imageFormat = LNX_IMAGE_TYPE;
 			geosFormat = false;
+		} else if (this instanceof D88) {
+			imageFormat = D88_IMAGE_TYPE;
+			geosFormat = false;
 		} else {
 			imageFormat = UNKNOWN_IMAGE_TYPE;
 			geosFormat = false;
@@ -695,6 +707,10 @@ public abstract class DiskImage implements Serializable {
 		if (geosFormat) {
 			feedbackMessage.append("GEOS formatted image detected.\n");
 		}
+		return imageFormat;
+	}
+
+	public int getDiskImageType() {
 		return imageFormat;
 	}
 
@@ -717,7 +733,7 @@ public abstract class DiskImage implements Serializable {
 			}
 			return true;
 		} catch (Exception e) {	//NOSONAR
-			feedbackMessage.append("Error: Could not write filedata.\n").append(e.getMessage()).append("\n");
+			feedbackMessage.append("Error: Could not write filedata.\n").append(e.getMessage()).append('\n');
 			return false;
 		}
 	}
@@ -748,8 +764,7 @@ public abstract class DiskImage implements Serializable {
 	 */
 	protected boolean isTrackFree(int trackNumber) {
 		readBAM();
-		int freeSectors = bam.getFreeSectors(trackNumber);
-		return freeSectors > 0 ? true : false;
+		return bam.getFreeSectors(trackNumber) > 0;
 	}
 
 	/**
@@ -761,7 +776,7 @@ public abstract class DiskImage implements Serializable {
 		try {
 			return cbmDisk[ position ] & 0xff;
 		} catch (ArrayIndexOutOfBoundsException e) {	// NOSONAR
-			feedbackMessage.append("Error: reading outside of image at position "+position+"\n");
+			feedbackMessage.append("Error: reading outside of image at position ").append(position).append('\n');
 			return 0;
 		}
 	}
@@ -778,7 +793,7 @@ public abstract class DiskImage implements Serializable {
 		try {
 			return cbmDisk[ pos ] & 0xff;
 		} catch (ArrayIndexOutOfBoundsException e) {	// NOSONAR
-			feedbackMessage.append("Error: reading outside of image at position "+pos+"\n");
+			feedbackMessage.append("Error: reading outside of image at position ").append(pos).append('\n');
 			return 0;
 		}
 	}
@@ -788,9 +803,16 @@ public abstract class DiskImage implements Serializable {
 	 * @param position the position within disk image
 	 * @param value value
 	 */
-	protected void setCbmDiskValue(int  position, int value){
+	protected void setCbmDiskValue(int position, int value){
 		if (cbmDisk != null) {
-			cbmDisk[ position] = (byte) value;
+			cbmDisk[position] = (byte) value;
+		}
+	}
+
+	protected void setCbmDiskValue(int position, int...values) {
+		int i = 0;
+		for (int value : values) {
+			cbmDisk[position + (i++)] = (byte) value;
 		}
 	}
 
@@ -869,6 +891,10 @@ public abstract class DiskImage implements Serializable {
 		this.compressed  = compressed;
 	}
 
+	public boolean isCompressed() {
+		return compressed;
+	}
+
 	public int getImageFormat() {
 		return imageFormat;
 	}
@@ -925,20 +951,23 @@ public abstract class DiskImage implements Serializable {
 	 * @throws CbmException when error
 	 */
 	public byte[] getBlock(int track, int sector) throws CbmException {
+		verifyTrackSector(track, sector);
+		int pos = getSectorOffset(track, sector);
+		return Arrays.copyOfRange(cbmDisk, pos, pos + BLOCK_SIZE);
+	}
+
+	public void verifyTrackSector(int track, int sector) throws CbmException {
 		if (track < 1 || track > getTrackCount()) {
 			throw new CbmException("Track "+track+" is not valid.");
 		} else if (sector < 0 || sector >= getMaxSectors(track)) {
-			throw new CbmException("Sector "+sector+" is not valid.");
-		} else {
-			int pos = getSectorOffset(track, sector);
-			return Arrays.copyOfRange(cbmDisk, pos, pos + BLOCK_SIZE);
+			throw new BadSectorException("Invalid sector: ", track, sector);
 		}
 	}
 
 	/**
 	 * Lookup first file matching criteria.
 	 * @param name the name of the file
-	 * @param fileType the typ eof file to lokk up
+	 * @param fileType the type of file to look up
 	 * @return found file or null if nothing found.
 	 */
 	public CbmFile findFile(String name, int fileType) {
@@ -973,4 +1002,87 @@ public abstract class DiskImage implements Serializable {
 		}
 	}
 
+	/**
+	 * @return true if mounted image support directories (or partitions)
+	 */
+	public boolean supportsDirectories() {
+		return false;
+	}
+
+	/**
+	 * Create a directory (or partition)
+	 * @param dirName name of directory to make
+	 * @param size number of blocks of partition
+	 * @param diskId the disk id
+	 * @return the CbmFile for the new partition
+	 * @throws CbmException if partition could not be created
+	 */
+	public CbmFile makedir(String dirName, int size, String diskId) throws CbmException {
+		throw new CbmException("Image does not support directories/partitions.");
+	}
+
+	public String getSectorTitle(int i) {
+		return Integer.toString(i-1);
+	}
+
+	/**
+	 * Read file entries from a chain of disk blocks
+	 * @param dirTrack track of first directory block
+	 * @param dirSector sector of first directory block
+	 * @param maxNumFiles maximum number of files supported by this image
+	 */
+	protected void readDirectory(final int dirTrack, final int dirSector, final int maxNumFiles) {
+		int track = dirTrack;
+		int sector = dirSector;
+		try {
+			boolean fileLimitReached = false;
+			int dirPosition = 0;
+			int filenumber = 0;
+			do {
+				verifyTrackSector(track, sector);
+				int dataPosition = getSectorOffset(track, sector);
+				for (int i = 0; i < DIR_ENTRIES_PER_SECTOR; i ++) {
+					cbmFile[filenumber] = new CbmFile(cbmDisk, dataPosition + i * DIR_ENTRY_SIZE);
+					if (!cbmFile[filenumber].isFileScratched()) {
+						cbmFile[filenumber].setDirPosition(dirPosition);
+						if (filenumber < maxNumFiles)  {
+							filenumber++;
+						} else {
+							// Too many files in directory check
+							fileLimitReached = true;
+						}
+					}
+					dirPosition++;
+				}
+				track = getCbmDiskValue(dataPosition + 0);
+				sector = getCbmDiskValue(dataPosition + 1);
+			} while (track != 0 && !fileLimitReached);
+			if (fileLimitReached) {
+				feedbackMessage.append("Error: Too many entries in directory (more than ").append(maxNumFiles).append(")!\n");
+			}
+			filesUsedCount = filenumber;
+		} catch (ArrayIndexOutOfBoundsException | CbmException e) { //NOSONAR
+			feedbackMessage.append("Error: Sector ").append(track).append('/').append(sector).append(" is outside of image.\n");
+		}
+	}
+
+	public abstract int getNextSector(int track, int sector);
+
+	public abstract TrackSector getSector(int offset);
+
+	public boolean isPartitionOpen() {
+		return false;
+	}
+
+	public int size() {
+		return cbmDisk != null ? cbmDisk.length : -1;
+	}
+
+	public Integer getCurrentPartition() {
+		return null;
+	}
+
+	public CbmFile setCurrentPartition(Integer partitionTrack) {
+		return null;
+	}
 }

@@ -8,12 +8,13 @@ import java.awt.Insets;
 import java.awt.event.ActionListener;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
+import java.awt.geom.Rectangle2D;
 import java.io.File;
 import java.io.InputStream;
 import java.io.Serializable;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
-import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -32,6 +33,7 @@ import javax.swing.JMenuBar;
 import javax.swing.JMenuItem;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
+import javax.swing.JPopupMenu;
 import javax.swing.JScrollPane;
 import javax.swing.JSplitPane;
 import javax.swing.JTextArea;
@@ -39,6 +41,7 @@ import javax.swing.JToggleButton;
 import javax.swing.SwingUtilities;
 import javax.swing.UIManager;
 import javax.swing.UnsupportedLookAndFeelException;
+import javax.swing.WindowConstants;
 import javax.swing.border.Border;
 import javax.swing.border.EtchedBorder;
 import javax.swing.plaf.ColorUIResource;
@@ -86,32 +89,35 @@ public class MainPanel implements Serializable {
 
 	public static final Insets BUTTON_MARGINS = new Insets(1, 4, 1, 4);
 	/** Left disk panel */
-	private DiskPanel diskPanel1;
+	private final DiskPanel diskPanel1;
 	/** Right disk panel */
-	private DiskPanel diskPanel2;
+	private final DiskPanel diskPanel2;
 	/** True when scanning for disk images is running. */
 	private boolean scannerActive = false;
-	private HashMap<Object, Object> colorHashMap = new HashMap<>();
+	private final transient HashMap<Object, Object> colorHashMap = new HashMap<>();
 	/** The position of the divider in the splitPane. */
-	private int dividerLoc = 0;
+	private int dividerLoc = -1;
 	/** The size of the divider in the splitPane. */
-	private int dividerSize = 0;
+	private int dividerSize = 10;
 	/** Buttons are put into GUI in numerical order, left to right, and then next row. */
 	enum Button {
-		LOAD_DISK_BUTTON,	BAM_BUTTON,			UP_BUTTON,				COPY_FILE_BUTTON,	RENAME_FILE_BUTTON,
-		VIEW_TEXT_BUTTON,	PLUGIN_2_BUTTON,	HIDE_CONSOLE_BUTTON,	UNLOAD_DISK_BUTTON,	VALIDATE_DISK_BUTTON,
-		DOWN_BUTTON,		NEW_FILE_BUTTON,	VIEW_IMAGE_BUTTON,		VIEW_BASIC_BUTTON,	PLUGIN_3_BUTTON,
-		SETTINGS_BUTTON,	NEW_DISK_BUTTON,	RENAME_DISK_BUTTON,		SORT_FILES_BUTTON,	DELETE_FILE_BUTTON,
-		VIEW_HEX_BUTTON,	PLUGIN_1_BUTTON,	PLUGIN_4_BUTTON,		EXIT_BUTTON
+		LOAD_DISK_BUTTON,	BAM_BUTTON,			UP_BUTTON,				COPY_FILE_BUTTON,	MD5_BUTTON ,
+		VIEW_TEXT_BUTTON,	PLUGIN_1_BUTTON,	HIDE_CONSOLE_BUTTON,	UNLOAD_DISK_BUTTON,	VALIDATE_DISK_BUTTON,
+		DOWN_BUTTON,		NEW_FILE_BUTTON,	MKDIR_BUTTON, VIEW_IMAGE_BUTTON,	PLUGIN_2_BUTTON,	SEARCH_BUTTON,
+		NEW_DISK_BUTTON, RENAME_DISK_BUTTON,  SORT_FILES_BUTTON , RENAME_FILE_BUTTON ,	DELETE_FILE_BUTTON,
+		VIEW_HEX_BUTTON,	PLUGIN_3_BUTTON,	 SETTINGS_BUTTON,
+		MIRROR_BUTTON ,	PLUGIN_5_BUTTON,	PLUGIN_6_BUTTON,	PLUGIN_7_BUTTON,
+		PLUGIN_8_BUTTON, VIEW_BASIC_BUTTON , PLUGIN_4_BUTTON,  EXIT_BUTTON
 	}
 	/** Number of columns of buttons. */
 	private static final int NUM_BUTTON_COLUMNS = 8;
 	/** Number of rows of buttons. */
-	private static final int NUM_BUTTON_ROWS = 3;
+	private static final int NUM_BUTTON_ROWS = 4;
 	/** Array with the button ID for each plugin button */
-	private static final Button[] PLUGIN_IDS = { Button.PLUGIN_1_BUTTON, Button.PLUGIN_2_BUTTON, Button.PLUGIN_3_BUTTON, Button.PLUGIN_4_BUTTON };
+	private static final Button[] PLUGIN_IDS = { Button.PLUGIN_1_BUTTON, Button.PLUGIN_2_BUTTON, Button.PLUGIN_3_BUTTON, Button.PLUGIN_4_BUTTON,
+			Button.PLUGIN_5_BUTTON, Button.PLUGIN_6_BUTTON, Button.PLUGIN_7_BUTTON, Button.PLUGIN_8_BUTTON };
 	/** Map containing all buttons */
-	private Map<Button,JComponent> buttonMap = new TreeMap<>();
+	private final Map<Button,JComponent> buttonMap = new TreeMap<>();
 
 	private static final String[] LOOK_AND_FEEL_CLASSES = {
 			"javax.swing.plaf.metal.MetalLookAndFeel",
@@ -134,18 +140,23 @@ public class MainPanel implements Serializable {
 	private JButton sortButton;
 	private JButton copyButton;
 	private JButton newFileButton;
+	private JButton mkdirButton;
 	private JButton delPRGButton;
 	private JButton renamePRGButton;
+
+	private JButton md5Button;
+	private JButton searchButton;
+
 	/** The plugin buttons. Used to be able to change the label from settings. */
-	private JButton[] pluginButtons = new JButton[Settings.MAX_PLUGINS];
+	private final JButton[] pluginButtons = new JButton[Settings.MAX_PLUGINS];
 	private JToggleButton consoleHideButton;
-	private JFrame parent;
+	private final JFrame parent;
 	/** The menu shown when database is used */
-	private JMenu searchMenu;
+	private final JMenu searchMenu = new JMenu(Settings.getMessage(Resources.DROID64_MENU_SEARCH));
 	/** The console */
-	private JTextArea consoleTextArea = null;
+	private final JTextArea consoleTextArea = new JTextArea();
 	/** The split pane used for the console at the bottom and the rest in the upper half. */
-	private JSplitPane splitPane = null;
+	private final JSplitPane splitPane = new JSplitPane(JSplitPane.VERTICAL_SPLIT);
 
 	private static String releaseNotes = null;
 	private static String manual = null;
@@ -156,6 +167,7 @@ public class MainPanel implements Serializable {
 	 */
 	public MainPanel(JFrame parent) {
 		this.parent = parent;
+		FileDialogHelper.setOwner(parent);
 		parent.setTitle(DroiD64.PROGNAME+" v"+DroiD64.VERSION + " - " + DroiD64.TITLE );
 
 		doSettings(parent);
@@ -169,11 +181,10 @@ public class MainPanel implements Serializable {
 		diskPanel1.setActive(true);
 		// Setup GUI
 		setupMenuBar(parent);
-		parent.setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
-		parent.addWindowListener(
-				new WindowAdapter(){
+		parent.setDefaultCloseOperation(WindowConstants.DO_NOTHING_ON_CLOSE);
+		parent.addWindowListener(new WindowAdapter() {
 					@Override
-					public void windowClosing(WindowEvent e){
+					public void windowClosing(WindowEvent e) {
 						exitThisProgram();
 					}
 				});
@@ -182,6 +193,8 @@ public class MainPanel implements Serializable {
 		setMainWindowSize(parent);
 		diskPanel1.loadLocalDirectory(Settings.getDefaultImageDir());
 		diskPanel2.loadLocalDirectory(Settings.getDefaultImageDir2());
+
+		hideConsole(Settings.getHideConsole());
 	}
 
 	/**
@@ -239,7 +252,6 @@ public class MainPanel implements Serializable {
 		JPanel listButtonPanel = new JPanel(new BorderLayout());
 		listButtonPanel.add(dirListPanel, BorderLayout.CENTER);
 		listButtonPanel.add(buttonPanel, BorderLayout.SOUTH);
-		splitPane = new JSplitPane(JSplitPane.VERTICAL_SPLIT);
 		splitPane.setContinuousLayout(true);
 		splitPane.setTopComponent(listButtonPanel);
 		splitPane.setBottomComponent(createConsolePanel());
@@ -297,6 +309,7 @@ public class MainPanel implements Serializable {
 		case BAM_BUTTON:
 		case VALIDATE_DISK_BUTTON:
 		case RENAME_DISK_BUTTON:
+		case MIRROR_BUTTON:
 			button.setBackground(adjustedColor(button.getBackground(), -20, -20, 20));
 			break;
 		case UP_BUTTON:
@@ -308,6 +321,8 @@ public class MainPanel implements Serializable {
 		case NEW_FILE_BUTTON:
 		case DELETE_FILE_BUTTON:
 		case RENAME_FILE_BUTTON:
+		case MKDIR_BUTTON:
+		case MD5_BUTTON:
 			button.setBackground(adjustedColor(button.getBackground(), 20, -20, 20));
 			break;
 		case VIEW_IMAGE_BUTTON:
@@ -320,11 +335,16 @@ public class MainPanel implements Serializable {
 		case PLUGIN_2_BUTTON:
 		case PLUGIN_3_BUTTON:
 		case PLUGIN_4_BUTTON:
+		case PLUGIN_5_BUTTON:
+		case PLUGIN_6_BUTTON:
+		case PLUGIN_7_BUTTON:
+		case PLUGIN_8_BUTTON:
 			button.setBackground(adjustedColor(button.getBackground(), -20, 20, 20));
 			break;
 		case HIDE_CONSOLE_BUTTON:
 		case SETTINGS_BUTTON:
 		case EXIT_BUTTON:
+		case SEARCH_BUTTON:
 			button.setBackground(adjustedColor(button.getBackground(), 30, -20, -20));
 			break;
 		default:
@@ -351,24 +371,15 @@ public class MainPanel implements Serializable {
 		DiskPanel inactivePanel = getInactiveDiskPanel();
 		showBamButton.setEnabled(activePanel != null && activePanel.isImageLoaded());
 		unloadDiskButton.setText(activePanel != null && activePanel.isImageLoaded() ? "Unload" : "Parent");
+		enableButtons(activePanel!= null && activePanel.supportsDirectories(), mkdirButton);
 		if (activePanel != null && activePanel.isWritableImageLoaded()) {
-			if (activePanel.isZipFileLoaded()) {
-				enableButtons(false, validateDiskButton, renameDiskButton, upButton, downButton, sortButton);
-			} else {
-				enableButtons(true, validateDiskButton, renameDiskButton, upButton, downButton, sortButton);
-			}
-			if (inactivePanel != null && (inactivePanel.isWritableImageLoaded() || (!inactivePanel.isImageLoaded() && !inactivePanel.isZipFileLoaded()))) {
-				enableButtons(true, copyButton, newFileButton, delPRGButton, renamePRGButton);
-			} else {
-				enableButtons(false, copyButton, newFileButton, delPRGButton, renamePRGButton);
-			}
+			enableButtons(!activePanel.isZipFileLoaded(), validateDiskButton, renameDiskButton, upButton, downButton, sortButton);
+			boolean enabled = inactivePanel != null && (inactivePanel.isWritableImageLoaded() || (!inactivePanel.isImageLoaded() && !inactivePanel.isZipFileLoaded()));
+			enableButtons(enabled, copyButton, newFileButton, delPRGButton, renamePRGButton);
 		} else {
-			enableButtons(false, validateDiskButton, renameDiskButton, upButton, downButton, sortButton);
-			if (inactivePanel != null && (inactivePanel.isWritableImageLoaded() || (!inactivePanel.isImageLoaded() && !inactivePanel.isZipFileLoaded()))) {
-				enableButtons(true, copyButton, newFileButton, delPRGButton, renamePRGButton);
-			} else {
-				enableButtons(false, copyButton, newFileButton, delPRGButton, renamePRGButton);
-			}
+			enableButtons(false, newFileButton, validateDiskButton, renameDiskButton, upButton, downButton, sortButton);
+			boolean enabled = inactivePanel != null && (inactivePanel.isWritableImageLoaded() || (!inactivePanel.isImageLoaded() && !inactivePanel.isZipFileLoaded()));
+			enableButtons(enabled, copyButton, delPRGButton, renamePRGButton);
 		}
 	}
 
@@ -390,20 +401,23 @@ public class MainPanel implements Serializable {
 			String tooltip = externalPrograms[i] != null ? externalPrograms[i].getDescription() : null;
 			pluginButtons[i] = createButton(label != null ? label : Utility.EMPTY, Integer.toString(i+1).charAt(0), PLUGIN_IDS[i], tooltip, pluginButtonListener);
 		}
-		consoleHideButton = createToggleButton(Resources.DROID64_BUTTON_HIDECONSOLE, 'e', Button.HIDE_CONSOLE_BUTTON, ae-> {
-			boolean show = !consoleHideButton.isSelected();
-			splitPane.getBottomComponent().setVisible(show);
-			if (show) {
-				splitPane.setDividerLocation(dividerLoc);
-				splitPane.setDividerSize(dividerSize);
-			} else {
-				dividerLoc = splitPane.getDividerLocation();
-				dividerSize = splitPane.getDividerSize();
-				splitPane.setDividerSize(0);
-			}
-		});
+		consoleHideButton = createToggleButton(Resources.DROID64_BUTTON_HIDECONSOLE, 'e', Button.HIDE_CONSOLE_BUTTON,
+				ae-> hideConsole(consoleHideButton.isSelected()));
+		consoleHideButton.setSelected(Settings.getHideConsole());
 		createButton(Resources.DROID64_BUTTON_SETTINGS, 'S', Button.SETTINGS_BUTTON, ae -> showSettings(parent));
 		createButton(Resources.DROID64_BUTTON_EXIT, 'x', Button.EXIT_BUTTON, ae -> exitThisProgram());
+	}
+
+	private void hideConsole(boolean hide) {
+		splitPane.getBottomComponent().setVisible(!hide);
+		if (!hide) {
+			splitPane.setDividerLocation(dividerLoc);
+			splitPane.setDividerSize(dividerSize);
+		} else {
+			dividerLoc = splitPane.getDividerLocation();
+			dividerSize = splitPane.getDividerSize();
+			splitPane.setDividerSize(0);
+		}
 	}
 
 	private void createDiskOperationButtons(final JFrame parent) {
@@ -445,6 +459,12 @@ public class MainPanel implements Serializable {
 			} else {
 				showErrorMessage(parent, LBL_NODISK);
 				return;
+			}
+		});
+		createButton(Resources.DROID64_BUTTON_MIRROR, 'v', Button.MIRROR_BUTTON, ae -> {
+			DiskPanel diskPanel = getActiveDiskPanel();
+			if (diskPanel != null) {
+				diskPanel.openOtherPanel();
 			}
 		});
 	}
@@ -539,29 +559,52 @@ public class MainPanel implements Serializable {
 				}
 			}
 		});
+		mkdirButton = createButton(Resources.DROID64_BUTTON_MKDIR, 'k', Button.MKDIR_BUTTON, event -> {
+			if (mkdirButton.getActionCommand().equals(event.getActionCommand())) {
+				DiskPanel diskPanel = getActiveDiskPanel();
+				if (diskPanel != null ) {
+					diskPanel.mkdir();
+				}
+			}
+		});
+		md5Button = createButton(Resources.DROID64_BUTTON_MD5, '5', Button.MD5_BUTTON, event -> {
+			if (md5Button.getActionCommand().equals(event.getActionCommand()) && getActiveDiskPanel() != null ) {
+				getActiveDiskPanel().calcMd5Checksum();
+			}
+		});
+		searchButton = createButton(Resources.DROID64_BUTTON_SEARCH, 's', Button.SEARCH_BUTTON, event -> {
+			if (searchButton.getActionCommand().equals(event.getActionCommand())) {
+				new SearchPanel(DroiD64.PROGNAME + " - Search", this).showDialog();
+			}
+		});
 	}
 
 	private JPanel createConsolePanel() {
 		JPanel consolePanel = new JPanel(new BorderLayout());
 		Border border = BorderFactory.createEtchedBorder(EtchedBorder.LOWERED);
 		consolePanel.setBorder(BorderFactory.createTitledBorder(border, Settings.getMessage(Resources.DROID64_CONSOLE)));
-		consoleTextArea = new JTextArea();
+
+		JPopupMenu popMenu = new JPopupMenu();
+		GuiHelper.addMenuItem(popMenu, Resources.DROID64_MENU_PROGRAM_CLEARCONSOLE, 'c', event -> consoleTextArea.setText(Utility.EMPTY));
+		GuiHelper.addMenuItem(popMenu, Resources.DROID64_MENU_PROGRAM_SAVECONSOLE, 'a', event -> saveConsole());
+
 		consoleTextArea.setEditable(false);
 		consoleTextArea.setFont(new Font(Font.MONOSPACED, Font.PLAIN, consoleTextArea.getFont().getSize()));
+		consoleTextArea.setComponentPopupMenu(popMenu);
 		consolePanel.add(new JScrollPane(consoleTextArea), BorderLayout.CENTER);
 		return consolePanel;
 	}
 
 	public void appendConsole(String message) {
-		if (consoleTextArea != null) {
-			if (!Utility.EMPTY.equals(message)) {
-				consoleTextArea.setText(consoleTextArea.getText()+"\n"+message);
-				DefaultCaret caret = (DefaultCaret) consoleTextArea.getCaret();
-				caret.setUpdatePolicy(DefaultCaret.OUT_BOTTOM);
-			}
-		} else {
-			System.out.println(message);	//NOSONAR
+		if (!Utility.EMPTY.equals(message)) {
+			consoleTextArea.setText(consoleTextArea.getText()+'\n'+message);
+			DefaultCaret caret = (DefaultCaret) consoleTextArea.getCaret();
+			caret.setUpdatePolicy(Rectangle2D.OUT_BOTTOM);
 		}
+	}
+
+	public void formatConsole(String message, Object...args) {
+		appendConsole(String.format(message, args));
 	}
 
 	private void showErrorMessage(JFrame parent, String error){
@@ -571,8 +614,7 @@ public class MainPanel implements Serializable {
 					Settings.getMessage(Resources.DROID64_INFO_NOIMAGELOADED),
 					DroiD64.PROGNAME + " - No disk",
 					JOptionPane.ERROR_MESSAGE);
-		}
-		if (LBL_INSERTERROR.equals(error)) {
+		} else if (LBL_INSERTERROR.equals(error)) {
 			appendConsole("\nInserting error. Aborting.\n");
 			JOptionPane.showMessageDialog(parent,
 					"An error occurred while inserting file into disk.\n"+
@@ -587,8 +629,6 @@ public class MainPanel implements Serializable {
 	 * @return JMenu
 	 */
 	private JMenu createHelpMenu(JFrame parent) {
-		final JFrame mainFrame = parent;
-		final MainPanel mainPanel = this;
 		JMenu menu = new JMenu(Settings.getMessage(Resources.DROID64_MENU_HELP));
 		menu.setMnemonic('h');
 		ActionListener listener = event -> {
@@ -596,15 +636,20 @@ public class MainPanel implements Serializable {
 			if (Resources.DROID64_MENU_HELP_ABOUT.equals(cmd)) {
 				showHelp();
 			} else if (Resources.DROID64_MENU_HELP_TODO.equals(cmd)) {
-				new BugsFrame(DroiD64.PROGNAME+ " - Bugs and ToDo");
+				new BugsPanel().showDialog(parent);
 			} else if (Resources.DROID64_MENU_HELP_RELEASENOTES.equals(cmd)) {
-				new TextViewDialog(mainFrame, DroiD64.PROGNAME, Settings.getMessage(Resources.DROID64_MENU_HELP_RELEASENOTES), getReleaseNotes(), true, Utility.MIMETYPE_HTML, mainPanel);
+				new TextViewPanel(this).show(getReleaseNotes(), DroiD64.PROGNAME, Settings.getMessage(Resources.DROID64_MENU_HELP_RELEASENOTES), Utility.MIMETYPE_HTML);
 			} else if (Resources.DROID64_MENU_HELP_MANUAL.equals(cmd)) {
-				new TextViewDialog(mainFrame, DroiD64.PROGNAME, Settings.getMessage(Resources.DROID64_MENU_HELP_MANUAL), getManual(), true, Utility.MIMETYPE_HTML, mainPanel);
+				new TextViewPanel(this).show(getManual(), DroiD64.PROGNAME, Settings.getMessage(Resources.DROID64_MENU_HELP_MANUAL), Utility.MIMETYPE_HTML);
 			} else if (Resources.DROID64_MENU_HELP_CONTACT.equals(cmd)) {
 				JTextArea info = new JTextArea(Settings.getMessage(Resources.DROID64_MENU_HELP_CONTACT_MSG));
 				info.setEditable(false);
-				JOptionPane.showMessageDialog(null, info, Settings.getMessage(Resources.DROID64_MENU_HELP_CONTACT), JOptionPane.INFORMATION_MESSAGE);
+				info.setLineWrap(true);
+				JPanel iPanel = new JPanel(new BorderLayout());
+				iPanel.add(new JScrollPane(info), BorderLayout.CENTER);
+				iPanel.addHierarchyListener(e -> GuiHelper.hierarchyListenerResizer(SwingUtilities.getWindowAncestor(iPanel)));
+				GuiHelper.setSize(info, 3, 4);
+				JOptionPane.showMessageDialog(parent, iPanel, Settings.getMessage(Resources.DROID64_MENU_HELP_CONTACT), JOptionPane.INFORMATION_MESSAGE);
 			}
 		};
 		menu.add(GuiHelper.addMenuItem(menu, Resources.DROID64_MENU_HELP_ABOUT, 'a', listener));
@@ -651,7 +696,6 @@ public class MainPanel implements Serializable {
 	 */
 	private JMenu createSearchMenu(final JFrame parent) {
 		final MainPanel mainPanel = this;
-		searchMenu = new JMenu(Settings.getMessage(Resources.DROID64_MENU_SEARCH));
 		searchMenu.setMnemonic('S');
 
 		final JMenuItem searchMenuItem = new JMenuItem("Search...", 's');
@@ -660,7 +704,7 @@ public class MainPanel implements Serializable {
 		searchMenu.add (scanMenuItem);
 		final JMenuItem syncMenuItem = new JMenuItem("Sync database and files", 'y');
 		searchMenu.add (syncMenuItem);
-		searchMenuItem.addActionListener(ae -> new SearchDialog(DroiD64.PROGNAME+" - Search", mainPanel));
+		searchMenuItem.addActionListener(ae -> new SearchPanel(DroiD64.PROGNAME+" - Search", mainPanel).showDialog());
 		scanMenuItem.addActionListener(ae -> showScanForImages(parent));
 		syncMenuItem.addActionListener(ae -> syncDatabase());
 		searchMenu.setEnabled(Settings.getUseDb());
@@ -674,7 +718,7 @@ public class MainPanel implements Serializable {
 	 */
 	private void exitThisProgram() {
 		if (!Settings.getAskQuit() || JOptionPane.showConfirmDialog(
-				null, "Really quit?", "Leaving this program...",
+				parent, "Really quit?", "Leaving this program...",
 				JOptionPane.OK_CANCEL_OPTION) == JOptionPane.OK_OPTION) {
 			parent.dispose();
 			System.exit(0);	//NOSONAR
@@ -686,7 +730,7 @@ public class MainPanel implements Serializable {
 	 */
 	private void showSettings(JFrame parent) {
 		doSettings(parent);
-		new SettingsDialog(DroiD64.PROGNAME+" - Settings", this);
+		new SettingsPanel(DroiD64.PROGNAME+" - Settings", this).showDialog();
 		doSettings(parent);
 	}
 
@@ -695,7 +739,7 @@ public class MainPanel implements Serializable {
 	 */
 	private synchronized void showScanForImages(JFrame parent) {
 		if (scannerActive) {
-			appendConsole("Disk scanner is already active.");
+			GuiHelper.showErrorMessage(parent, "Scan failed", "Disk scanner is already active.");
 		} else {
 			JFileChooser chooser = new JFileChooser(Settings.getDefaultImageDir());
 			chooser.setToolTipText("Select directory to start scanning for disk images in.");
@@ -711,7 +755,7 @@ public class MainPanel implements Serializable {
 					public void run() {
 						try {
 							int numDisks = scanForD64Files(path);
-							appendConsole("Done scanning. Found "+numDisks + " disk images in " + path);
+							GuiHelper.showInfoMessage(parent, "Scan completed", "Done scanning.%nFound %d disk images in %s.",numDisks, path );
 						} finally {
 							scannerActive = false;
 						}
@@ -737,8 +781,7 @@ public class MainPanel implements Serializable {
 					// saved for a different host.
 					continue;
 				}
-				String fn = disk.getFilePath() + File.separator + disk.getFileName();
-				File f = new File(fn);
+				File f = new File(disk.getFilePath() + File.separator + disk.getFileName());
 				if (!f.exists() || !f.isFile()) {
 					deletedFileCount++;
 					disk.setDelete();
@@ -746,9 +789,9 @@ public class MainPanel implements Serializable {
 					appendConsole("Removing info for "+f.getPath());
 				}
 			}
-			appendConsole("Sync done. Removed "+deletedFileCount+" disk from database.");
+			GuiHelper.showInfoMessage(parent, "Sync completed", "Sync done.%nRemoved %d disk(s) from database.",deletedFileCount );
 		} catch (DatabaseException e) {	//NOSONAR
-			appendConsole("Sync failed: "+e.getMessage());
+			GuiHelper.showException(parent, "Sync failed", e, "Sync failed.");
 		}
 	}
 
@@ -757,10 +800,8 @@ public class MainPanel implements Serializable {
 	 */
 	private void doSettings(JFrame parent ) {
 		setLookAndFeel(parent, Settings.getLookAndFeel());
-		if (searchMenu != null) {
-			searchMenu.setEnabled(Settings.getUseDb());
-			searchMenu.setVisible(Settings.getUseDb());
-		}
+		searchMenu.setEnabled(Settings.getUseDb());
+		searchMenu.setVisible(Settings.getUseDb());
 		setDefaultFonts();
 		if (Settings.getUseDb()) {
 			try {
@@ -782,12 +823,12 @@ public class MainPanel implements Serializable {
 	}
 
 	private void showHelp() {
-		new ShowHelpFrame(DroiD64.PROGNAME+" - About");
+		new ShowHelpPanel().showDialog(parent);
 	}
 
 	public static String[] getLookAndFeelNames() {
 		String[] looks = new String[LOOK_AND_FEEL_CLASSES.length];
-		for (int i=0; i < looks.length; i++) {
+		for (int i=0; i < LOOK_AND_FEEL_CLASSES.length; i++) {
 			String[] x = LOOK_AND_FEEL_CLASSES[i].split("[.]");
 			looks[i] = x[x.length - 1];
 		}
@@ -811,35 +852,35 @@ public class MainPanel implements Serializable {
 			appendConsole("Icon image failed: "+e);
 		}
 		for (Map.Entry<?,?> entry : colorHashMap.entrySet()) {
+			if (!(entry.getValue() instanceof javax.swing.plaf.ColorUIResource)) {
+				continue;
+			}
 			Object key = entry.getKey();
-			Object value = entry.getValue();
-			if (value instanceof javax.swing.plaf.ColorUIResource) {
-				ColorUIResource cr = (ColorUIResource) value;
-				switch (Settings.getColourChoice()) {
-				case 0:	// gray (normal, no change to default values)
-					UIManager.put(key, value);
-					break;
-				case 1:		// red
-					putColor(key, cr.getRed()+COLOUR_POWER_1, cr.getGreen()-COLOUR_POWER_1, cr.getBlue()-COLOUR_POWER_1);
-					break;
-				case 2:		// green
-					putColor(key, cr.getRed()-COLOUR_POWER_1, cr.getGreen()+COLOUR_POWER_1, cr.getBlue()-COLOUR_POWER_1);
-					break;
-				case 3:		// blue
-					putColor(key, cr.getRed()-COLOUR_POWER_1, cr.getGreen()-COLOUR_POWER_1, cr.getBlue()+COLOUR_POWER_1);
-					break;
-				case 4:		// gray-light
-					putColor(key, cr.getRed()+COLOUR_POWER_2, cr.getGreen()+COLOUR_POWER_2, cr.getBlue()+COLOUR_POWER_2 + 10);
-					break;
-				case 5:		// gray-light
-					putColor(key, cr.getRed()-COLOUR_POWER_2, cr.getGreen()-COLOUR_POWER_2, cr.getBlue()-COLOUR_POWER_2 + 10);
-					break;
-				case 6:		// cyan
-					putColor(key, cr.getRed()-COLOUR_POWER_1, cr.getGreen()+COLOUR_POWER_2, cr.getBlue()+COLOUR_POWER_2 + 10);
-					break;
-				default:	// Unknown
-					break;
-				}
+			ColorUIResource cr = (ColorUIResource) entry.getValue();
+			switch (Settings.getColourChoice()) {
+			case 0:	// gray (normal, no change to default values)
+				UIManager.put(key, cr);
+				break;
+			case 1:		// red
+				putColor(key, cr.getRed()+COLOUR_POWER_1, cr.getGreen()-COLOUR_POWER_1, cr.getBlue()-COLOUR_POWER_1);
+				break;
+			case 2:		// green
+				putColor(key, cr.getRed()-COLOUR_POWER_1, cr.getGreen()+COLOUR_POWER_1, cr.getBlue()-COLOUR_POWER_1);
+				break;
+			case 3:		// blue
+				putColor(key, cr.getRed()-COLOUR_POWER_1, cr.getGreen()-COLOUR_POWER_1, cr.getBlue()+COLOUR_POWER_1);
+				break;
+			case 4:		// gray-light
+				putColor(key, cr.getRed()+COLOUR_POWER_2, cr.getGreen()+COLOUR_POWER_2, cr.getBlue()+COLOUR_POWER_2 + 10);
+				break;
+			case 5:		// gray-light
+				putColor(key, cr.getRed()-COLOUR_POWER_2, cr.getGreen()-COLOUR_POWER_2, cr.getBlue()-COLOUR_POWER_2 + 10);
+				break;
+			case 6:		// cyan
+				putColor(key, cr.getRed()-COLOUR_POWER_1, cr.getGreen()+COLOUR_POWER_2, cr.getBlue()+COLOUR_POWER_2 + 10);
+				break;
+			default:	// Unknown
+				break;
 			}
 		}
 		setDefaultFonts();
@@ -854,12 +895,9 @@ public class MainPanel implements Serializable {
 
 	private void saveDefaultValues(){
 		colorHashMap.clear();
-		Enumeration<Object> keys = UIManager.getDefaults().keys();
-		while (keys.hasMoreElements()) {
-			Object key = keys.nextElement();
-			Object value = UIManager.get (key);
-			if (value instanceof javax.swing.plaf.ColorUIResource) {
-				colorHashMap.put(key, value);
+		for (Entry<Object, Object> entry : UIManager.getDefaults().entrySet()) {
+			if (entry.getValue() instanceof javax.swing.plaf.ColorUIResource) {
+				colorHashMap.put(entry.getKey(), entry.getValue());
 			}
 		}
 	}
@@ -894,30 +932,18 @@ public class MainPanel implements Serializable {
 	 */
 	protected int scanForD64Files(String dirName) {
 		appendConsole("Scanning "+dirName);
-		File dir = new File(dirName);
-		File[] files = dir.listFiles();
+		File[] files = new File(dirName).listFiles();
 		Arrays.sort(files);
 		int diskCount = 0;
-		for (int i=0; i<files.length; i++) {
-			if (files[i].isDirectory()) {
-				diskCount += scanForD64Files(files[i].getAbsolutePath());
-			} else if (files[i].isFile()) {
-				String name = files[i].getName();
-				boolean found = false;
-				Map<Integer,List<String>> map = Settings.getFileExtensionMap();
-				for (Entry<Integer,List<String>> entry : map.entrySet()) {
-					for (String ext : entry.getValue()) {
-						if (name.toLowerCase().endsWith(ext.toLowerCase())) {
-							found = true;
-							String fileName = dirName + File.separator + name;
-							saveDiskToDatabase(fileName, dirName, name);
-							diskCount++;
-							break;
-						}
-					}
-					if (found) {
-						break;
-					}
+		for (File file : files) {
+			if (file.isDirectory()) {
+				diskCount += scanForD64Files(file.getAbsolutePath());
+			} else if (file.isFile()) {
+				String name = file.getName();
+				if (DiskImage.getImageType(name) != DiskImage.UNKNOWN_IMAGE_TYPE) {
+					String fileName = dirName + File.separator + name;
+					saveDiskToDatabase(fileName, dirName, name);
+					diskCount++;
 				}
 			}
 		}
@@ -926,6 +952,7 @@ public class MainPanel implements Serializable {
 
 	private void saveDiskToDatabase(String fileName, String dirName, String name) {
 		try {
+			appendConsole("saveDiskToDatabase");
 			DiskImage diskImage =  DiskImage.getDiskImage(fileName);
 			diskImage.readBAM();
 			diskImage.readDirectory();
@@ -961,7 +988,7 @@ public class MainPanel implements Serializable {
 	}
 
 	private static String getResource(String resourceFile) {
-		try (InputStream in = Settings.class.getResourceAsStream(resourceFile); Scanner scanner = new Scanner(in, "utf-8")) {
+		try (InputStream in = Settings.class.getResourceAsStream(resourceFile); Scanner scanner = new Scanner(in, StandardCharsets.UTF_8.name())) {
 			return scanner.useDelimiter("\\Z").next();
 		} catch (Exception e) {	//NOSONAR
 			return "Failed to read " + resourceFile + " resource: \n"+e.getMessage();

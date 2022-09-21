@@ -1,9 +1,8 @@
 package droid64.gui;
 
+import java.awt.Component;
 import java.io.File;
 import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
 
 import javax.swing.JFileChooser;
 import javax.swing.JFrame;
@@ -16,9 +15,17 @@ public class FileDialogHelper {
 	private static JFileChooser textFileChooser = null;
 	private static JFileChooser imageFileChooser = null;
 	private static JFileChooser fontFileChooser = null;
+	private static Component owner = new JFrame();
 
 	private FileDialogHelper() {
 		super();
+	}
+
+	/**
+	 * @param newOwner the owning GUI component
+	 */
+	public static void setOwner(Component newOwner) {
+		owner = newOwner;
 	}
 
 	/**
@@ -43,12 +50,12 @@ public class FileDialogHelper {
 		textFileChooser.setSelectedFile(getDefaultFile(defaultName, extFilter));
 		if (saveMode) {
 			textFileChooser.setDialogTitle(title != null ? title : "Save text file ");
-			if (textFileChooser.showSaveDialog(new JFrame()) == JFileChooser.APPROVE_OPTION) {
+			if (textFileChooser.showSaveDialog(owner) == JFileChooser.APPROVE_OPTION) {
 				return textFileChooser.getSelectedFile()+Utility.EMPTY;
 			}
 		} else {
 			textFileChooser.setDialogTitle(title != null ? title : "Open text file");
-			if (textFileChooser.showOpenDialog(new JFrame()) == JFileChooser.APPROVE_OPTION) {
+			if (textFileChooser.showOpenDialog(owner) == JFileChooser.APPROVE_OPTION) {
 				return textFileChooser.getSelectedFile()+Utility.EMPTY;
 			}
 		}
@@ -67,7 +74,7 @@ public class FileDialogHelper {
 		}
 		fontFileChooser.setSelectedFile(getDefaultFile(defaultName, extFilter));
 		fontFileChooser.setDialogTitle(title != null ? title : "Open font file");
-		if (fontFileChooser.showOpenDialog(new JFrame()) == JFileChooser.APPROVE_OPTION) {
+		if (fontFileChooser.showOpenDialog(owner) == JFileChooser.APPROVE_OPTION) {
 			return fontFileChooser.getSelectedFile()+Utility.EMPTY;
 		}
 		return null;
@@ -109,13 +116,13 @@ public class FileDialogHelper {
 		if (saveMode) {
 			imageFileChooser.setDialogTitle("Save disk image");
 			imageFileChooser.setDialogType(JFileChooser.FILES_ONLY | JFileChooser.SAVE_DIALOG);
-			if (imageFileChooser.showSaveDialog(new JFrame()) == JFileChooser.APPROVE_OPTION) {
+			if (imageFileChooser.showSaveDialog(owner) == JFileChooser.APPROVE_OPTION) {
 				return imageFileChooser.getSelectedFile()+Utility.EMPTY;
 			}
 		} else {
 			imageFileChooser.setDialogTitle("Load disk image");
 			imageFileChooser.setDialogType(JFileChooser.FILES_ONLY | JFileChooser.OPEN_DIALOG);
-			if (imageFileChooser.showOpenDialog(new JFrame()) == JFileChooser.APPROVE_OPTION) {
+			if (imageFileChooser.showOpenDialog(owner) == JFileChooser.APPROVE_OPTION) {
 				return imageFileChooser.getSelectedFile()+Utility.EMPTY;
 			}
 		}
@@ -150,15 +157,7 @@ public class FileDialogHelper {
 				if (f.isDirectory()) {
 					return true;
 				} else {
-					Map<Integer,List<String>> map = Settings.getFileExtensionMap();
-					for (Entry<Integer,List<String>> entry : map.entrySet()) {
-						for (String ext : entry.getValue()) {
-							if (f.getName().toLowerCase().endsWith(ext.toLowerCase())) {
-								return true;
-							}
-						}
-					}
-					return false;
+					return Settings.getFileExtensionMap().values().stream().flatMap(List<String>::stream).anyMatch(ext -> f.getName().toLowerCase().endsWith(ext.toLowerCase()));
 				}
 			}
 			@Override

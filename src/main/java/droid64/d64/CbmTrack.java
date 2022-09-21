@@ -85,7 +85,7 @@ public class CbmTrack {
 		builder.append(" sectors=").append(sectors);
 		builder.append(" sectorsIn=").append(sectorsIn);
 		builder.append(" offset=").append(offset);
-		builder.append("]");
+		builder.append(']');
 		return builder.toString();
 	}
 }

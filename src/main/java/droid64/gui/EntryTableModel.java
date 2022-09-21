@@ -56,7 +56,7 @@ class EntryTableModel extends AbstractTableModel {
 	private static final int[] COLWIDTH_CPM = {1, 1, 220, 1, 1, 1, 1};
 	private static final int[] COLWIDTH_LOCAL = {1, 220, 1, 1};
 
-	private List<DirEntry> data = new ArrayList<>();
+	private final List<DirEntry> data = new ArrayList<>();
 
 	@Override
 	public String getColumnName(int column) {
@@ -84,13 +84,11 @@ class EntryTableModel extends AbstractTableModel {
 	}
 
 	public synchronized boolean isFile(int row) {
-		DirEntry p = data.get(row);
-		return p.isFile();
+		return data.get(row).isFile();
 	}
 
 	public synchronized boolean isImageFile(int row) {
-		DirEntry p = data.get(row);
-		return p.isImageFile();
+		return data.get(row).isImageFile();
 	}
 
 	@Override
@@ -153,7 +151,7 @@ class EntryTableModel extends AbstractTableModel {
 	}
 
 	public synchronized DirEntry getDirEntry(int index) {
-		if (data != null && index < data.size() ) {
+		if (index < data.size() ) {
 			return data.get(index);
 		} else {
 			return null;

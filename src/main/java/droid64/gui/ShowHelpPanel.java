@@ -1,16 +1,19 @@
 package droid64.gui;
 import java.awt.BorderLayout;
 import java.awt.Color;
+import java.awt.Component;
 import java.text.MessageFormat;
 
 import javax.swing.ImageIcon;
-import javax.swing.JButton;
-import javax.swing.JFrame;
 import javax.swing.JLabel;
+import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTextPane;
+import javax.swing.SwingConstants;
+import javax.swing.SwingUtilities;
 
+import droid64.DroiD64;
 import droid64.d64.Utility;
 
 /**<pre style='font-family:Sans,Arial,Helvetica'>
@@ -38,29 +41,22 @@ import droid64.d64.Utility;
  *</pre>
  * @author wolf
  */
-public class ShowHelpFrame extends JFrame {
+public class ShowHelpPanel extends JPanel {
 
 	private static final long serialVersionUID = 1L;
 	private static String about = null;
 
-	public ShowHelpFrame (String topText) {
-		this(topText, true);
-	}
-
 	/**
 	 * Constructor
-	 * @param topText title
-	 * @param visible if dialog should be visible
 	 */
-	protected ShowHelpFrame (String topText, boolean visible) {
-		setTitle(topText);
+	protected ShowHelpPanel () {
 
 		setLayout(new BorderLayout());
 
 		JPanel imagePanel = new JPanel();
 		ImageIcon imageIcon = new ImageIcon(getClass().getResource("resources/wolf.jpg"));
 		imageIcon.setDescription("Me having some breakfast.");
-		imagePanel.add(new JLabel(imageIcon, JLabel.CENTER), BorderLayout.CENTER);
+		imagePanel.add(new JLabel(imageIcon, SwingConstants.CENTER), BorderLayout.CENTER);
 		imagePanel.setToolTipText("Me having some breakfast.");
 
 		JTextPane messageTextArea = new JTextPane();
@@ -70,24 +66,18 @@ public class ShowHelpFrame extends JFrame {
 		messageTextArea.setText(getAbout());
 		messageTextArea.setCaretPosition(0);
 
-		final JButton okButton = new JButton("OK");
-		okButton.setMnemonic('o');
-		okButton.addActionListener(ae -> dispose());
-		JPanel buttonPanel = new JPanel();
-		buttonPanel.add(okButton);
-
 		add(imagePanel, BorderLayout.NORTH);
 		add(new JScrollPane(messageTextArea), BorderLayout.CENTER);
-		add(buttonPanel, BorderLayout.SOUTH);
 
-		GuiHelper.setLocation(this, 3, 3);
-		pack();
-		GuiHelper.setSize(this, 4, 2);
-		setVisible(visible);
-		setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+		GuiHelper.setPreferredSize(this, 3, 2);
+		addHierarchyListener(e -> GuiHelper.hierarchyListenerResizer(SwingUtilities.getWindowAncestor(this)));
 	}
 
-	private static String getAbout() {
+	public void showDialog(Component parent) {
+		JOptionPane.showMessageDialog(parent, this, DroiD64.PROGNAME + " - About", JOptionPane.PLAIN_MESSAGE);
+	}
+
+	protected static String getAbout() {
 		if (about == null) {
 			String str = Utility.getResource("resources/about.html");
 			Object[] args = {
@@ -101,5 +91,4 @@ public class ShowHelpFrame extends JFrame {
 		}
 		return about;
 	}
-
 }

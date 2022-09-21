@@ -53,16 +53,16 @@ public class PrintPageable implements Pageable {
 	private static final Font MONO_FONT = new Font(Font.MONOSPACED, Font.PLAIN, 8);
 	private Font cbmFont = null;
 
-	private PageFormat documentPageFormat = new PageFormat();
+	private final PageFormat documentPageFormat = new PageFormat();
 	private String[] lines = null;
-	private String title = null;
+	private final String title;
 	private byte[] data = null;
 	private BufferedImage image = null;
-	private Mode mode;
+	private final Mode mode;
 
 	private boolean useCbmFont = false;
 	private boolean useMonoFont = false;
-	private MainPanel mainPanel;
+	private final MainPanel mainPanel;
 
 	/**
 	 * Constructor for text pageable

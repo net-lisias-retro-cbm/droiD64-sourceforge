@@ -31,8 +31,8 @@ public class CbmBam implements Serializable {
 
 	private static final long serialVersionUID = 1L;
 	private int diskDosType;
-	private int[] freeSectors = null;
-	private int[][] trackBits = null;
+	private final int[] freeSectors;
+	private final int[][] trackBits;
 	private String diskName;	//string[16]
 	private String diskId;	//string[5]
 
@@ -40,18 +40,12 @@ public class CbmBam implements Serializable {
 	public static final String FREE = "-";
 	public static final String INVALID = Utility.SPACE;
 	public static final String RESERVED = "X";
+	public static final String FREE_PART = "=";
+	public static final String USED_PART = "#";
 
 	public CbmBam(int numTracks, int numTrackBytes) {
 		freeSectors = new int[numTracks];
 		trackBits =  new int[numTracks][numTrackBytes - 1];
-	}
-
-	public CbmBam(int diskDosType, int[] freeSectors, int[][] trackBits, String diskName, String diskId) {
-		this.diskDosType = diskDosType;
-		this.freeSectors = freeSectors;
-		this.trackBits = trackBits;
-		this.diskName = diskName;
-		this.diskId = diskId;
 	}
 
 	/**
@@ -130,6 +124,25 @@ public class CbmBam implements Serializable {
 		trackBits[track-1][byteNum-1] = value;
 	}
 
+	/**
+	 * @return hexdump of all BAM entries and the free sectors
+	 */
+	public String dump() {
+		StringBuilder b = new StringBuilder();
+		if (trackBits != null && trackBits.length > 0) {
+			for (int t = 0; t < trackBits.length; t++) {
+				b.append('[').append(t).append("]\t");
+				for (int s = 0; s < trackBits[t].length; s++) {
+					b.append(Utility.getByteString(trackBits[t][s])).append(' ');
+				}
+				b.append('\t').append(freeSectors[t]).append('\n');
+			}
+		} else {
+			b.append("null");
+		}
+		return b.toString();
+	}
+
 	@Override
 	public String toString() {
 		StringBuilder builder = new StringBuilder();
@@ -139,7 +152,7 @@ public class CbmBam implements Serializable {
 		builder.append(" trackBits=").append(Arrays.toString(trackBits));
 		builder.append(" diskName=").append(diskName);
 		builder.append(" diskId=").append(diskId);
-		builder.append("]");
+		builder.append(']');
 		return builder.toString();
 	}
 }

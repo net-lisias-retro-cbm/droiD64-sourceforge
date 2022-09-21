@@ -5,13 +5,13 @@ import droid64.d64.Utility;
 public class RenameResult {
 
 	private String fileName = Utility.EMPTY;
-	private boolean success = false;
 	private int fileType = 0;
 	private String diskName = Utility.EMPTY;
 	private String diskID = Utility.EMPTY;
 	private int diskType = 0;
 	private boolean compressedDisk = false;
 	private boolean cpmDisk = false;
+	private int partitionSectorCount;
 
 	public String getFileName() {
 		return fileName;
@@ -21,20 +21,16 @@ public class RenameResult {
 		this.fileName = fileName;
 	}
 
-	public boolean isSuccess() {
-		return success;
-	}
-
-	public void setSuccess(boolean success) {
-		this.success = success;
-	}
-
 	public int getFileType() {
 		return fileType;
 	}
 
 	public void setFileType(int fileType) {
 		this.fileType = fileType;
+	}
+
+	public void setDiskType(int diskType) {
+		this.diskType = diskType;
 	}
 
 	public String getDiskName() {
@@ -57,10 +53,6 @@ public class RenameResult {
 		return diskType;
 	}
 
-	public void setDiskType(int diskType) {
-		this.diskType = diskType;
-	}
-
 	public boolean isCompressedDisk() {
 		return compressedDisk;
 	}
@@ -77,4 +69,19 @@ public class RenameResult {
 		this.cpmDisk = cpmDisk;
 	}
 
+	public int getPartitionSectorCount() {
+		return partitionSectorCount;
+	}
+
+	public void setPartitionSectorCount(int partitionSectorCount) {
+		this.partitionSectorCount = partitionSectorCount;
+	}
+
+	@Override
+	public String toString() {
+		return "RenameResult [fileName=" + fileName + ", fileType="
+				+ fileType + ", diskName=" + diskName + ", diskID=" + diskID + ", diskType=" + diskType
+				+ ", compressedDisk=" + compressedDisk + ", cpmDisk=" + cpmDisk + ", partitionSectorCount="
+				+ partitionSectorCount + "]";
+	}
 }

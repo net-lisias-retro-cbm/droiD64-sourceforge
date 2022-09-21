@@ -3,7 +3,11 @@ package droid64.d64;
 import java.io.ByteArrayOutputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.stream.Collectors;
 
 /**<pre style='font-family:sans-serif;'>
  * Created on 2015-Oct-15
@@ -64,6 +68,11 @@ public class D81 extends DiskImage {
 	/** Track number of first track (may be above one for sub directories on 1581 disks) */
 	private static final int FIRST_TRACK    = 1;
 
+	/** Track of currently open partition .*/
+	private Integer currentPartitionTrack = null;
+	/** Maps track to the CbmFile for partition. Note: partitions may contain partitions. */
+	private Map<Integer,CbmFile> partMap = new HashMap<>();
+
 	/** Constructor */
 	public D81() {
 		bam = new CbmBam(TRACK_COUNT, BYTES_PER_BAM_TRACK);
@@ -85,9 +94,18 @@ public class D81 extends DiskImage {
 	public int getBlocksFree() {
 		int blocksFree = 0;
 		if (cbmDisk != null) {
-			for (int track = 1; track <= getTrackCount(); track++) {
-				if (track != DIR_TRACK) {
-					blocksFree = blocksFree + bam.getFreeSectors(track);
+			if (getCurrentPartition() != null) {
+				CbmFile pf = partMap.get(getCurrentPartition());
+				for (int track = pf.getTrack(); track <= pf.getTrack()+pf.getSizeInBlocks()/40; track++) {
+					if (track != DIR_TRACK && partMap.get(track) == null) {
+						blocksFree = blocksFree + bam.getFreeSectors(track);
+					}
+				}
+			} else {
+				for (int track = 1; track <= getTrackCount(); track++) {
+					if (track != DIR_TRACK && partMap.get(track) == null) {
+						blocksFree = blocksFree + bam.getFreeSectors(track);
+					}
 				}
 			}
 		}
@@ -118,15 +136,42 @@ public class D81 extends DiskImage {
 		bam.setDiskName(Utility.getString(cbmDisk, headerOffset + 0x04, DISK_NAME_LENGTH));
 		bam.setDiskId(Utility.getString(cbmDisk, headerOffset + 0x16, DISK_ID_LENGTH));
 		checkImageFormat();
+		partMap.values().stream().distinct().forEach(cf -> readBAM(cf.getTrack(), cf.getSizeInBlocks()/40));
+	}
+
+
+	/**
+	 * Read BAM from partition
+	 * @param track
+	 * @param numTracks
+	 */
+	private void readBAM(final int track, int numTracks) {
+		feedbackMessage.append("readBAM: track=").append(track).append(" numTracks=").append(numTracks).append('\n');
+		final int headerOffset = getSectorOffset(track, 0);
+		final int bamOffset1 = getSectorOffset(track, 1) + 0x10;
+		final int bamOffset2 = getSectorOffset(track, 2) + 0x10;
+
+		if (currentPartitionTrack == null && track == BAM_TRACK || currentPartitionTrack != null && currentPartitionTrack == track) {
+			bam.setDiskName(Utility.EMPTY);
+			bam.setDiskId(Utility.EMPTY);
+			bam.setDiskDosType(getCbmDiskValue(headerOffset + 2 ));
+			bam.setDiskName(Utility.getString(cbmDisk, headerOffset + 0x04, DISK_NAME_LENGTH));
+			bam.setDiskId(Utility.getString(cbmDisk, headerOffset + 0x16, DISK_ID_LENGTH));
+		}
+		for (int t = track; t < track+numTracks && t <= TRACK_COUNT; t++) {
+			int bamOffset = (t<=40 ? bamOffset1 : bamOffset2) + ((t % 40) - 1) * BYTES_PER_BAM_TRACK;
+			bam.setFreeSectors(t, (byte) getCbmDiskValue(bamOffset));
+			for (int cnt = 1; cnt < BYTES_PER_BAM_TRACK; cnt ++) {
+				bam.setTrackBits(t, cnt, (byte) getCbmDiskValue(bamOffset + cnt));
+			}
+		}
 	}
 
 	@Override
 	public String[][] getBamTable() {
 		String[][] bamEntry = new String[TRACK_COUNT][TRACK_SECTORS + 1];
 		for (int trk = 0; trk < TRACK_COUNT; trk++) {
-			for (int sec = 0; sec <= TRACK_SECTORS; sec++) {
-				bamEntry[trk][sec] =  CbmBam.INVALID;
-			}
+			Arrays.fill(bamEntry[trk], CbmBam.INVALID);
 		}
 		for (int trk = 1; trk <= TRACK_COUNT; trk++) {
 			int sector = 0;
@@ -134,9 +179,9 @@ public class D81 extends DiskImage {
 			for (int cnt = 1; cnt < BYTES_PER_BAM_TRACK; cnt++) {
 				for (int bit = 0; bit < 8 && sector <= TRACK_SECTORS; bit++) {
 					if ((getBam().getTrackBits(trk, cnt) & DiskImage.BYTE_BIT_MASKS[bit]) == 0) {
-						bamEntry[trk-1][sector++] = CbmBam.USED;
+						bamEntry[trk-1][sector++] = isPartition(trk) ? CbmBam.USED_PART : CbmBam.USED;
 					} else {
-						bamEntry[trk-1][sector++] = CbmBam.FREE;
+						bamEntry[trk-1][sector++] = isPartition(trk) ? CbmBam.FREE_PART : CbmBam.FREE;
 					}
 				}
 			}
@@ -144,48 +189,37 @@ public class D81 extends DiskImage {
 		return bamEntry;
 	}
 
+	private boolean isPartition(int trk) {
+		return partMap.containsKey(trk);
+	}
+
 	@Override
 	public void readDirectory() {
 		if (isCpmImage()) {
 			readCpmDirectory(D81Constants.C1581_DIR_TRACK, D81Constants.C1581_DIR_SECTORS, true);
-			return;
+		} else {
+			int dirTrack = currentPartitionTrack == null ? DIR_TRACK : currentPartitionTrack;
+			readDirectory(dirTrack, DIR_SECT, false, 0);
+			for (CbmFile cf : cbmFile) {
+				if (cf!=null && cf.getFileType() == CbmFile.TYPE_CBM) {
+					int numTrk = cf.getSizeInBlocks() / TRACK_SECTORS;
+					int trk = cf.getTrack();
+					if (cf.getSector() == 0 && numTrk >= 3 && (trk < BAM_TRACK && trk+numTrk < BAM_TRACK || trk > BAM_TRACK && trk+numTrk > BAM_TRACK)) {
+						// partition must start on sector 0, must not cross BAM track and must be at least 3 tracks
+						for (int t=trk; t < trk + numTrk; t++) {
+							partMap.put(t, cf);
+						}
+						readBAM(trk, numTrk);
+					}
+				}
+			}
+			feedbackMessage.append("partTracks: ").append(partMap.keySet().stream().sorted((s1, s2) -> s1.compareTo(s2)).map(String::valueOf).collect(Collectors.joining(","))).append('\n');
 		}
-		readDirectory(DIR_TRACK, DIR_SECT, false, 0);
 	}
 
 	/** Read normal Commodore directory structure */
 	private void readDirectory(final int dirTrack, final int dirSector, boolean isPartition, int partitionSectorCount) {
-		boolean fileLimitReached = false;
-		int dirPosition = 0;
-		int filenumber = 0;
-		int track = dirTrack;
-		int sector = dirSector;
-		do {
-			if (track >= TRACK_COUNT) {
-				feedbackMessage.append("Error: Track ").append(track).append(" is not within image.\n");
-				break;
-			}
-			int dataPosition = getSectorOffset(track, sector);
-			for (int i = 0; i < DIR_ENTRIES_PER_SECTOR; i ++) {
-				cbmFile[filenumber] = new CbmFile(cbmDisk, dataPosition + (i * DIR_ENTRY_SIZE));
-				if (!cbmFile[filenumber].isFileScratched()) {
-					cbmFile[filenumber].setDirPosition(dirPosition);
-					if (filenumber < FILE_NUMBER_LIMIT)  {
-						filenumber++;
-					} else {
-						// Too many files in directory check
-						fileLimitReached = true;
-					}
-				}
-				dirPosition++;
-			}
-			track = getCbmDiskValue(dataPosition + 0);
-			sector = getCbmDiskValue(dataPosition + 1);
-		} while (track != 0 && !fileLimitReached);
-		if (fileLimitReached) {
-			feedbackMessage.append("Error: Too many entries in directory (more than ").append(FILE_NUMBER_LIMIT).append(")!\n");
-		}
-		filesUsedCount = filenumber;
+		readDirectory(dirTrack, dirSector, FILE_NUMBER_LIMIT);
 		validate(dirTrack, dirSector, isPartition, partitionSectorCount);
 	}
 
@@ -198,12 +232,45 @@ public class D81 extends DiskImage {
 	 */
 	@Override
 	public void readPartition(int track, int sector, int numBlocks) throws CbmException {
-		String partName = Utility.getTrimmedString(cbmDisk, getSectorOffset(track, sector) + 0x04, 16);
-		String partId = Utility.getTrimmedString(cbmDisk, getSectorOffset(track, sector) + 0x14, 5);
-		int dirTrack = cbmDisk[ getSectorOffset(track, sector) + 0x00] & 0x0ff;
-		int dirSector = cbmDisk[ getSectorOffset(track, sector) + 0x01] & 0x0ff;
-		feedbackMessage.append("readPartition: ").append(dirTrack).append("/").append(dirSector).append(" '").append(partName).append("' ").append(partId).append("\n");
+		if (sector!=0 || numBlocks/TRACK_SECTORS < 3) {
+			feedbackMessage.append("readPartition: No sub directory partition").append('\n');
+			currentPartitionTrack = null;
+			return;
+		}
+		int dirTrack = cbmDisk[getSectorOffset(track, sector) + 0x00] & 0x0ff;
+		int dirSector = cbmDisk[getSectorOffset(track, sector) + 0x01] & 0x0ff;
+		feedbackMessage.append("readPartition: ").append(dirTrack).append('/').append(dirSector).append('\n');
 		readDirectory(dirTrack, dirSector, true, numBlocks);
+		currentPartitionTrack = track;
+		readBAM(track, numBlocks / TRACK_SECTORS);
+	}
+
+	@Override
+	public boolean isPartitionOpen() {
+		return currentPartitionTrack!=null;
+	}
+
+
+	public CbmFile getPartitionFile(int track) {
+		return partMap.get(track);
+	}
+
+	@Override
+	public CbmFile setCurrentPartition(Integer partitionTrack) {
+		if (partitionTrack == null) {
+			this.currentPartitionTrack = null;
+			return null;
+		}
+		CbmFile part = partMap.get(partitionTrack);
+		if (part != null) {
+			this.currentPartitionTrack = partitionTrack;
+		}
+		return part;
+	}
+
+	@Override
+	public Integer getCurrentPartition() {
+		return currentPartitionTrack;
 	}
 
 	@Override
@@ -236,6 +303,10 @@ public class D81 extends DiskImage {
 			}
 		} else if (cbmFile[number].isFileScratched()) {
 			throw new CbmException("getFileData: File number " + number + " is deleted.");
+		} else if (cbmFile[number].getFileType() == CbmFile.TYPE_CBM) {
+			int blockPos = getSectorOffset(cbmFile[number].getTrack(), 0);
+			int len = cbmFile[number].getSizeInBlocks() * BLOCK_SIZE;
+			return Arrays.copyOfRange(cbmDisk, blockPos, blockPos + len);
 		}
 		feedbackMessage.append("getFileData: ").append(number).append(" '").append(cbmFile[number].getName()).append("'\n");
 		feedbackMessage.append("Tracks / Sectors: ");
@@ -249,11 +320,11 @@ public class D81 extends DiskImage {
 			int blockPos = getSectorOffset(track, sector);
 			int nextTrack  = getCbmDiskValue(blockPos + 0x00);
 			int nextSector = getCbmDiskValue(blockPos + 0x01);
-			feedbackMessage.append(track).append("/").append(sector).append(Utility.SPACE);
+			feedbackMessage.append(track).append('/').append(sector).append(Utility.SPACE);
 			if (nextTrack > 0) {
 				out.write(cbmDisk, blockPos + 2, BLOCK_SIZE - 2);
 			} else {
-				feedbackMessage.append("\nRemaining bytes: ").append(nextSector).append("\n");
+				feedbackMessage.append("\nRemaining bytes: ").append(nextSector).append('\n');
 				out.write(cbmDisk, blockPos + 2, nextSector - 2 + 1);
 			}
 			track = nextTrack;
@@ -330,7 +401,7 @@ public class D81 extends DiskImage {
 	 * @return number of validation errors
 	 */
 	private Integer validate(final int dirTrack, final int dirSector, boolean isPartition, int partitionSectorCount) {
-		feedbackMessage.append("validate: D81 dirSector ").append(dirTrack).append("/").append(dirSector).append(isPartition ? " partition " : Utility.SPACE);
+		feedbackMessage.append("validate: D81 dirSector ").append(dirTrack).append('/').append(dirSector).append(isPartition ? " partition " : Utility.SPACE);
 		// init to null
 		Boolean[][] bamEntry = new Boolean[getTrackCount() + 1][getMaxSectorCount()];
 		for (int trk = 0; trk < bamEntry.length; trk++) {
@@ -486,14 +557,7 @@ public class D81 extends DiskImage {
 	 */
 	@Override
 	public boolean isSectorFree(int track, int sector) {
-		int trackPos;
-		if (track <= 40) {
-			trackPos = getSectorOffset(BAM_TRACK, BAM_SECT_1) + 0x10 + (track - 1) * BYTES_PER_BAM_TRACK + 1;
-		} else {
-			trackPos = getSectorOffset(BAM_TRACK, BAM_SECT_2) + 0x10 + (track - 41) * BYTES_PER_BAM_TRACK + 1;
-		}
-		int value =  getCbmDiskValue(trackPos + (sector / 8)) & BYTE_BIT_MASKS[sector & 0x07];
-		return value != 0;
+		return isSectorFree(track, sector, currentPartitionTrack == null ? BAM_TRACK : currentPartitionTrack, track<=40 ? BAM_SECT_1 : BAM_SECT_2);
 	}
 
 	/**
@@ -503,8 +567,8 @@ public class D81 extends DiskImage {
 	 * @return when True, the sector is free; otherwise used
 	 */
 	private boolean isSectorFree(int track, int sector, int bamTrack, int bamSector) {
-		int trackPos = getSectorOffset(bamTrack, bamSector) + 0x10 + (track - 1) * BYTES_PER_BAM_TRACK + 1;
-		int value =  getCbmDiskValue(trackPos + (sector / 8)) & BYTE_BIT_MASKS[sector & 0x07];
+		int trackPos = getSectorOffset(bamTrack, bamSector) + 0x10 + ((track - 1) % 40) * BYTES_PER_BAM_TRACK + 1;
+		int value = getCbmDiskValue(trackPos + (sector / 8)) & BYTE_BIT_MASKS[sector & 0x07];
 		return value != 0;
 	}
 
@@ -515,11 +579,16 @@ public class D81 extends DiskImage {
 	 */
 	@Override
 	public void markSectorUsed(int track, int sector) {
-		int trackPos;
+		if (!isTrackInCurrentPartition(track)) {
+			feedbackMessage.append("\nmark used in wrong BAM!\n");
+			return;
+		}
+		final int bamTrack = currentPartitionTrack == null ? BAM_TRACK : currentPartitionTrack;
+		final int trackPos;
 		if (track <= 40) {
-			trackPos = getSectorOffset(BAM_TRACK, BAM_SECT_1) + BYTES_PER_BAM_TRACK * (track - 1) + 0x10;
+			trackPos = getSectorOffset(bamTrack, BAM_SECT_1) + BYTES_PER_BAM_TRACK * (track - 1) + 0x10;
 		} else {
-			trackPos = getSectorOffset(BAM_TRACK, BAM_SECT_2) + BYTES_PER_BAM_TRACK * (track - 41) + 0x10;
+			trackPos = getSectorOffset(bamTrack, BAM_SECT_2) + BYTES_PER_BAM_TRACK * (track - 41) + 0x10;
 		}
 		int pos = (sector / 8) + 1;
 		setCbmDiskValue(trackPos + pos, getCbmDiskValue(trackPos + pos) & INVERTED_BYTE_BIT_MASKS[sector & 0x07] );
@@ -533,16 +602,26 @@ public class D81 extends DiskImage {
 	 */
 	@Override
 	public void markSectorFree(int track, int sector) {
-		int trackPos;
+		if (!isTrackInCurrentPartition(track)) {
+			feedbackMessage.append("\n mark free in wrong BAM!\n");
+			return;
+		}
+		final int bamTrack = currentPartitionTrack == null ? BAM_TRACK : currentPartitionTrack;
+		final int trackPos;
 		if (track <= 40) {
-			trackPos = getSectorOffset(BAM_TRACK, BAM_SECT_1) + BYTES_PER_BAM_TRACK * (track - 1) + 0x10;
+			trackPos = getSectorOffset(bamTrack, BAM_SECT_1) + BYTES_PER_BAM_TRACK * (track - 1) + 0x10;
 		} else {
-			trackPos = getSectorOffset(BAM_TRACK, BAM_SECT_2) + BYTES_PER_BAM_TRACK * (track - 41) + 0x10;
+			trackPos = getSectorOffset(bamTrack, BAM_SECT_2) + BYTES_PER_BAM_TRACK * (track - 41) + 0x10;
 		}
 		int pos = (sector / 8) + 1;
 		setCbmDiskValue(trackPos + pos, getCbmDiskValue(trackPos + pos) | BYTE_BIT_MASKS[sector & 0x07] );
 		setCbmDiskValue(trackPos, getCbmDiskValue(trackPos) + 1);
 	}
+
+	protected boolean isTrackInCurrentPartition(int track) {
+		return currentPartitionTrack == null || Optional.ofNullable(partMap.get(track)).map(CbmFile::getTrack).filter(currentPartitionTrack::equals).isPresent();
+	}
+
 
 	/**
 	 * Determine if there's, at least, one free sector on a track.
@@ -552,8 +631,7 @@ public class D81 extends DiskImage {
 	@Override
 	protected boolean isTrackFree(int trackNumber) {
 		readBAM();
-		int freeSectors = bam.getFreeSectors(trackNumber);
-		return freeSectors > 0 ? true : false;
+		return bam.getFreeSectors(trackNumber) > 0;
 	}
 
 	/**
@@ -567,6 +645,23 @@ public class D81 extends DiskImage {
 			block.track = 1;
 			block.sector = 0;
 			block = findNextCopyBlock(block);
+		} else if (currentPartitionTrack != null) {
+			CbmFile partFile = partMap.get(currentPartitionTrack);
+			if (partFile == null) {
+				feedbackMessage.append("findFirstCopyBlock: track " + currentPartitionTrack + " is no parttion");
+				return null;
+			}
+			// first track in a partition is reserved for header, BAM and dir blocks. The rest are used with interleave 1.
+			int lastTrack = partFile.getTrack() + partFile.getSizeInBlocks() / TRACK_SECTORS;
+			feedbackMessage.append("findFirstCopyBlock: in partition: " + currentPartitionTrack + "-" + lastTrack+"\n");
+			for (int t=partFile.getTrack() + 1; t < lastTrack; t++) {
+				for (int s=0; s<getMaxSectors(t);s++) {
+					if (isSectorFree(t, s, currentPartitionTrack, t <= 40 ? 1 : 2)) {
+						return new TrackSector(t,s);
+					}
+				}
+			}
+			return null;
 		} else {
 			boolean found = false;	// No free sector found yet
 			int distance = 1;		// On a normal disk, start looking checking the tracks just besides the directory track.
@@ -577,7 +672,7 @@ public class D81 extends DiskImage {
 					// Track within disk limits
 					found = isTrackFree(block.track);
 				}
-				if (!found){
+				if (!found) {
 					// Check the track above the directory track
 					block.track = BAM_TRACK + distance;
 					if (block.track <= TRACK_COUNT && block.track != BAM_TRACK) {
@@ -606,7 +701,7 @@ public class D81 extends DiskImage {
 			}
 		}
 		if (block != null) {
-			feedbackMessage.append("firstCopyBlock: The first block will be ").append(block.track).append("/").append(block.sector).append(".\n");
+			feedbackMessage.append("firstCopyBlock: The first block will be ").append(block.track).append('/').append(block.sector).append(".\n");
 		} else {
 			feedbackMessage.append("firstCopyBlock: Error: Disk is full!\n");
 		}
@@ -624,6 +719,48 @@ public class D81 extends DiskImage {
 			// If we somehow already ran off the disk then there are no more free sectors left.
 			return null;
 		}
+		if (currentPartitionTrack != null) {
+
+			CbmFile cf = partMap.get(currentPartitionTrack);
+
+			feedbackMessage.append("findNextCopyBlock: in partition: "+currentPartitionTrack);
+
+			// 1. search where track >= block.track
+			for (int t=block.track; t < cf.getTrack() + cf.getSizeInBlocks() / TRACK_SECTORS; t++) {
+				if (t==block.track) {
+					// look for blocks in same track in a sector after block
+					for (int s=block.sector+1; s < getMaxSectors(t); s++) {
+						if (isSectorFree(t,s, currentPartitionTrack, t <= 40 ? 1 : 2)) {
+							return new TrackSector(t,s);
+						}
+					}
+					// look for blocks in same track in a sector before block
+					for (int s = block.sector-1; s >= 0; s--) {
+						if (isSectorFree(t, s, currentPartitionTrack, t <= 40 ? 1 : 2)) {
+							return new TrackSector(t, s);
+						}
+					}
+				} else {
+					for (int s=0; s<getMaxSectors(t);s++) {
+						if (isSectorFree(t,s, currentPartitionTrack, t <= 40 ? 1 : 2)) {
+							return new TrackSector(t,s);
+						}
+					}
+				}
+			}
+
+			// 2. search where track < block.track
+			for (int t=block.track-1; t > cf.getTrack(); t--) {
+				for (int s=0; s<getMaxSectors(t);s++) {
+					if (isSectorFree(t,s, currentPartitionTrack, t <= 40 ? 1 : 2)) {
+						return new TrackSector(t,s);
+					}
+				}
+			}
+
+			return null;
+		}
+		// No partition
 		int tries = 3;			// Set the number of tries to three.
 		found = false;			// We found no free sector yet.
 		int curTrack = block.track;		// Remember the current track number.
@@ -724,7 +861,7 @@ public class D81 extends DiskImage {
 		}
 		int usedBlocks = 0;
 		int dataRemain = saveData.length;
-		feedbackMessage.append("SaveFileData: ").append(dataRemain).append(" bytes of data.\n");
+		feedbackMessage.append("SaveFileData: ").append(dataRemain).append(" bytes ("+((dataRemain+253)/254)+" blocks) of data.\n");
 		TrackSector firstBlock = findFirstCopyBlock();
 		if (firstBlock == null) {
 			feedbackMessage.append("\nsaveFileData: Error: No free sectors on disk. Disk is full.\n");
@@ -735,7 +872,7 @@ public class D81 extends DiskImage {
 		int thisSector;
 		int dataPos = 0;
 		while (dataRemain >= 0 && block != null) {
-			feedbackMessage.append(dataRemain).append(" bytes remain: block ").append(block.track).append("/").append(block.sector).append("\n");
+			feedbackMessage.append(dataRemain).append(" bytes remain: block ").append(block.track).append('/').append(block.sector).append('\n');
 			thisTrack = block.track;
 			thisSector = block.sector;
 			markSectorUsed(thisTrack, thisSector);
@@ -764,7 +901,7 @@ public class D81 extends DiskImage {
 
 	@Override
 	public boolean addDirectoryEntry(CbmFile cbmFile, int fileTrack, int fileSector, boolean isCopyFile, int lengthInBytes) {
-		feedbackMessage.append(String.format("addDirectoryEntry: \"%s\", %s, %d/%d%nn", cbmFile.getName(), CbmFile.FILE_TYPES[cbmFile.getFileType()], fileTrack, fileSector));
+		feedbackMessage.append(String.format("addDirectoryEntry: \"%s\", %s, %d/%d%n", cbmFile.getName(), CbmFile.FILE_TYPES[cbmFile.getFileType()], fileTrack, fileSector));
 		if (isCpmImage()) {
 			feedbackMessage.append("Not yet implemented for CP/M format.\n");
 			return false;
@@ -778,13 +915,14 @@ public class D81 extends DiskImage {
 		}
 		cbmFile.setDirTrack(0);
 		cbmFile.setDirSector(-1);
-		int dirEntryNumber = findFreeDirEntry();
+		int dirTrack = currentPartitionTrack == null ? DIR_TRACK : currentPartitionTrack;
+		int dirEntryNumber = findFreeDirEntry(dirTrack, DIR_SECT);
 		if (dirEntryNumber != -1 && setNewDirLocation(cbmFile, dirEntryNumber)) {
-			writeSingleDirectoryEntry(cbmFile, getDirectoryEntryPosition(dirEntryNumber));
+			writeSingleDirectoryEntry(cbmFile, getDirectoryEntryPosition(dirTrack, DIR_SECT, dirEntryNumber));
 			filesUsedCount++;	// increase the maximum file numbers
 			return true;
 		} else {
-			feedbackMessage.append("Error: Could not find a free sector on track "+DIR_TRACK+" for new directory entries.\n");
+			feedbackMessage.append("Error: Could not find a free sector on track "+dirTrack+" for new directory entries.\n");
 			return false;
 		}
 	}
@@ -792,11 +930,11 @@ public class D81 extends DiskImage {
 	/**
 	 * Find first free directory entry.
 	 * Looks through the allocated directory sectors.
+	 * @param track track of first dir block
+	 * @param sector of first dir block
 	 * @return number of next free directory entry, or -1 if none is free.
 	 */
-	private int findFreeDirEntry() {
-		int track = DIR_TRACK;
-		int sector = DIR_SECT;
+	private int findFreeDirEntry(int track, int sector) {
 		int dirPosition = 0;
 		do {
 			int dataPosition = getSectorOffset(track, sector);
@@ -839,7 +977,7 @@ public class D81 extends DiskImage {
 			return true;
 		}
 		//find the correct entry where to write new values for dirTrack and dirSector
-		int thisTrack = DIR_TRACK;
+		int thisTrack = currentPartitionTrack != null ? currentPartitionTrack : DIR_TRACK;
 		int thisSector = DIR_SECT;
 		int entryPosCount = 8;
 		while (dirEntryNumber >= entryPosCount) {
@@ -859,9 +997,9 @@ public class D81 extends DiskImage {
 					setCbmDiskValue(getSectorOffset(thisTrack, thisSector) + 0x01, nextSector);
 					setCbmDiskValue(getSectorOffset(nextTrack, nextSector) + 0x00, 0);
 					setCbmDiskValue(getSectorOffset(nextTrack, nextSector) + 0x01, -1);
-					feedbackMessage.append("Added another directory block ").append(nextTrack).append("/").append(nextSector).append(") for dir entry ").append(dirEntryNumber).append(".\n");
+					feedbackMessage.append("Added another directory block ").append(nextTrack).append('/').append(nextSector).append(") for dir entry ").append(dirEntryNumber).append(".\n");
 				} else {
-					feedbackMessage.append( "Error: no more directory sectors. Can't add file.\n");
+					feedbackMessage.append( "Error: No more directory sectors. Can't add file.\n");
 					return false;
 				}
 			}
@@ -874,35 +1012,36 @@ public class D81 extends DiskImage {
 
 	/**
 	 * Find offset to a directory entry.
+	 * @param track
+	 * @param sector
 	 * @param dirEntryNumber directory entry number to look up
 	 * @return offset in image to directory entry, or -1 if dirEntry is not available.
 	 */
-	private int getDirectoryEntryPosition(int dirEntryNumber) {
+	private int getDirectoryEntryPosition(int track, int sector, int dirEntryNumber) {
 		if (dirEntryNumber < 0 || dirEntryNumber >= FILE_NUMBER_LIMIT) {
 			return -1;
 		}
-		int track = DIR_TRACK;
-		int sector = DIR_SECT;
-		int entryPosCount = 8;
+		int entryPosCount = DIR_ENTRIES_PER_SECTOR;
 		while (dirEntryNumber >= entryPosCount && track != 0) {
-			int tmpTrack = track;
-			track = getCbmDiskValue(getSectorOffset(tmpTrack, sector) + 0x00);
-			sector = getCbmDiskValue(getSectorOffset(tmpTrack, sector) + 0x01);
-			entryPosCount += 8;
+			int offset = getSectorOffset(track, sector);
+			track = getCbmDiskValue(offset+ 0x00);
+			sector = getCbmDiskValue(offset + 0x01);
+			entryPosCount += DIR_ENTRIES_PER_SECTOR;
 		}
-		return track == 0 ? -1 : getSectorOffset(track, sector) + (dirEntryNumber & 0x07) * 32;
+		return track == 0 ? -1 : getSectorOffset(track, sector) + (dirEntryNumber & 0x07) * DIR_ENTRY_SIZE;
 	}
 
 	@Override
 	protected void writeDirectoryEntry(CbmFile cbmFile, int dirEntryNumber) {
-		feedbackMessage.append("writeDirectoryEntry: cbmFile to dirEntryNumber ").append(dirEntryNumber).append(".\n");
-		int pos = getDirectoryEntryPosition(dirEntryNumber);
+		feedbackMessage.append("writeDirectoryEntry: cbmFile to dirEntryNumber ").append(dirEntryNumber).append('\n');
+		CbmFile p = partMap.get(cbmFile.getTrack());
+		int pos = getDirectoryEntryPosition(p == null ? DIR_TRACK : p.getTrack(), DIR_SECT, dirEntryNumber);
 		if (pos >= 0) {
 			setCbmDiskValue(pos + 0, cbmFile.getDirTrack());
 			setCbmDiskValue(pos + 1, cbmFile.getDirSector());
 			writeSingleDirectoryEntry(cbmFile, pos);
 		} else {
-			feedbackMessage.append("Error: writeDirectoryEntry failed for entry "+dirEntryNumber+"\n");
+			feedbackMessage.append("Error: writeDirectoryEntry failed for entry ").append(dirEntryNumber).append('\n');
 		}
 	}
 
@@ -916,7 +1055,7 @@ public class D81 extends DiskImage {
 			feedbackMessage.append("Not yet implemented for CP/M format.\n");
 			return ;
 		}
-		feedbackMessage.append("writeSingleDirectoryEntry: dirpos="+cbmFile.getDirPosition()+"\n");
+		feedbackMessage.append("writeSingleDirectoryEntry: dirpos=").append(cbmFile.getDirPosition()).append('\n');
 		cbmFile.toBytes(cbmDisk, where);
 	}
 
@@ -926,25 +1065,135 @@ public class D81 extends DiskImage {
 		if (isCpmImage()) {
 			throw new CbmException("Delete not yet implemented for CP/M format.");
 		}
-		cbmFile.setFileType(0);
-		cbmFile.setFileScratched(true);
 		int dirEntryNumber = cbmFile.getDirPosition();
-		int dirEntryPos = getDirectoryEntryPosition(dirEntryNumber);
+		int dirEntryPos = getDirectoryEntryPosition(currentPartitionTrack==null ? DIR_TRACK : currentPartitionTrack, DIR_SECT, dirEntryNumber);
 		if (dirEntryPos != -1) {
+			int fileType = cbmFile.getFileType();
+			cbmFile.setFileType(0);
+			cbmFile.setFileScratched(true);
 			setCbmDiskValue(dirEntryPos + 0x02, 0);
 			// Free used blocks
-			int track = cbmFile.getTrack();
-			int sector = cbmFile.getSector();
-			while (track != 0) {
-				int tmpTrack  = getCbmDiskValue(getSectorOffset(track, sector) + 0x00);
-				int tmpSector = getCbmDiskValue(getSectorOffset(track, sector) + 0x01);
-				markSectorFree(track, sector);
-				track = tmpTrack;
-				sector = tmpSector;
+			if (fileType == CbmFile.TYPE_CBM) {
+				int last = cbmFile.getTrack() + cbmFile.getSizeInBlocks()/40;
+				for (int trk= cbmFile.getTrack(); trk < last; trk++) {
+					partMap.remove(trk);
+					for (int sec = 0; sec < TRACK_SECTORS; sec++) {
+						markSectorFree(trk, sec);
+					}
+				}
+			} else {
+				int track = cbmFile.getTrack();
+				int sector = cbmFile.getSector();
+				while (track != 0) {
+					int tmpTrack  = getCbmDiskValue(getSectorOffset(track, sector) + 0x00);
+					int tmpSector = getCbmDiskValue(getSectorOffset(track, sector) + 0x01);
+					markSectorFree(track, sector);
+					track = tmpTrack;
+					sector = tmpSector;
+				}
 			}
 		} else {
 			feedbackMessage.append("Error: Failed to delete ").append(cbmFile.getName());
 		}
+	}
+
+	@Override
+	public boolean supportsDirectories() {
+		return true;
+	}
+
+
+	@Override
+	public CbmFile makedir(String dirName, int numBlocks, String diskId) throws CbmException {
+		int numTracks = Math.max((numBlocks + TRACK_SECTORS - 1) / TRACK_SECTORS, 3);
+		int tc = 0;
+		int t0 = 1;
+		int t1;
+		for (t1 = t0; t1 <= TRACK_COUNT; t1++) {
+			if (bam.getFreeSectors(t1) == TRACK_SECTORS && t1 != BAM_TRACK && !partMap.containsKey(t1)) {
+				if (tc==0) {
+					t0=t1;
+				}
+				feedbackMessage.append("D81.makedir: free tracks: "+t0+"-"+t1+"  "+tc).append('\n');
+				if (++tc == numTracks) {
+					break;
+				}
+			} else {
+				feedbackMessage.append("D81.makedir: track is busy: "+t1+"  "+tc).append('\n');
+				tc = 0;
+			}
+		}
+		if (tc != numTracks) {
+			throw new CbmException("Not enough free space for partiton");
+		}
+		feedbackMessage.append("D81.makedir: track ").append(t0).append('-').append(t1).append('\n');
+		CbmFile cbmFile = new CbmFile();
+		cbmFile.setName(dirName);
+		cbmFile.setFileType(CbmFile.TYPE_CBM);
+		cbmFile.setSizeInBlocks(numTracks * TRACK_SECTORS);
+		addDirectoryEntry(cbmFile, t0, 0, false, numTracks * TRACK_SECTORS * 254);
+		feedbackMessage.append("D81.makedir: mark used tracks: " + t0 + "-" + t1 + "\n");
+		for (int t=t0; t <= t1; t++) {
+			partMap.put(t, cbmFile);
+			bam.setFreeSectors(t, 0);
+			for (int s=0; s < TRACK_SECTORS; s++) {
+				markSectorUsed(t, s);
+			}
+		}
+		formatPartition(t0, 0, numBlocks, t1 - t0 + 1,  dirName, diskId);
+		return cbmFile;
+	}
+
+	private void formatPartition(final int track, final int sector, int numBlocks, int numTracks, String partName, String partId) {
+		int  p0 = getSectorOffset(track, sector + 0); // header
+		int  p1 = getSectorOffset(track, sector + 1); // bam1
+		int  p2 = getSectorOffset(track, sector + 2); // bam2
+		int  p3 = getSectorOffset(track, sector + 3); // first dir
+		Arrays.fill(cbmDisk, p0, p0 + numBlocks * BLOCK_SIZE, (byte) 0);
+		setCbmDiskValue(p0 + 0x00, track, sector+3, 0x44, 0x00);
+		setCbmDiskValue(p0 + 0x18, 0xa0, 0x33, 0x44, 0xa0, 0xa0);
+		Utility.setPaddedString(cbmDisk, p0 + 0x04, partName, DISK_NAME_LENGTH);
+		Utility.setPaddedString(cbmDisk, p0 + 0x16, partId, 2);
+		// BAM1
+		Utility.copyBytes(D81Constants.EMPTY_BAM1, cbmDisk, 0, p1, 16);
+		for (int t=1; t<=TRACK_COUNT; t++) {
+			int bamIdx = (t <= 40 ? p1 : p2) + 0x10 + ( (t % 40) - 1 ) * 6;
+			if (t == track) {
+				setCbmDiskValue(bamIdx, 0x24, 0xf0, 0xff, 0xff, 0xff, 0xff); // 40 - header+bam1+bam2+dir
+			} else if (t > track && t < track+numTracks) {
+				setCbmDiskValue(bamIdx, 0x28, 0xff, 0xff, 0xff, 0xff, 0xff); // free
+			} else {
+				setCbmDiskValue(bamIdx, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00); // used
+			}
+		}
+		setCbmDiskValue(p1 + 0x00, track, sector+2);
+		Utility.setPaddedString(cbmDisk, p1 + 0x04, partId, 2);
+		Utility.setPaddedString(cbmDisk, p2 + 0x04, partId, 2);
+		// BAM2
+		setCbmDiskValue(p2 + 0x00, 0x00, 0xff, 0x44, 0xbb);
+		setCbmDiskValue(p2 + 0x06, 0xc0);
+		// Dir1
+		setCbmDiskValue(p3 + 0x00, 0x00, 0xff);
+	}
+
+	@Override
+	public int getNextSector(int track, int sector) {
+		if (track < getTrackCount() && sector < TRACK_SECTORS) {
+			return sector + 1;
+		}
+		return this.getFirstSector();
+	}
+
+	@Override
+	public TrackSector getSector(int offset) {
+		int t = offset / (TRACK_SECTORS * BLOCK_SIZE);
+		int s = ((offset - t * TRACK_SECTORS * BLOCK_SIZE) / BLOCK_SIZE);
+		return new TrackSector(t + 1,s);
+	}
+
+	@Override
+	public int getFirstSector() {
+		return DEFAULT_ZERO;
 	}
 
 }

@@ -1,14 +1,15 @@
 package droid64.gui;
 import java.awt.BorderLayout;
-import java.awt.Container;
+import java.awt.Component;
 
-import javax.swing.JButton;
-import javax.swing.JFrame;
 import javax.swing.JLabel;
+import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTextPane;
+import javax.swing.SwingUtilities;
 
+import droid64.DroiD64;
 import droid64.d64.Utility;
 
 /**<pre style='font-family:sans-serif;'>
@@ -36,46 +37,30 @@ import droid64.d64.Utility;
  *</pre>
  * @author wolf
  */
-public class BugsFrame extends JFrame {
+public class BugsPanel extends JPanel {
 
 	private static final long serialVersionUID = 1L;
-	private static String todo = null;
+	private static transient String todo = null;
 
-	public BugsFrame (String topText) {
-		this(topText, true);
-	}
-
-	protected BugsFrame (String topText, boolean visible) {
-		setTitle(topText);
+	protected BugsPanel () {
 		JPanel bugsPanel = createTextPane(Settings.getMessage(Resources.DROID64_BUGS_INGRESS), Resources.DROID64_BUGS_BUGS, BorderLayout.SOUTH);
 		JPanel todoPanel = createTextPane(getBugs(), Resources.DROID64_BUGS_TODO, BorderLayout.CENTER);
 
-		Container cp = getContentPane();
-		cp.setLayout(new BorderLayout());
-		cp.add(bugsPanel, BorderLayout.NORTH);
-		cp.add(todoPanel, BorderLayout.CENTER);
-		cp.add(drawButtonPanel(), BorderLayout.SOUTH);
+		setLayout(new BorderLayout());
+		add(bugsPanel, BorderLayout.NORTH);
+		add(todoPanel, BorderLayout.CENTER);
 
-		GuiHelper.setLocation(this,  3, 3);
-		pack();
-		setVisible(visible);
-		setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+		addHierarchyListener(e -> GuiHelper.hierarchyListenerResizer(SwingUtilities.getWindowAncestor(this)));
 	}
 
-	private JPanel drawButtonPanel() {
-		final JButton okButton = new JButton(Settings.getMessage(Resources.DROID64_BUGS_OK));
-		okButton.setMnemonic('o');
-		okButton.addActionListener(ae->dispose());
-		JPanel buttonPanel = new JPanel();
-		buttonPanel.add(okButton);
-		return buttonPanel;
+	public void showDialog(Component parent) {
+		JOptionPane.showMessageDialog(parent, this, DroiD64.PROGNAME+ " - Bugs and ToDo", JOptionPane.PLAIN_MESSAGE);
 	}
 
 	private JPanel createTextPane(String message, String labelPropKey, String constraints) {
-		JTextPane bugsTextArea = drawTextArea(message);
 		JPanel bugsPanel = new JPanel(new BorderLayout());
 		bugsPanel.add(new JLabel(Settings.getMessage(labelPropKey)), BorderLayout.NORTH);
-		bugsPanel.add(new JScrollPane(bugsTextArea), constraints);
+		bugsPanel.add(new JScrollPane(drawTextArea(message)), constraints);
 		return bugsPanel;
 	}
 
@@ -88,11 +73,10 @@ public class BugsFrame extends JFrame {
 		return textArea;
 	}
 
-	private static String getBugs() {
+	protected static String getBugs() {
 		if (todo == null) {
 			todo = Utility.getResource("resources/bugs.html");
 		}
 		return todo;
 	}
-
 }

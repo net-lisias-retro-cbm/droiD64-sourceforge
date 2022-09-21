@@ -25,7 +25,7 @@ public class NotFoundException extends DatabaseException {
 		StringBuilder buf = new StringBuilder();
 		buf.append("NotFoundException{");
 		buf.append(" .message=").append(getMessage());
-		buf.append("]");
+		buf.append(']');
 		return buf.toString();
 	}
 

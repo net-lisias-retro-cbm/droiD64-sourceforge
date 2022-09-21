@@ -25,7 +25,7 @@ public class CbmException extends Exception {
 		StringBuilder buf = new StringBuilder();
 		buf.append("CbmException[");
 		buf.append(" .message=").append(getMessage());
-		buf.append("]");
+		buf.append(']');
 		return buf.toString();
 	}
 

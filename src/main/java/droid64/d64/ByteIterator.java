@@ -2,7 +2,7 @@ package droid64.d64;
 
 public class ByteIterator {
 
-	private byte[] data;
+	private final byte[] data;
 	private int position;
 
 	public ByteIterator(byte[] data) {

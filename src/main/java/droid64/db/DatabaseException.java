@@ -25,7 +25,7 @@ public class DatabaseException extends Exception {
 		StringBuilder buf = new StringBuilder();
 		buf.append("DatabaseException[");
 		buf.append(" .message=").append(getMessage());
-		buf.append("]");
+		buf.append(']');
 		return buf.toString();
 	}
 }

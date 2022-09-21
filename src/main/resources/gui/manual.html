@@ -62,6 +62,7 @@ How to do this depends on your operating system and the way you start DroiD64.</
 <li> D80 (C8050) A 5.25 inch format, single sided with 520 kB on each side. It has 77 tracks with between 23 and 29 sectors.</li>
 <li> D81 (C1581) A 3.5 inch format, double sided with 800kB in total. It has 80 tracks with 40 sectors.</li>
 <li> D82 (C8250) The double sided D80, with a total of 1040 kB. It is organized as 154 tracks with between 23 and 29 sectors.</li>
+<li> D88 (C8280) A 8 inch double sided format with 1001 kB in total. It has 77 tracks with 26 sectors on each side.</li>
 <li> T64 (C1530) The tape format used in several emulators.</li>
 <li> LNX The LiNX disk archive format. </li>
 <li> Zip Supported to allow you to browse contents of image files. When running plugins, the chosen image is extracted into the temp folder and is deleted after use.</li>
@@ -77,21 +78,22 @@ The <b>label</b> which is the text on the button.
 The <b>command</b> which is the program which will be executed.
 The <b>arguments</b> which are command line arguments forwarded to your command.
 The <b>description</b> which is the tooltip explaining what the plugin does.
-The <b>fork new thread</b> checkbox, which when checked will make the plugin to execute in the background. Otherwise, DroiD66 will be blocked waiting for the plugin to terminate.
+The <b>fork new thread</b> checkbox, which when checked will make the plugin to execute in the background. Otherwise, DroiD64 will be blocked waiting for the plugin to terminate.
 </p>
 
 <p>These are keywords which may be used in the arguments:</p>
 <ul>
  <li><i>{Image}</i> - The filename of the disk image. E.g. "<i>/some/where/image.d64</i>".</li>
  <li><i>{Files}</i> - The names of the selected files. E.g. "<i>file1 file2 file3</i>"</li>
- <li><i>{ImageFiles}</i> - Similar to <i>{Files}</i> but each file is prefixed by the <i>image</i>: E.g. "<i>/some/where/image.d64:file1 /some/where/image.d64:file2</i>".</li>
+ <li><i>{ImageFiles}</i> - Similar to <i>{Files}</i> but each file is prefixed by the <i>image</i>: E.g. "<i>/some/where/image.d64:file1 /some/where/image.d64:file2</i>". When used with VICE it will autostart the selected file.</li>
  <li><i>{Target}</i> - The path of the the other disk pane.</li>
  <li><i>{NewFile}</i> - Opens a file dialog asking for a name for a new disk image.</li>
- <li><i>{ImageType}</i> - Type of image (D64, D67, D71, D80, D81 D82, T64, LNX).</li>
- <li><i>{DriveType}</i> - Type of drive used for the image (1541, 1571, 1581, 4250, 8250).</li>
+ <li><i>{ImageType}</i> - Type of image (D64, D67, D71, D80, D81 D82, D88, T64, LNX).</li>
+ <li><i>{DriveType}</i> - Type of drive used for the image (1541, 1571, 1581, 4250, 8250, 8280).</li>
 </ul>
 
 <p><b>Example:</b></p>
+Starting the VICE C64 emulator with disk image disk image mounted and autostart the selected file.
   <table border="1">
     <tr><th>Label:</th><td>VICE 64</td>
     <tr><th>Command:</th><td>x64</td>
@@ -111,8 +113,15 @@ The <b>fork new thread</b> checkbox, which when checked will make the plugin to 
  <dd>Unload a mounted disk image, or change to parent folder.</dd>
  <dt>New Disk</dt>
  <dd>Opens a dialog for creating a new blank disk image.</dd>
+ <dt>Mirror</dt>
+ <dd>Opens the same folder/image as in the inactive file panel.</dd>
  <dt>BAM</dt>
- <dd>Open block allocation map. When double clicking a sector when in <i>view</i> mode, the hexdump of the sector will be show. When in <i>edit</i> mode you can toggle a sector between allocated and free. </dd>
+ <dd>Open block allocation map. When double clicking a sector when in <i>view</i> mode, a hexdump of the sector will be shown.
+ The hex viewer has navigation fields at the top to allow you choose which track and sector to view.
+ If you select one byte in the table which is a valid track number and if the selected byte is directly followed by a value which is a valid sector number, then a button with the track/sector is enabled. Pressing this button jump to that block.
+ This is a convenient way to analyze a disk image.
+ When in <i>edit</i> mode you can toggle a sector between allocated and free.
+ </dd>
  <dt>Validate Disk</dt>
  <dd>
    <p>The validation feature of DroiD64 will scan the opened disk image for problems. Problems like:</p>
@@ -138,7 +147,7 @@ The <b>fork new thread</b> checkbox, which when checked will make the plugin to 
 <h3>4.2. File operations</h3>
 <dl>
  <dt>Copy File</dt>
- <dd>Copy selected file(s).</dd>
+ <dd>Copy selected file(s). If copying a CBM (partition) file, its contents is simply copied as one large data file. The BAM, directory blocks and track/sector pointers are not recreated when a partition is copied to another D81 disk image.</dd>
  <dt>New File</dt>
  <dd>Opens a dialog for creating a new empty file.</dd> 
  <dt>Delete File</dt>
@@ -147,6 +156,11 @@ The <b>fork new thread</b> checkbox, which when checked will make the plugin to 
  <dd>Rename selected file(s).</dd>
  <dt>MD5 checksum</dt>
  <dd>Print the selected file(s) MD5 checksum on the console. Useful to compare files.</dd>
+ <dt>Makedir</dt>
+ <dd>
+   Create a directory in local file system.
+   The D81 disk images supports partitions (CBM files), and if a d81 image is mounted, a new partition can be created.
+ </dd>
 </dl>
 
 <h3>4.3. View operations</h3>
@@ -154,11 +168,13 @@ The <b>fork new thread</b> checkbox, which when checked will make the plugin to 
  <dt>View Image</dt>
  <dd>Open selected file(s) in the Koala paint viewer.</dd>
  <dt>View Hex</dt>
- <dd>Open the selected file in a hexdump viewer. The hexdump viewer can also show MOS6510 disassembled code of the file.</dd>
+ <dd>
+ Open the selected file in a hexdump viewer. The hexdump viewer can also show MOS 6510 disassembled code of the file. Including the illegal opcodes.
+ </dd>
  <dt>View Text</dt>
  <dd>View the selected file as a text file.</dd>
  <dt>View Basic</dt>
- <dd>View the selected file as a BASIC listing.</dd>
+ <dd>View the selected file as a BASIC listing. BASIC V2 to V7 is supported.</dd>
 </dl>
 
 <hr/>
@@ -199,7 +215,7 @@ If you manage to use DroiD64 with some other database, please mail me the detail
 
 <h3>5.2.  MySQL </h3>
   <table style="border-spacing:0px;padding=0px;border-collapse:separate;">
-    <tr><th>JDBC driver class:</th><td>com.mysql.jdbc.Driver</td>
+    <tr><th>JDBC driver class:</th><td>com.mysql.cj.jdbc.Driver</td>
     <tr><th>Connection URL:</th><td>jdbc:mysql://localhost:3306/droid64</td>
     <tr><th>User:</th><td>droid64</td>
     <tr><th>Password:</th><td>uridium</td>
@@ -271,6 +287,7 @@ The settings for database connectivity. See section 5 in this document for more 
 
 <h3>6.5.  Plugin <i>&lt;number<&gt;</i></h3>
 Configure the plugin buttons. See section 3 in this document for more details.
+There is one sub tab for each of the plugin configurations available.
 
 </body>
 </html>

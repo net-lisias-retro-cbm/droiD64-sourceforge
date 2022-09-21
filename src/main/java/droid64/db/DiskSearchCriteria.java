@@ -104,7 +104,7 @@ public class DiskSearchCriteria {
 		builder.append(" .fileSizeMax=").append(fileSizeMax);
 		builder.append(" .imageType=").append(imageType);
 		builder.append(" .hostName=").append(hostName);
-		builder.append(" .fileType=").append(fileType).append("]");
+		builder.append(" .fileType=").append(fileType).append(']');
 		return builder.toString();
 	}
 

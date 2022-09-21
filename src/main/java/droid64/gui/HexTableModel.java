@@ -7,27 +7,19 @@ import droid64.d64.Utility;
 /**
  * Table model used by HexViewFrame.
  * @author Henrik
- * @see HexViewDialog
+ * @see HexViewPanel
  */
 public class HexTableModel extends AbstractTableModel {
 
 	private static final long serialVersionUID = 1L;
 	private int bytesPerRow = 16;
 	private byte[] data = null;
-	private int length;
+	private int length = 0;
 
-	/**
-	 * Constructor
-	 * @param data the data to render
-	 * @param length the length of the data
-	 */
-	public HexTableModel(byte[] data, int length) {
+	public void loadData(byte[] data, int length) {
 		this.data = data;
-		if (data == null) {
-			this.length = 0;
-		} else {
-			this.length = length < data.length ? length : data.length;
-		}
+		this.length = data != null ? Math.min(data.length, length) : 0;
+		fireTableDataChanged();
 	}
 
 	@Override
@@ -67,7 +59,7 @@ public class HexTableModel extends AbstractTableModel {
 			} else if (columnIndex == bytesPerRow + 1) {
 				return getDumpRowString(rowIndex);
 			} else {
-				int addr = (rowIndex * bytesPerRow) + columnIndex -1;
+				int addr = rowIndex * bytesPerRow + columnIndex -1;
 				if (addr < data.length && addr < length) {
 					return Utility.getByteStringUpperCase(data[addr]);
 				} else {

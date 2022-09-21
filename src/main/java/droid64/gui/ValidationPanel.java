@@ -1,7 +1,7 @@
 package droid64.gui;
 
 import java.awt.BorderLayout;
-import java.awt.Container;
+import java.awt.Frame;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.util.ArrayList;
@@ -12,35 +12,40 @@ import java.util.Map;
 
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
-import javax.swing.JFrame;
+import javax.swing.JDialog;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JSplitPane;
 import javax.swing.JTable;
 import javax.swing.JTextArea;
 import javax.swing.ListSelectionModel;
+import javax.swing.SwingUtilities;
+import javax.swing.WindowConstants;
 import javax.swing.table.AbstractTableModel;
 import javax.swing.table.DefaultTableColumnModel;
 import javax.swing.table.TableColumn;
-import javax.swing.table.TableModel;
 
 import droid64.d64.Utility;
 import droid64.d64.ValidationError;
 
-public class ValidationFrame extends JFrame {
+public class ValidationPanel extends JPanel {
 
 	private static final long serialVersionUID = 1L;
 	private static final String HEADER_TRACK_SECTOR = "\nTrack/Sector\n------------\n";
 	private static final String HEADER_TRACK_SECTOR_FILE = "\nTrack/Sector\t File\n------------\t ----------------\n";
 
-	private Map<Integer,List<ValidationError>> errorMap = new HashMap<>();
+	private final Map<Integer,List<ValidationError>> errorMap = new HashMap<>();
+	private final JButton repairButton = new JButton("Repair");
+	private final JTextArea textArea = new JTextArea();
+	private final Frame parentFrame;
+	private final JButton closeButton = new JButton("Close");
+
 	private JCheckBox[] boxes;
 	private List<Integer> keys;
-	private JButton repairButton;
+	private DiskPanel diskPanel;
 
-	public ValidationFrame(List<ValidationError> errors, final DiskPanel diskPanel) {
-		super.setTitle("Validation errors");
-		parseErrors(errors);
+	public ValidationPanel(Frame parentFrame) {
+		this.parentFrame = parentFrame;
 
 		DefaultTableColumnModel columnModel = new DefaultTableColumnModel();
 		TableColumn col1 = new TableColumn(0, 10);
@@ -56,13 +61,11 @@ public class ValidationFrame extends JFrame {
 		col4.setHeaderValue("Error text");
 		columnModel.addColumn(col4);
 
-		TableModel tableModel = new ValidationTableModel();
-
-		final JTextArea textArea = new JTextArea();
 		textArea.setLineWrap(true);
 		textArea.setEditable(false);
 
-		final JTable errorTable = new JTable(tableModel, columnModel);
+		final JTable errorTable = new JTable(new ValidationTableModel(), columnModel);
+		errorTable.getTableHeader().setReorderingAllowed(false);
 		errorTable.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
 		errorTable.setAutoResizeMode(JTable.AUTO_RESIZE_LAST_COLUMN);
 		errorTable.addMouseListener(new MouseAdapter() {
@@ -75,44 +78,45 @@ public class ValidationFrame extends JFrame {
 			}
 		});
 
-		if (errorMap.isEmpty()) {
-			textArea.setText("No validation errors found.");
-		}
-
-		final JButton okButton = new JButton("OK");
-		okButton.setMnemonic('o');
-		okButton.setToolTipText("Leave Validation errors.");
-		okButton.addActionListener(ae -> dispose());
-
-		repairButton = new JButton("Repair");
 		repairButton.setToolTipText("Repair selected validation errors.");
-		repairButton.setEnabled(!errorMap.isEmpty());
-		repairButton.addActionListener(ae -> repair(errorTable, diskPanel, textArea));
-
-		Container cp = getContentPane();
-		cp.setLayout(new BorderLayout());
+		repairButton.addActionListener(ae -> repair(errorTable, textArea));
 
 		JSplitPane splitPane = new JSplitPane(JSplitPane.VERTICAL_SPLIT);
 		splitPane.setContinuousLayout(true);
 		splitPane.setTopComponent(new JScrollPane(errorTable));
 		splitPane.setBottomComponent(new JScrollPane(textArea));
 
-		cp.add(splitPane, BorderLayout.CENTER);
-
 		JPanel buttonPanel = new JPanel();
 		buttonPanel.add(repairButton);
+		buttonPanel.add(closeButton);
 
-		buttonPanel.add(okButton);
-		cp.add(buttonPanel, BorderLayout.SOUTH);
+		setLayout(new BorderLayout());
+		add(splitPane, BorderLayout.CENTER);
+		add(buttonPanel, BorderLayout.SOUTH);
 
-		GuiHelper.setLocation(this,  4, 6);
-		pack();
 		GuiHelper.setSize(this,  4, 2);
-		setVisible(diskPanel != null);
-		setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+		addHierarchyListener(e -> GuiHelper.hierarchyListenerResizer(SwingUtilities.getWindowAncestor(this)));
 	}
 
-	private void repair(JTable errorTable, DiskPanel diskPanel, JTextArea textArea) {
+	public void show(List<ValidationError> errors, DiskPanel diskPanel) {
+		this.diskPanel = diskPanel;
+		parseErrors(errors);
+		repairButton.setEnabled(!errorMap.isEmpty());
+		if (errorMap.isEmpty()) {
+			textArea.setText("No validation errors found.");
+		}
+		GuiHelper.setPreferredSize(this, 2, 2);
+
+		final JDialog dialog = new JDialog(parentFrame, "Validation errors", true);
+		dialog.setContentPane(this);
+		dialog.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
+		closeButton.addActionListener(e -> dialog.dispose());
+		dialog.pack();
+		dialog.setLocationRelativeTo(parentFrame);
+		dialog.setVisible(true);
+	}
+
+	private void repair(JTable errorTable, JTextArea textArea) {
 		if (!errorMap.isEmpty()) {
 			return;
 		}
@@ -132,16 +136,16 @@ public class ValidationFrame extends JFrame {
 		}
 	}
 
-	private void parseErrors(List<ValidationError> errorList) {
+	protected void parseErrors(List<ValidationError> errorList) {
 		errorMap.clear();
 		if (errorList != null) {
-			for (ValidationError error : errorList) {
+			errorList.forEach(error -> {
 				Integer code = Integer.valueOf(error.getErrorCode());
 				if (!errorMap.containsKey(code)) {
 					errorMap.put(code, new ArrayList<>());
 				}
 				errorMap.get(code).add(error);
-			}
+			});
 		}
 		boxes = new JCheckBox[errorMap.size()];
 		for (int i=0; i < boxes.length; i++) {
@@ -167,9 +171,9 @@ public class ValidationFrame extends JFrame {
 		int i=0;
 		for (ValidationError error : errorList) {
 			if (hasFile) {
-				buf.append(error.getTrack()).append('/').append(error.getSector()).append("\t ").append(error.getFileName()).append('\n');
+				buf.append(String.format("%3d/%-3d %s%n", error.getTrack(), error.getSector(), error.getFileName()));
 			} else {
-				buf.append(error.getTrack()).append('/').append(error.getSector()).append( (i++ & 7) == 7 ? "\n" : "\t ");
+				buf.append(String.format("%3d/%-3d%s", error.getTrack(), error.getSector(), (i++ & 7) == 7 ? "\n" : " "));
 			}
 		}
 		return buf.toString();
@@ -226,11 +230,7 @@ public class ValidationFrame extends JFrame {
 
 		@Override
 		public Class<?> getColumnClass(int column) {
-			if (column == 0) {
-				return Boolean.class;
-			} else {
-				return String.class;
-			}
+			return column == 0 ? Boolean.class : String.class;
 		}
 	}
 

@@ -72,14 +72,12 @@ public class ExternalProgram {
 		List<String> files = new ArrayList<>();
 		List<String> imagefiles = new ArrayList<>();
 		if (sourceFiles != null && !sourceFiles.isEmpty()) {
-			for (String file : sourceFiles) {
-				if (file!= null && !file.isEmpty()) {
-					files.add(file);
-					if (sourceImage != null && !sourceImage.isEmpty()) {
-						imagefiles.add(sourceImage + ":" + file);
-					}
+			sourceFiles.stream().filter(s -> s!=null && !s.isEmpty()).forEach(fName-> {
+				files.add(fName);
+				if (sourceImage != null && !sourceImage.isEmpty()) {
+					imagefiles.add(sourceImage + ":" + fName);
 				}
-			}
+			});
 		}
 		return buildArguments(sourceImage, target, imagefiles, files, directory, imageType);
 	}
@@ -143,6 +141,8 @@ public class ExternalProgram {
 			return "1581";
 		case DiskImage.D82_IMAGE_TYPE:
 			return "8250";
+		case DiskImage.D88_IMAGE_TYPE:
+			return "8280";
 		case DiskImage.D64_IMAGE_TYPE:
 		case DiskImage.D64_CPM_C64_IMAGE_TYPE:
 		case DiskImage.D64_CPM_C128_IMAGE_TYPE:
@@ -177,7 +177,7 @@ public class ExternalProgram {
 				mainPanel.getRightDiskPanel().reloadDiskImage(true);
 			}
 		} catch (Exception e) {	//NOSONAR
-			mainPanel.appendConsole("\n"+e.getMessage());
+			mainPanel.appendConsole('\n'+e.getMessage());
 		}
 	}
 
@@ -197,7 +197,7 @@ public class ExternalProgram {
 			}
 			process.waitFor();
 		} catch (Exception e) {	//NOSONAR
-			mainPanel.appendConsole("\n"+e.getMessage());
+			mainPanel.appendConsole('\n'+e.getMessage());
 		}
 	}
 
@@ -210,7 +210,7 @@ public class ExternalProgram {
 		builder.append(" .description=").append(description);
 		builder.append(" .label=").append(label);
 		builder.append(" .forkThread=").append(forkThread);
-		builder.append("]");
+		builder.append(']');
 		return builder.toString();
 	}
 
@@ -292,5 +292,4 @@ public class ExternalProgram {
 	public void setForkThread(boolean forkThread) {
 		this.forkThread = forkThread;
 	}
-
 }

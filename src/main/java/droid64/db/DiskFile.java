@@ -93,7 +93,7 @@ public class DiskFile extends Value {
 		builder.append(" .fileNum=").append(fileNum);
 		builder.append(" .fileType=").append(fileType);
 		builder.append(" .state=").append(getState());
-		builder.append("]");
+		builder.append(']');
 		return builder.toString();
 	}
 

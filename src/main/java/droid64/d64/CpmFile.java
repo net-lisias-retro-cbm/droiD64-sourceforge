@@ -79,7 +79,7 @@ public class CpmFile extends CbmFile implements Serializable {
 		if (cpmNameExt==null || cpmNameExt.isEmpty()) {
 			return cpmName != null ? cpmName.trim().toLowerCase() : getName();
 		} else {
-			return cpmName != null ? cpmName.trim().toLowerCase() + "." + cpmNameExt.trim().toLowerCase() : getName();
+			return cpmName != null ? cpmName.trim().toLowerCase() + '.' + cpmNameExt.trim().toLowerCase() : getName();
 		}
 	}
 
@@ -178,9 +178,9 @@ public class CpmFile extends CbmFile implements Serializable {
 
 	@Override
 	public String asDirString() {
-		return String.format("%-5s %-8s %-3s %-3s",
+		return String.format("%-5s %-8s %-3s %c%c%c",
 				recordCount, cpmName, cpmNameExt,
-				(readOnly ? "R" : "-") + (hidden ? "H" : "-") + (archived ? "A" : "-"));
+				(readOnly ? 'R' : '-'), (hidden ? 'H' : '-'), (archived ? 'A' : '-'));
 	}
 
 	@Override
@@ -192,7 +192,7 @@ public class CpmFile extends CbmFile implements Serializable {
 		builder.append(" recordCount=").append(recordCount);
 		builder.append(" hidden=").append(hidden);
 		builder.append(" allocList=").append(allocList);
-		builder.append("]");
+		builder.append(']');
 		return builder.toString();
 	}
 

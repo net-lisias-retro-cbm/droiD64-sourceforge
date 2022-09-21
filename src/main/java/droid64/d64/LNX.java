@@ -95,7 +95,7 @@ public class LNX extends DiskImage {
 					// file name
 					pos = end + 1;
 					end = findNextMark(pos);
-					String name = getString(pos, end);
+					String name = Utility.getPetsciiString(cbmDisk, pos, end);
 					// size in blocks
 					pos = end + 1;
 					end = findNextMark(pos);
@@ -103,7 +103,7 @@ public class LNX extends DiskImage {
 					// file type
 					pos = end + 1;
 					end = findNextMark(pos);
-					String ftype = getString(pos, end);
+					String ftype = Utility.getPetsciiString(cbmDisk, pos, end);
 					// Get LSU (last sector usage, i.e. the number of bytes used in last block + 1).
 					pos = end + 1;
 					end = findNextMark(pos);
@@ -117,7 +117,7 @@ public class LNX extends DiskImage {
 				feedbackMessage.append("Error: No end of BASIC header found.\n");
 			}
 		} catch (NumberFormatException | ParseException e) {	//NOSONAR
-			feedbackMessage.append("Error: Failed to parse LNX file "+(num+1)+" at index 0x"+Integer.toHexString(pos)+".\n"+e.getMessage()+"\n");
+			feedbackMessage.append("Error: Failed to parse LNX file ").append(num+1).append(" at index 0x").append(Integer.toHexString(pos)).append(".\n").append(e.getMessage()).append('\n');
 		}
 	}
 
@@ -134,11 +134,6 @@ public class LNX extends DiskImage {
 		cf.setFileClosed(true);
 		cf.setLsu(lsu);
 		cbmFile[num] = cf;
-	}
-
-	@Override
-	public void readPartition(int track, int sector, int numBlocks) throws CbmException {
-		// No partitions in LNX
 	}
 
 	@Override
@@ -213,27 +208,6 @@ public class LNX extends DiskImage {
 	}
 
 	/**
-	 * Get String starting at <code>start</code> and ending at <code>end</code>.
-	 * @param start
-	 * @param end
-	 * @return String
-	 * @throws ParseException if start or end not within LNX file or if start &gt; end.
-	 */
-	private String getString(int start, int end) throws ParseException {
-		if (start < 0 || end > cbmDisk.length || start > end) {
-			throw new ParseException("Failed to get string in LNX file.\n", start);
-		}
-		StringBuilder buf = new StringBuilder();
-		for (int i = start; i < end; i++) {
-			int c = cbmDisk[i] & 0xff;
-			if (c != (Utility.BLANK & 0xff)) {
-				buf.append((char)(Utility.PETSCII_TABLE[c]));
-			}
-		}
-		return buf.toString();
-	}
-
-	/**
 	 * Find next <code>LNX_MARK</code> in LNX file, on or after <code>start</code>.
 	 * @param start int
 	 * @return position of next <code>LNX_MARK</code> or -1 if none was found.
@@ -273,7 +247,7 @@ public class LNX extends DiskImage {
 		if (end > start && end < cbmDisk.length) {
 			String str = new String(Arrays.copyOfRange(cbmDisk, start, end)).trim();
 			if (str.isEmpty()) {
-				feedbackMessage.append("Warning: Tried parsing empty string to integer at 0x"+start+"\n");
+				feedbackMessage.append("Warning: Tried parsing empty string to integer at 0x").append(start).append('\n');
 				return 0;
 			} else {
 				try {
@@ -285,6 +259,41 @@ public class LNX extends DiskImage {
 		} else {
 			throw new NumberFormatException("Failed to parse int at 0x"+Integer.toHexString(start)+" (no string).");
 		}
+	}
+
+	@Override
+	public int getNextSector(int track, int sector) {
+		return sector;
+	}
+
+	@Override
+	public TrackSector getSector(int offset) {
+		return null;
+	}
+
+	@Override
+	public int getBlocksFree() {
+		return DEFAULT_ZERO;
+	}
+
+	@Override
+	public int getFirstSector() {
+		return DEFAULT_ZERO;
+	}
+
+	@Override
+	public int getMaxSectors(int trackNumber) {
+		return DEFAULT_ZERO;
+	}
+
+	@Override
+	public int getTrackCount() {
+		return DEFAULT_ZERO;
+	}
+
+	@Override
+	public int getMaxSectorCount() {
+		return DEFAULT_ZERO;
 	}
 
 }

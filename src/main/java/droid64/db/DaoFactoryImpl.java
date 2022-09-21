@@ -156,7 +156,7 @@ public class DaoFactoryImpl extends DaoFactory {
 		if (jdbcUrl==null || jdbcUrl.trim().isEmpty()) {
 			throw new DatabaseException("No URL");
 		}
-		Class.forName ("com.mysql.jdbc.Driver");
+		Class.forName ("com.mysql.cj.jdbc.Driver");
 		if (jdbcUser!=null && !jdbcUser.isEmpty()) {
 			connection = DriverManager.getConnection(jdbcUrl, jdbcUser, jdbcPassword);
 		} else {

@@ -8,6 +8,7 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -33,7 +34,7 @@ public class Settings {
 	private static final ResourceBundle RESOURCE_BUNDLE = ResourceBundle.getBundle(DROID64);
 	public static final String DIR_FONT_NAME = "droiD64_cbm.ttf";
 	private static final JPanel DEFAULT_PANEL = new JPanel();
-	public static final int MAX_PLUGINS = 4;
+	public static final int MAX_PLUGINS = 8;
 
 	private static final String DELIM = ";";
 	private static final String LF = "\n";
@@ -67,6 +68,7 @@ public class Settings {
 	private static final String SETTING_DEFAULT_IMAGE_DIR   = "default_image_dir";
 	private static final String SETTING_DEFAULT_IMAGE_DIR2  = "default_image_dir2";
 	private static final String SETTING_FONT_SIZE           = "font_size";
+	private static final String SETTING_HIDECONSOLE         = "hide_console";
 	private static final String SETTING_ROW_HEIGHT          = "row_height";
 	private static final String SETTING_LOCAL_ROW_HEIGHT    = "local_row_height";
 	private static final String SETTING_LOCAL_FONT_SIZE     = "local_font_size";
@@ -95,6 +97,7 @@ public class Settings {
 	private static final String SETTING_FILE_EXT_T64        = "file_ext_t64";
 	private static final String SETTING_FILE_EXT_D80        = "file_ext_d80";
 	private static final String SETTING_FILE_EXT_D82        = "file_ext_d82";
+	private static final String SETTING_FILE_EXT_D88        = "file_ext_d88";
 	private static final String SETTING_FILE_EXT_LNX        = "file_ext_lnx";
 	private static final String SETTING_FILE_EXT_D64_GZ        = "file_ext_d64_gz";
 	private static final String SETTING_FILE_EXT_D67_GZ        = "file_ext_d67_gz";
@@ -103,10 +106,12 @@ public class Settings {
 	private static final String SETTING_FILE_EXT_T64_GZ        = "file_ext_t64_gz";
 	private static final String SETTING_FILE_EXT_D80_GZ        = "file_ext_d80_gz";
 	private static final String SETTING_FILE_EXT_D82_GZ        = "file_ext_d82_gz";
+	private static final String SETTING_FILE_EXT_D88_GZ        = "file_ext_d88_gz";
 	private static final String SETTING_FILE_EXT_LNX_GZ        = "file_ext_lnx_gz";
 
 	// For convenience
 	private static final String USER_HOME = System.getProperty("user.home");
+	private static final String VICE_PLUGIN_ARGS = "-drive8type {DriveType} {ImageFiles}";
 
 	private static ExternalProgram[] externalPrograms = new ExternalProgram[MAX_PLUGINS];
 	private static Font commodoreFont = null;
@@ -134,9 +139,11 @@ public class Settings {
 		map.put(SETTING_DIR_LOCAL_BG,		new Parameter(SETTING_DIR_LOCAL_BG,			Parameter.COLOR_PARAM,		DIR_BG_COLOR_LOCAL));
 		map.put(SETTING_DIR_LOCAL_FG,		new Parameter(SETTING_DIR_LOCAL_FG,			Parameter.COLOR_PARAM,		DIR_FG_COLOR_LOCAL));
 		map.put(SETTING_FONT_SIZE,			new Parameter(SETTING_FONT_SIZE,			Parameter.INTEGER_PARAM,	Integer.valueOf(10)));
+		map.put(SETTING_HIDECONSOLE,		new Parameter(SETTING_HIDECONSOLE,			Parameter.BOOLEAN_PARAM,	Boolean.FALSE));
+
 		map.put(SETTING_LOCAL_FONT_SIZE,	new Parameter(SETTING_LOCAL_FONT_SIZE,		Parameter.INTEGER_PARAM,	Integer.valueOf(10)));
 		map.put(SETTING_WINDOW,				new Parameter(SETTING_WINDOW,				Parameter.STRING_PARAM,		Utility.EMPTY));
-		map.put(SETTING_JDBC_DRIVER,		new Parameter(SETTING_JDBC_DRIVER,			Parameter.STRING_PARAM,		"com.mysql.jdbc.Driver"));
+		map.put(SETTING_JDBC_DRIVER,		new Parameter(SETTING_JDBC_DRIVER,			Parameter.STRING_PARAM,		"com.mysql.cj.jdbc.Driver"));
 		map.put(SETTING_JDBC_URL,			new Parameter(SETTING_JDBC_URL,				Parameter.STRING_PARAM,		"jdbc:mysql://localhost:3306/droid64"));
 		map.put(SETTING_JDBC_USER,			new Parameter(SETTING_JDBC_USER,			Parameter.STRING_PARAM,		DROID64));
 		map.put(SETTING_JDBC_PASS,			new Parameter(SETTING_JDBC_PASS,			Parameter.STRING_PARAM,		"uridium"));
@@ -147,33 +154,36 @@ public class Settings {
 		map.put(SETTING_USE_DB,				new Parameter(SETTING_USE_DB,				Parameter.BOOLEAN_PARAM,	Boolean.FALSE));
 		map.put(SETTING_LOOK_AND_FEEL,		new Parameter(SETTING_LOOK_AND_FEEL,		Parameter.INTEGER_PARAM,	Integer.valueOf(1)));
 		map.put(SETTING_PLUGIN_COMMAND,		new Parameter(SETTING_PLUGIN_COMMAND,		Parameter.INDEXED_STRING_PARAM,
-				Arrays.asList( "d64copy", "x64", "128", "cbmctrl" )));
+				new ArrayList<>(Arrays.asList( "d64copy", "x64", "128", "cbmctrl", "xpet" ))));
 		map.put(SETTING_PLUGIN_ARGUMENTS,	new Parameter(SETTING_PLUGIN_ARGUMENTS,		Parameter.INDEXED_STRING_PARAM,
-				Arrays.asList( "{Image} 8", "-drive8type {DriveType} {ImageFiles}", "-drive8type {DriveType} {ImageFiles}", "dir 8" )));
+				new ArrayList<>(Arrays.asList( "{Image} 8", VICE_PLUGIN_ARGS, VICE_PLUGIN_ARGS, VICE_PLUGIN_ARGS ))));
 		map.put(SETTING_PLUGIN_DESCRIPTION,	new Parameter(SETTING_PLUGIN_DESCRIPTION,	Parameter.INDEXED_STRING_PARAM,
-				Arrays.asList(
+				new ArrayList<>(Arrays.asList(
 						"Transfer this disk image to a real floppy.", "Invoke VICE 64 emulator with this disk image",
-						"Invoke VICE 128 emulator with this disk image", "List files using OpenCBM" )));
+						"Invoke VICE 128 emulator with this disk image", "List files using OpenCBM", "VICE PET emulator" ))));
 		map.put(SETTING_PLUGIN_LABEL,		new Parameter(SETTING_PLUGIN_LABEL,			Parameter.INDEXED_STRING_PARAM,
-				Arrays.asList( "d64copy", "VICE 64", "VICE 128", "CBM dir" )));
+				new ArrayList<>(Arrays.asList( "d64copy", "VICE 64", "VICE 128", "CBM dir", "VICE PET" ))));
+
 		map.put(SETTING_PLUGIN_FORK,		new Parameter(SETTING_PLUGIN_FORK,			Parameter.INDEXED_STRING_PARAM,
-				Arrays.asList( "true", "true", "true", "true" )));
-		map.put(SETTING_FILE_EXT_D64,		new Parameter(SETTING_FILE_EXT_D64,			Parameter.STRING_LIST_PARAM,	Arrays.asList(".d64".split(DELIM)) ));
+				new ArrayList<>(Arrays.asList( "true", "true", "true", "true", "true" ))));
+		map.put(SETTING_FILE_EXT_D64,		new Parameter(SETTING_FILE_EXT_D64,			Parameter.STRING_LIST_PARAM,	Arrays.asList(".d64;.d64.gz".split(DELIM)) ));
 		map.put(SETTING_FILE_EXT_D67,		new Parameter(SETTING_FILE_EXT_D67,			Parameter.STRING_LIST_PARAM,	Arrays.asList(".d67".split(DELIM)) ));
 		map.put(SETTING_FILE_EXT_D71,		new Parameter(SETTING_FILE_EXT_D71,			Parameter.STRING_LIST_PARAM,	Arrays.asList(".d71".split(DELIM)) ));
 		map.put(SETTING_FILE_EXT_D81,		new Parameter(SETTING_FILE_EXT_D81,			Parameter.STRING_LIST_PARAM,	Arrays.asList(".d81".split(DELIM)) ));
 		map.put(SETTING_FILE_EXT_T64,		new Parameter(SETTING_FILE_EXT_T64,			Parameter.STRING_LIST_PARAM,	Arrays.asList(".t64".split(DELIM)) ));
 		map.put(SETTING_FILE_EXT_D80,		new Parameter(SETTING_FILE_EXT_D80,			Parameter.STRING_LIST_PARAM,	Arrays.asList(".d80".split(DELIM)) ));
 		map.put(SETTING_FILE_EXT_D82,		new Parameter(SETTING_FILE_EXT_D82,			Parameter.STRING_LIST_PARAM,	Arrays.asList(".d82".split(DELIM)) ));
+		map.put(SETTING_FILE_EXT_D88,		new Parameter(SETTING_FILE_EXT_D88,			Parameter.STRING_LIST_PARAM,	Arrays.asList(".d88".split(DELIM)) ));
 		map.put(SETTING_FILE_EXT_LNX,		new Parameter(SETTING_FILE_EXT_LNX,			Parameter.STRING_LIST_PARAM,	Arrays.asList(".lnx".split(DELIM)) ));
-		map.put(SETTING_FILE_EXT_D64_GZ,	new Parameter(SETTING_FILE_EXT_D64_GZ,		Parameter.STRING_LIST_PARAM,	Arrays.asList("d64.gz".split(DELIM)) ));
-		map.put(SETTING_FILE_EXT_D67_GZ,	new Parameter(SETTING_FILE_EXT_D67_GZ,		Parameter.STRING_LIST_PARAM,	Arrays.asList("d67.gz".split(DELIM)) ));
-		map.put(SETTING_FILE_EXT_D71_GZ,	new Parameter(SETTING_FILE_EXT_D71_GZ,		Parameter.STRING_LIST_PARAM,	Arrays.asList("d71.gz".split(DELIM)) ));
-		map.put(SETTING_FILE_EXT_D81_GZ,	new Parameter(SETTING_FILE_EXT_D81_GZ,		Parameter.STRING_LIST_PARAM,	Arrays.asList("d81.gz".split(DELIM)) ));
-		map.put(SETTING_FILE_EXT_T64_GZ,	new Parameter(SETTING_FILE_EXT_T64_GZ,		Parameter.STRING_LIST_PARAM,	Arrays.asList("t64.gz".split(DELIM)) ));
-		map.put(SETTING_FILE_EXT_D80_GZ,	new Parameter(SETTING_FILE_EXT_D80_GZ,		Parameter.STRING_LIST_PARAM,	Arrays.asList("d80.gz".split(DELIM)) ));
-		map.put(SETTING_FILE_EXT_D82_GZ,	new Parameter(SETTING_FILE_EXT_D82_GZ,		Parameter.STRING_LIST_PARAM,	Arrays.asList("d82.gz".split(DELIM)) ));
-		map.put(SETTING_FILE_EXT_LNX_GZ,	new Parameter(SETTING_FILE_EXT_LNX_GZ,		Parameter.STRING_LIST_PARAM,	Arrays.asList("lnx.gz".split(DELIM)) ));
+		map.put(SETTING_FILE_EXT_D64_GZ,	new Parameter(SETTING_FILE_EXT_D64_GZ,		Parameter.STRING_LIST_PARAM,	Arrays.asList(".d64.gz".split(DELIM)) ));
+		map.put(SETTING_FILE_EXT_D67_GZ,	new Parameter(SETTING_FILE_EXT_D67_GZ,		Parameter.STRING_LIST_PARAM,	Arrays.asList(".d67.gz".split(DELIM)) ));
+		map.put(SETTING_FILE_EXT_D71_GZ,	new Parameter(SETTING_FILE_EXT_D71_GZ,		Parameter.STRING_LIST_PARAM,	Arrays.asList(".d71.gz".split(DELIM)) ));
+		map.put(SETTING_FILE_EXT_D81_GZ,	new Parameter(SETTING_FILE_EXT_D81_GZ,		Parameter.STRING_LIST_PARAM,	Arrays.asList(".d81.gz".split(DELIM)) ));
+		map.put(SETTING_FILE_EXT_T64_GZ,	new Parameter(SETTING_FILE_EXT_T64_GZ,		Parameter.STRING_LIST_PARAM,	Arrays.asList(".t64.gz".split(DELIM)) ));
+		map.put(SETTING_FILE_EXT_D80_GZ,	new Parameter(SETTING_FILE_EXT_D80_GZ,		Parameter.STRING_LIST_PARAM,	Arrays.asList(".d80.gz".split(DELIM)) ));
+		map.put(SETTING_FILE_EXT_D82_GZ,	new Parameter(SETTING_FILE_EXT_D82_GZ,		Parameter.STRING_LIST_PARAM,	Arrays.asList(".d82.gz".split(DELIM)) ));
+		map.put(SETTING_FILE_EXT_D88_GZ,	new Parameter(SETTING_FILE_EXT_D88_GZ,		Parameter.STRING_LIST_PARAM,	Arrays.asList(".d88.gz".split(DELIM)) ));
+		map.put(SETTING_FILE_EXT_LNX_GZ,	new Parameter(SETTING_FILE_EXT_LNX_GZ,		Parameter.STRING_LIST_PARAM,	Arrays.asList(".lnx.gz".split(DELIM)) ));
 		map.put(SETTING_SYS_FONT,			new Parameter(SETTING_SYS_FONT,				Parameter.FONT_PARAM,			null));
 		map.put(SETTING_CBM_FONT,			new Parameter(SETTING_CBM_FONT,				Parameter.FONT_PARAM,			null));
 
@@ -248,7 +258,7 @@ public class Settings {
 			String args = i <argList.size() ? argList.get(i) : Utility.EMPTY;
 			String descr = i <descrList.size() ? descrList.get(i) : Utility.EMPTY;
 			String label = i <labelList.size() ? labelList.get(i) : Utility.EMPTY;
-			boolean forkThread = i <forkList.size() ? Boolean.valueOf(forkList.get(i)) : true;
+			boolean forkThread = i <forkList.size() ? Boolean.valueOf(forkList.get(i)) : Boolean.TRUE;
 			if (Utility.EMPTY.equals(cmd) && Utility.EMPTY.equals(descr) && Utility.EMPTY.equals(label)) {
 				list.add(null);
 			} else {
@@ -278,11 +288,17 @@ public class Settings {
 		setIndexedString(SETTING_PLUGIN_LABEL, num, label);
 		setIndexedString(SETTING_PLUGIN_FORK, num, Boolean.toString(forkThread));
 	}
+
 	private static void setIndexedString(String key, int num, String value) {
 		Parameter param = settingTypeMap.get(key);
 		List<String> list = param.getIndexedStringValue();
-		for (int i=list.size(); i <= num; i++) {
-			list.add(Utility.EMPTY);
+		if (list.size() <= num) {
+			// Might be readonly
+			list = new ArrayList<>(list);
+			param.setIndexedStringValue(list);
+			for (int i=list.size(); i <= num; i++) {
+				list.add(Utility.EMPTY);
+			}
 		}
 		list.set(num, value);
 	}
@@ -365,7 +381,7 @@ public class Settings {
 	}
 
 	public static String getJdbcDriver() {
-		return getStringParameter(SETTING_JDBC_DRIVER, "com.mysql.jdbc.Driver");
+		return getStringParameter(SETTING_JDBC_DRIVER, "com.mysql.cj.jdbc.Driver");
 	}
 	public static void setJdbcDriver(String driver) {
 		setStringParameter(SETTING_JDBC_DRIVER, driver);
@@ -436,6 +452,7 @@ public class Settings {
 		map.put(DiskImage.D80_IMAGE_TYPE, joinLists(getStringListParam(SETTING_FILE_EXT_D80), getStringListParam(SETTING_FILE_EXT_D80_GZ)));
 		map.put(DiskImage.D81_IMAGE_TYPE, joinLists(getStringListParam(SETTING_FILE_EXT_D81), getStringListParam(SETTING_FILE_EXT_D81_GZ)));
 		map.put(DiskImage.D82_IMAGE_TYPE, joinLists(getStringListParam(SETTING_FILE_EXT_D82), getStringListParam(SETTING_FILE_EXT_D82_GZ)));
+		map.put(DiskImage.D88_IMAGE_TYPE, joinLists(getStringListParam(SETTING_FILE_EXT_D88), getStringListParam(SETTING_FILE_EXT_D88_GZ)));
 		map.put(DiskImage.LNX_IMAGE_TYPE, joinLists(getStringListParam(SETTING_FILE_EXT_LNX), getStringListParam(SETTING_FILE_EXT_LNX_GZ)));
 		map.put(DiskImage.T64_IMAGE_TYPE, joinLists(getStringListParam(SETTING_FILE_EXT_T64), getStringListParam(SETTING_FILE_EXT_T64_GZ)));
 		return map;
@@ -496,6 +513,9 @@ public class Settings {
 		case DiskImage.D82_IMAGE_TYPE:
 			setStringListParam(compressed ? SETTING_FILE_EXT_D82_GZ : SETTING_FILE_EXT_D82, value);
 			break;
+		case DiskImage.D88_IMAGE_TYPE:
+			setStringListParam(compressed ? SETTING_FILE_EXT_D88_GZ : SETTING_FILE_EXT_D88, value);
+			break;
 		case DiskImage.LNX_IMAGE_TYPE:
 			setStringListParam(compressed ? SETTING_FILE_EXT_LNX_GZ : SETTING_FILE_EXT_LNX, value);
 			break;
@@ -544,6 +564,8 @@ public class Settings {
 			return getStringListParam(compressed ? SETTING_FILE_EXT_D81_GZ : SETTING_FILE_EXT_D81);
 		case DiskImage.D82_IMAGE_TYPE:
 			return getStringListParam(compressed ? SETTING_FILE_EXT_D82_GZ : SETTING_FILE_EXT_D82);
+		case DiskImage.D88_IMAGE_TYPE:
+			return getStringListParam(compressed ? SETTING_FILE_EXT_D88_GZ : SETTING_FILE_EXT_D88);
 		case DiskImage.T64_IMAGE_TYPE:
 			return getStringListParam(compressed ? SETTING_FILE_EXT_T64_GZ : SETTING_FILE_EXT_T64);
 		case DiskImage.LNX_IMAGE_TYPE:
@@ -827,6 +849,22 @@ public class Settings {
 		} catch (MissingResourceException e) {
 			return key;
 		}
+	}
+
+	public static String getMessage(String key, Object...args) {
+		try {
+			return MessageFormat.format(RESOURCE_BUNDLE.getString(key), args);
+		} catch (MissingResourceException e) {
+			return key;
+		}
+	}
+
+	public static boolean getHideConsole() {
+		return Boolean.TRUE.equals(getBooleanParameter(SETTING_HIDECONSOLE));
+	}
+
+	public static void setHideConsole(boolean selected) {
+		setBooleanParameter(SETTING_HIDECONSOLE, selected);
 	}
 
 }
