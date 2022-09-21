@@ -30,14 +30,14 @@ public class ListTableCellRenderer extends DefaultTableCellRenderer {
 			if (model.isFile(row)) {
 				if (model.isImageFile(row)) {
 					label.setForeground(Color.RED);
-					label.setBackground(Settings.getDirLocalColorBg());
+					label.setBackground(Setting.DIR_LOCAL_BG.getColor());
 				} else {
-					label.setForeground(Settings.getDirLocalColorFg());
-					label.setBackground(Settings.getDirLocalColorBg());
+					label.setForeground(Setting.DIR_LOCAL_FG.getColor());
+					label.setBackground(Setting.DIR_LOCAL_BG.getColor());
 				}
 			} else {
 				label.setForeground(Color.BLUE);
-				label.setBackground(Settings.getDirLocalColorBg());
+				label.setBackground(Setting.DIR_LOCAL_BG.getColor());
 			}
 			if (column == 3) {
 				label.setHorizontalAlignment(SwingConstants.RIGHT);

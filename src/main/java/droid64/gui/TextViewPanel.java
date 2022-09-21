@@ -56,10 +56,12 @@ public class TextViewPanel extends JPanel {
 	private final JButton printButton = new JButton("Print");
 	private final JToggleButton c64ModeButton = new JToggleButton("C64 mode");
 	private final JButton closeButton = new JButton("Close");
+	private JDialog dialog;
 	private String name;
 
 	public TextViewPanel(MainPanel mainPanel) {
 		this.mainPanel = mainPanel;
+		this.dialog = new JDialog(mainPanel.getParent(), "Text", true);
 		setup();
 	}
 
@@ -77,13 +79,11 @@ public class TextViewPanel extends JPanel {
 		c64ModeButton.setVisible(!Utility.MIMETYPE_HTML.equals(mimeType));
 
 		GuiHelper.setPreferredSize(this, 2, 2);
-
-		final JDialog dialog = new JDialog(mainPanel.getParent(), title, true);
-		dialog.setContentPane(this);
-		dialog.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
-
 		closeButton.addActionListener(e -> dialog.dispose());
 
+		dialog.setTitle(title + " - " + name);
+		dialog.setContentPane(this);
+		dialog.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
 		dialog.pack();
 		dialog.setLocationRelativeTo(mainPanel.getParent());
 		dialog.setVisible(true);
@@ -105,13 +105,7 @@ public class TextViewPanel extends JPanel {
 	}
 
 	private void setTextFont(JComponent component, boolean useCbmFont) {
-		Font font;
-		try {
-			font = useCbmFont ? Settings.getCommodoreFont() : new JPanel().getFont();
-		} catch (CbmException e) {
-			mainPanel.appendConsole("Failed to set Commodore font. Using default font.\n"+e);
-			font = new JPanel().getFont();
-		}
+		Font font = useCbmFont ? Setting.CBM_FONT.getFont() : Setting.SYS_FONT.getFont();
 		component.setFont(font);
 	}
 
@@ -135,9 +129,13 @@ public class TextViewPanel extends JPanel {
 		buttonPanel.add(saveButton);
 		buttonPanel.add(closeButton);
 
+		JScrollPane scrollPane = new JScrollPane(textPane);
+
+		GuiHelper.keyNavigateTextArea(textPane, scrollPane);
+
 		setLayout(new BorderLayout());
 		add(titleLabel, BorderLayout.NORTH);
-		add(new JScrollPane(textPane), BorderLayout.CENTER);
+		add(scrollPane, BorderLayout.CENTER);
 		add(buttonPanel, BorderLayout.SOUTH);
 
 		GuiHelper.setSize(this, 6, 2);
@@ -168,5 +166,9 @@ public class TextViewPanel extends JPanel {
 		} catch (PrinterException e) {
 			mainPanel.appendConsole("Failed to print text.\n"+e);
 		}
+	}
+
+	protected void setDialog(JDialog dialog) {
+		this.dialog = dialog;
 	}
 }

@@ -1,5 +1,8 @@
 package droid64.db;
 
+import droid64.d64.DiskImageType;
+import droid64.d64.FileType;
+
 /**
  * Class to save search criteria when searching in the database for disks and files.
  * @author Henrik
@@ -10,10 +13,10 @@ public class DiskSearchCriteria {
 	private String fileName;
 	private Integer fileSizeMin;
 	private Integer fileSizeMax;
-	private Integer fileType;
+	private FileType fileType;
 	private String diskPath;
 	private String diskFileName;
-	private Integer imageType;
+	private DiskImageType imageType;
 	private String hostName;
 
 	public String getFileName() {
@@ -34,10 +37,10 @@ public class DiskSearchCriteria {
 	public void setFileSizeMax(Integer fileSizeMax) {
 		this.fileSizeMax = fileSizeMax;
 	}
-	public Integer getFileType() {
+	public FileType getFileType() {
 		return fileType;
 	}
-	public void setFileType(Integer fileType) {
+	public void setFileType(FileType fileType) {
 		this.fileType = fileType;
 	}
 	public String getDiskLabel() {
@@ -62,11 +65,11 @@ public class DiskSearchCriteria {
 		return diskFileName;
 	}
 
-	public Integer getImageType() {
+	public DiskImageType getImageType() {
 		return imageType;
 	}
 
-	public void setImageType(Integer imageType) {
+	public void setImageType(DiskImageType imageType) {
 		this.imageType = imageType;
 	}
 

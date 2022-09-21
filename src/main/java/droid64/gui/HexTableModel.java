@@ -9,17 +9,20 @@ import droid64.d64.Utility;
  * @author Henrik
  * @see HexViewPanel
  */
-public class HexTableModel extends AbstractTableModel {
+public abstract class HexTableModel extends AbstractTableModel {
 
 	private static final long serialVersionUID = 1L;
 	private int bytesPerRow = 16;
 	private byte[] data = null;
 	private int length = 0;
+	private boolean dirty;
+	private boolean readOnly = true;
 
 	public void loadData(byte[] data, int length) {
 		this.data = data;
 		this.length = data != null ? Math.min(data.length, length) : 0;
 		fireTableDataChanged();
+		dirty = false;
 	}
 
 	@Override
@@ -73,13 +76,39 @@ public class HexTableModel extends AbstractTableModel {
 		if (data == null || columnIndex == 0 || columnIndex == bytesPerRow + 1) {
 			return null;
 		} else {
-			int addr = (rowIndex * bytesPerRow) + columnIndex -1;
+			int addr = rowIndex * bytesPerRow + columnIndex -1;
 			if (addr < data.length && addr < length) {
 				return Integer.valueOf(data[addr] & 0xff);
 			} else {
 				return null;
 			}
 		}
+	}
+
+	@Override
+	public boolean isCellEditable(int row, int col) {
+		return !readOnly && col > 0 && col <= bytesPerRow && row != -1;
+	}
+
+	public abstract void setValue(int pos, int value);
+
+	@Override
+	public void setValueAt(Object obj, int row, int col) {
+		if (isCellEditable(row, col)) {
+			int addr = row * bytesPerRow + col -1;
+			int value = Utility.parseHexInteger((String)obj, data[addr]) & 0xff;
+			data[addr] = (byte) (value & 0xff);
+			setValue(addr, value);
+			dirty = true;
+		}
+	}
+
+	public boolean isDirty() {
+		return dirty;
+	}
+
+	public void setDirty(boolean dirty) {
+		this.dirty = dirty;
 	}
 
 	/**
@@ -106,6 +135,14 @@ public class HexTableModel extends AbstractTableModel {
 			}
 		}
 		return buf.toString();
+	}
+
+	public void setReadOnly(boolean readOnly) {
+		this.readOnly = readOnly;
+	}
+
+	public boolean isReadOnly() {
+		return readOnly;
 	}
 
 }

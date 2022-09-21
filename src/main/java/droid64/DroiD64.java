@@ -2,9 +2,10 @@ package droid64;
 
 import javax.swing.JFrame;
 
+import droid64.d64.Utility;
 import droid64.gui.MainPanel;
 import droid64.gui.Resources;
-import droid64.gui.Settings;
+import droid64.gui.Setting;
 
 /**
  * <pre style='font-family:sans-serif;'>
@@ -37,14 +38,14 @@ public class DroiD64 {
 
 	public static final String PROGNAME = "droiD64";
 	public static final String TITLE = "Alpha Version Warning: MAY HAVE ERRORS! USE ONLY ON BACKUPS! LOOK AT \"BUGS AND TO-DO\"!";
-	public static final String VERSION = Settings.getMessage(Resources.DROID_VERSION);
+	public static final String VERSION = Utility.getMessage(Resources.DROID_VERSION);
 
 	private DroiD64() {
 		super();
 	}
 
 	public static void main(String[] args) {
-		Settings.loadSettingsFromFile();
+		Setting.load();
 		JFrame mainFrame = new JFrame();
 		new MainPanel(mainFrame);
 		mainFrame.setVisible(true);

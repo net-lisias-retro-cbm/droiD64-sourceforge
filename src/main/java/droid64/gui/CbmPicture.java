@@ -4,6 +4,7 @@ import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.stream.IntStream;
 
 import javax.imageio.ImageIO;
 
@@ -85,18 +86,16 @@ public class CbmPicture {
 			}
 			int background = data[KOALA_BACKGROUND + 2] & 0x0f;
 			colors[0] = COLORS[background];
-			for (int row = 0; row < 25; row++) {
-				for (int col = 0; col < 40; col++) {
+			IntStream.range(0, 25).forEach(row ->
+				IntStream.range(0, 40).forEach(col -> {
 					int screenColor = data[2 + KOALA_SCREEN_RAM + row * 40 + col] & 0xff;
 					int colorRam = data[2 + KOALA_COLOR_RAM + row * 40 + col] & 0x0f;
 					colors[1] = COLORS[screenColor >>> 4];
 					colors[2] = COLORS[screenColor & 0x0f];
 					colors[3] = COLORS[colorRam];
-					for (int k = 0; k < 8; k++) {
-						setPixelOctet(row, col, k, colorMode, colors, image);
-					}
-				}
-			}
+					IntStream.range(0, 8).forEach(k -> setPixelOctet(row, col, k, colorMode, colors, image));
+				})
+			);
 		}
 		return image;
 	}

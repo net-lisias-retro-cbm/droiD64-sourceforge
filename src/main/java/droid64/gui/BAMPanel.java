@@ -2,10 +2,12 @@ package droid64.gui;
 
 import java.awt.BorderLayout;
 import java.awt.Color;
+import java.awt.Component;
 import java.awt.Insets;
 import java.awt.Point;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.util.Arrays;
 
 import javax.swing.BorderFactory;
 import javax.swing.ButtonGroup;
@@ -19,15 +21,16 @@ import javax.swing.JRadioButton;
 import javax.swing.JScrollPane;
 import javax.swing.JTable;
 import javax.swing.ListSelectionModel;
+import javax.swing.SwingConstants;
 import javax.swing.SwingUtilities;
 import javax.swing.WindowConstants;
 import javax.swing.border.EtchedBorder;
 import javax.swing.border.TitledBorder;
 import javax.swing.table.AbstractTableModel;
+import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.TableColumnModel;
 
 import droid64.DroiD64;
-import droid64.d64.CbmBam;
 import droid64.d64.CbmException;
 import droid64.d64.DiskImage;
 import droid64.d64.Utility;
@@ -63,7 +66,7 @@ public class BAMPanel extends JPanel {
 
 	private static final long serialVersionUID = 1L;
 
-	private final JButton saveButton = new JButton(Settings.getMessage(Resources.DROID64_BAM_SAVE));
+	private final JButton saveButton = new JButton(Utility.getMessage(Resources.DROID64_BAM_SAVE));
 	private final JLabel diskNameLabel = new JLabel();
 	private final BamTableModel tableModel = new BamTableModel();
 	private final JTable bamTable = new JTable(tableModel);
@@ -77,7 +80,7 @@ public class BAMPanel extends JPanel {
 	private final JMenuItem freeSelected = GuiHelper.addMenuItem(popMenu, Resources.DROID64_BAM_FREE, 'f', event -> setSelectedAllocation(false));
 	private final MainPanel mainPanel;
 	private DiskImage diskImage;
-	private String diskFileName;
+	private JDialog dialog;
 
 	/**
 	 * Constructor
@@ -86,15 +89,16 @@ public class BAMPanel extends JPanel {
 	 */
 	public BAMPanel(final MainPanel mainPanel) {
 		this.mainPanel = mainPanel;
+		this.dialog = new JDialog(mainPanel.getParent(), "", true);
 		initGUI();
 	}
 
 	private void initGUI() {
-		saveButton.setToolTipText(Settings.getMessage(Resources.DROID64_BAM_SAVE_TOOLTIP));
+		saveButton.setToolTipText(Utility.getMessage(Resources.DROID64_BAM_SAVE_TOOLTIP));
 		saveButton.setMnemonic('s');
 		saveButton.setEnabled(false);
 		saveButton.addActionListener(ae -> {
-			if (diskImage.writeImage(diskFileName)) {
+			if (diskImage.save()) {
 				saveButton.setEnabled(false);
 			}
 			diskImage.readBAM();
@@ -122,11 +126,13 @@ public class BAMPanel extends JPanel {
 			}
 		});
 
+		GuiHelper.keyNavigateTable(bamTable);
+
 		bamTable.setComponentPopupMenu(popMenu);
 		editMode(false);
 
 		TitledBorder border = BorderFactory.createTitledBorder(BorderFactory.createEtchedBorder(EtchedBorder.LOWERED),
-				Settings.getMessage(Resources.DROID64_BAM_MODE));
+				Utility.getMessage(Resources.DROID64_BAM_MODE));
 
 		JPanel modePanel = new JPanel();
 		modePanel.add(viewModeButton);
@@ -168,13 +174,10 @@ public class BAMPanel extends JPanel {
 	/**
 	 * @param diskName     name of disk
 	 * @param bamEntry     bitmap entries
-	 * @param diskFileName name of disk image
 	 * @param diskImage    the disk image
 	 * @param writable     if writable
 	 */
-	public void show(String diskName, final String[][] bamEntry, final String diskFileName, final DiskImage diskImage,
-			boolean writable) {
-		this.diskFileName = diskFileName;
+	public void show(String diskName, final BamTrack[] bamEntry, final DiskImage diskImage,	boolean writable) {
 		this.diskImage = diskImage;
 		this.tableModel.setBamEntry(bamEntry);
 		this.editModeButton.setEnabled(writable);
@@ -189,21 +192,19 @@ public class BAMPanel extends JPanel {
 		}
 
 		GuiHelper.setPreferredSize(this, 2, 2);
-
-		final JDialog dialog = new JDialog(mainPanel.getParent(), DroiD64.PROGNAME + " - BAM of this disk image", true);
-		dialog.setContentPane(this);
-		dialog.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
-
 		closeButton.addActionListener(e -> dialog.dispose());
 
+		dialog.setTitle( DroiD64.PROGNAME + " - BAM of " + diskImage.getDiskImageType() + " disk image");
+		dialog.setContentPane(this);
+		dialog.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
 		dialog.pack();
 		dialog.setLocationRelativeTo(mainPanel.getParent());
 		dialog.setVisible(true);
 	}
 
 	private JRadioButton createRadioButton(String propKey, String toolPropKey) {
-		JRadioButton button = new JRadioButton(Settings.getMessage(propKey));
-		button.setToolTipText(Settings.getMessage(toolPropKey));
+		JRadioButton button = new JRadioButton(Utility.getMessage(propKey));
+		button.setToolTipText(Utility.getMessage(toolPropKey));
 		button.setMargin(new Insets(1, 4, 1, 4));
 		return button;
 	}
@@ -223,7 +224,7 @@ public class BAMPanel extends JPanel {
 	}
 
 	private void toggleBlock(int row, int col, final JTable bamTable) {
-		setUsed(row, col, tableModel.equals(CbmBam.FREE, row, col));
+		setUsed(row, col, tableModel.equals(BamState.FREE, row, col));
 		saveButton.setEnabled(true);
 		bamTable.invalidate();
 		bamTable.repaint();
@@ -232,13 +233,12 @@ public class BAMPanel extends JPanel {
 	private void setUsed(int row, int col, boolean used) {
 		if (used) {
 			diskImage.markSectorUsed(row + 1, col - 1);
-			tableModel.setValueAt(CbmBam.USED, row, col);
+			tableModel.setValueAt(BamState.USED, row, col);
 		} else {
 			diskImage.markSectorFree(row + 1, col - 1);
-			tableModel.setValueAt(CbmBam.FREE, row, col);
+			tableModel.setValueAt(BamState.FREE, row, col);
 		}
 	}
-
 
 	private void viewBlock(int row, int col, MainPanel mainPanel) {
 		try {
@@ -250,14 +250,18 @@ public class BAMPanel extends JPanel {
 		}
 	}
 
+	protected void setDialog(JDialog dialog) {
+		this.dialog = dialog;
+	}
+
 	private class BamTableModel extends AbstractTableModel {
 		private static final long serialVersionUID = 1L;
 
-		private String[][] bamEntry = null;
+		private transient BamTrack[] bamEntry = null;
 
 		@Override
 		public String getColumnName(int column) {
-			return column > 0 ? diskImage.getSectorTitle(column) : Settings.getMessage(Resources.DROID64_BAM_TRACK);
+			return column > 0 ? diskImage.getSectorTitle(column) : Utility.getMessage(Resources.DROID64_BAM_TRACK);
 		}
 
 		@Override
@@ -265,13 +269,13 @@ public class BAMPanel extends JPanel {
 			return String.class;
 		}
 
-		public void setBamEntry(String[][] bamEntry) {
+		public void setBamEntry(BamTrack[] bamEntry) {
 			this.bamEntry = bamEntry;
 		}
 
-		public boolean equals(String expected, int row, int col) {
-			if (bamEntry != null && row < bamEntry.length && col < bamEntry[0].length) {
-				return expected.equals(bamEntry[row][col]);
+		public boolean equals(BamState expected, int row, int col) {
+			if (bamEntry != null && row < bamEntry.length && col < bamEntry[row].bam.length) {
+				return expected.equals(bamEntry[row].bam[col]);
 			}
 			return false;
 		}
@@ -283,24 +287,89 @@ public class BAMPanel extends JPanel {
 
 		@Override
 		public int getColumnCount() {
-			return bamEntry != null ? bamEntry[0].length : 0;
+			return bamEntry != null ? bamEntry[0].bam.length : 0;
 		}
 
 		@Override
 		public Object getValueAt(int row, int column) {
 			if (bamEntry == null) {
 				return Utility.EMPTY;
-			} else if (row < bamEntry.length && column < bamEntry[0].length) {
-				return bamEntry[row][column];
+			} else if (column == 0) {
+				return bamEntry[row].track;
+			} else if (row < bamEntry.length && column < bamEntry[row].bam.length) {
+				return bamEntry[row].bam[column];
 			} else {
 				return Utility.EMPTY;
 			}
 		}
 
-		public void setValueAt(String value, int row, int column) {
-			if (bamEntry != null && row < bamEntry.length && column < bamEntry[0].length) {
-				bamEntry[row][column] = value;
+		public void setValueAt(BamState value, int row, int column) {
+			if (bamEntry != null && row < bamEntry.length && column < bamEntry[row].bam.length) {
+				bamEntry[row].bam[column] = value;
 			}
+		}
+	}
+
+	public enum BamState {
+		FREE("Free", "-", new Color(200,255,200)),
+		USED("Used", "x", new Color(255,200,200)),
+		INVALID("Invalid", " ", new Color(100,100,100)),
+		RESERVED("Reserved", "X", new Color(100,100,255)),
+		FREE_PART("Free partition", "=", new Color(100,200,100)),
+		USED_PART("Used partition", "#", new Color(200,100,100));
+
+		public final String title;
+		public final String mark;
+		public final Color color;
+
+		private BamState(String title, String mark, Color color) {
+			this.title = title;
+			this.mark = mark;
+			this.color = color;
+		}
+
+		@Override
+		public String toString() {
+			return mark;
+		}
+	}
+
+	public static class BamTrack {
+		public final int track;
+		public final BamState[] bam;
+
+		public BamTrack(int track, int numSectors) {
+			this.track = track;
+			this.bam = new BamState[numSectors];
+			Arrays.fill(this.bam, BamState.FREE);
+		}
+	}
+
+
+	protected static class ColoredTableCellRenderer extends DefaultTableCellRenderer {
+
+		private static final long serialVersionUID = 1L;
+
+		@Override
+		public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
+			JLabel label = new JLabel(column > 0 ? Utility.EMPTY : value.toString());
+			label.setOpaque(true);
+			label.setBorder(BorderFactory.createEmptyBorder(1, 1, 1, 1));
+			label.setFont(table.getFont());
+			label.setForeground(table.getForeground());
+			label.setBackground(table.getBackground());
+			if (column == 0) {
+				label.setHorizontalAlignment(SwingConstants.RIGHT);
+			} else if (value instanceof BamState) {
+				if (isSelected) {
+					label.setBackground(((BamState) value).color.darker());
+				} else {
+					label.setBackground(((BamState) value).color);
+				}
+			} else {
+				label.setBackground(BamState.INVALID.color);
+			}
+			return label;
 		}
 	}
 }

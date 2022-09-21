@@ -3,11 +3,13 @@ package droid64.gui;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.InputStreamReader;
+import java.lang.ProcessBuilder.Redirect;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 
 import droid64.d64.DiskImage;
+import droid64.d64.DiskImageType;
+import droid64.d64.Utility;
 
 /**<pre style='font-family:Sans,Arial,Helvetica'>
  * Created on 27.07.2004
@@ -34,6 +36,21 @@ import droid64.d64.DiskImage;
  * @author wolf
  */
 public class ExternalProgram {
+
+	/** The disk image file name including path */
+    private static final String IMAGE      = "{Image}";
+    /** The selected files */
+    private static final String FILES      = "{Files}";
+    /** The selected files prefixed by disk image file */
+    private static final String IMAGEFILES = "{ImageFiles}";
+    /** The path to the target */
+    private static final String TARGET     = "{Target}";
+    /** Ask user for details to create a new disk image */
+    private static final String NEWFILE    = "{NewFile}";
+    /** Disk image type name */
+    private static final String IMAGETYPE  = "{ImageType}";
+    /** Name of the disk drive used to handle the disk image */
+    private static final String DRIVETYPE  = "{DriveType}";
 
 	private String command;
 	private String arguments;
@@ -65,104 +82,87 @@ public class ExternalProgram {
 	 * @param imageType type of disk image
 	 * @return array of strings, with command first. Return empty array if command is null or empty string.
 	 */
-	public String[] getExecute(String sourceImage, List<String> sourceFiles, String target, String directory, int imageType) {
+	public List<String> getExecute(File sourceImage, List<String> sourceFiles, File target, File directory, DiskImageType imageType) {
 		if (command == null || command.isEmpty()) {
-			return new String[0];
+			return new ArrayList<>();
 		}
 		List<String> files = new ArrayList<>();
 		List<String> imagefiles = new ArrayList<>();
 		if (sourceFiles != null && !sourceFiles.isEmpty()) {
-			sourceFiles.stream().filter(s -> s!=null && !s.isEmpty()).forEach(fName-> {
+			sourceFiles.stream().filter(s -> s!= null && !s.isEmpty()).forEach(fName-> {
 				files.add(fName);
-				if (sourceImage != null && !sourceImage.isEmpty()) {
-					imagefiles.add(sourceImage + ":" + fName);
+				if (sourceImage != null && sourceImage.exists()) {
+					imagefiles.add(sourceImage.getPath() + ":" + fName);
 				}
 			});
 		}
 		return buildArguments(sourceImage, target, imagefiles, files, directory, imageType);
 	}
 
-	private String[] buildArguments(String sourceImage, String target, List<String> imagefiles, List<String> files, String directory, int imageType) {
+	private List<String> buildArguments(File sourceImage, File target, List<String> imagefiles, List<String> files, File directory, DiskImageType imageType) {
 		List<String> args = new ArrayList<>();
+		if (Utility.isEmpty(command)) {
+			return args;
+		}
 		args.add(command);
 		for (String s : arguments.split("\\s+")) {
 			switch (s) {
-			case "{Image}":
-				if (sourceImage != null && !sourceImage.isEmpty()) {
-					args.add(sourceImage);
+			case IMAGE:
+				if (sourceImage != null && sourceImage.exists()) {
+					args.add(sourceImage.getPath());
 				}
 				break;
-			case "{Files}":
+			case FILES:
 				if (!files.isEmpty()) {
 					args.addAll(files);
 				}
 				break;
-			case "{ImageFiles}":
+			case IMAGEFILES:
 				if (!imagefiles.isEmpty()) {
 					args.addAll(imagefiles);
+				} else if (sourceImage != null && sourceImage.exists()) {
+					args.add(sourceImage.getPath());
 				}
 				break;
-			case "{Target}":
-				if (target != null && !target.isEmpty()) {
-					args.add(target);
+			case TARGET:
+				if (target != null) {
+					args.add(target.getPath());
 				}
 				break;
-			case "{NewFile}":
-				String name = FileDialogHelper.openImageFileDialog(directory, null, true);
-				if (name == null) {
-					return new String[0];
+			case NEWFILE:
+				File newFile = FileDialogHelper.openImageFileDialog(directory, null, true);
+				if (newFile == null) {
+					return new ArrayList<>();
 				}
-				args.add(name);
+				args.add(newFile.getPath());
 				break;
-			case "{ImageType}":
+			case IMAGETYPE:
 				args.add(DiskImage.getImageTypeName(imageType));
 				break;
-			case "{DriveType}":
-				args.add(driveTypeFromImageType(imageType));
+			case DRIVETYPE:
+				args.add(imageType.driveName);
 				break;
 			default:
-				args.add(s);
+				if (!Utility.isEmpty(s)) {
+					args.add(s);
+				}
 			}
 		}
-		return args.toArray(new String[args.size()]);
-	}
-
-	private String driveTypeFromImageType(int imageType) {
-		switch (imageType) {
-		case DiskImage.D67_IMAGE_TYPE:
-			return "2040";
-		case DiskImage.D71_IMAGE_TYPE:
-		case DiskImage.D71_CPM_IMAGE_TYPE:
-			return "1571";
-		case DiskImage.D80_IMAGE_TYPE:
-			return "8050";
-		case DiskImage.D81_IMAGE_TYPE:
-		case DiskImage.D81_CPM_IMAGE_TYPE:
-			return "1581";
-		case DiskImage.D82_IMAGE_TYPE:
-			return "8250";
-		case DiskImage.D88_IMAGE_TYPE:
-			return "8280";
-		case DiskImage.D64_IMAGE_TYPE:
-		case DiskImage.D64_CPM_C64_IMAGE_TYPE:
-		case DiskImage.D64_CPM_C128_IMAGE_TYPE:
-		default:
-			return "1541";
-		}
+		return args;
 	}
 
 	/**
 	 * Run the external program.
 	 * @param imageFile the image file
-	 * @param execArgs arguments as parsed by {@link #getExecute(String, List, String, String, int)}
+	 * @param execArgs arguments as parsed by {@link #getExecute(File, List, File, File, DiskImageType)}
 	 * @param mainPanel used to log output from command
 	 */
-	public void runProgram(final File imageFile, final String[] execArgs, final MainPanel mainPanel) {
-		if (execArgs == null || execArgs.length == 0) {
+	public void runProgram(final File imageFile, final List<String> execArgs, final MainPanel mainPanel) {
+		if (execArgs == null || execArgs.isEmpty()) {
 			mainPanel.appendConsole("No command to execute!");
 		}
 		try {
-			mainPanel.appendConsole("Executing: " + Arrays.toString(execArgs));
+			mainPanel.appendConsole("Executing: " + execArgs);
 			if (forkThread) {
 				Thread runner = new Thread() {
 					@Override
@@ -181,21 +181,20 @@ public class ExternalProgram {
 		}
 	}
 
-	private void runProgramThread(File imgParentFile, String[] execArgs, MainPanel mainPanel) {
+	private void runProgramThread(File imgParentFile, List<String> execArgs, MainPanel mainPanel) {
 		try {
-			ProcessBuilder procBuilder = new ProcessBuilder(execArgs);
-			if (imgParentFile != null) {
-				procBuilder.directory(imgParentFile);
+			Process process = new ProcessBuilder(execArgs)
+					.directory(imgParentFile != null ? imgParentFile : new File("."))
+					.redirectErrorStream(true)
+					.redirectOutput(Redirect.INHERIT)
+					.start();
+			try (BufferedReader br = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
+				String line;
+				while ((line = br.readLine()) != null) {
+					mainPanel.appendConsole(line);
+				}
+				process.waitFor();
 			}
-			procBuilder.redirectErrorStream(true);
-			Process process = procBuilder.start();
-			InputStreamReader isr = new InputStreamReader(process.getInputStream());
-			BufferedReader br = new BufferedReader(isr);
-			String line;
-			while ((line = br.readLine()) != null) {
-				mainPanel.appendConsole(line);
-			}
-			process.waitFor();
 		} catch (Exception e) {	//NOSONAR
 			mainPanel.appendConsole('\n'+e.getMessage());
 		}

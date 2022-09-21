@@ -43,7 +43,7 @@ public class BugsPanel extends JPanel {
 	private static transient String todo = null;
 
 	protected BugsPanel () {
-		JPanel bugsPanel = createTextPane(Settings.getMessage(Resources.DROID64_BUGS_INGRESS), Resources.DROID64_BUGS_BUGS, BorderLayout.SOUTH);
+		JPanel bugsPanel = createTextPane(Utility.getMessage(Resources.DROID64_BUGS_INGRESS), Resources.DROID64_BUGS_BUGS, BorderLayout.SOUTH);
 		JPanel todoPanel = createTextPane(getBugs(), Resources.DROID64_BUGS_TODO, BorderLayout.CENTER);
 
 		setLayout(new BorderLayout());
@@ -59,7 +59,7 @@ public class BugsPanel extends JPanel {
 
 	private JPanel createTextPane(String message, String labelPropKey, String constraints) {
 		JPanel bugsPanel = new JPanel(new BorderLayout());
-		bugsPanel.add(new JLabel(Settings.getMessage(labelPropKey)), BorderLayout.NORTH);
+		bugsPanel.add(new JLabel(Utility.getMessage(labelPropKey)), BorderLayout.NORTH);
 		bugsPanel.add(new JScrollPane(drawTextArea(message)), constraints);
 		return bugsPanel;
 	}

@@ -37,22 +37,6 @@ import droid64.d64.Utility;
  */
 public class Parameter {
 
-	// Types of parameters
-	/** paramName=text */
-	public static final int STRING_PARAM = 1;
-	/** paramName=integer */
-	public static final int INTEGER_PARAM = 2;
-	/** paramName={ yes | no } */
-	public static final int BOOLEAN_PARAM = 3;
-	/** paramName=r,g,b */
-	public static final int COLOR_PARAM = 4;
-	/** paramName=fontName */
-	public static final int FONT_PARAM = 5;
-	/** paramName=string;string;string ... */
-	public static final int STRING_LIST_PARAM = 6;
-	/** paramName.x=value */
-	public static final int INDEXED_STRING_PARAM = 7;
-
 	private static final String DELIM = ";";
 	private static final String LF = "\n";
 	private static final String EQ = "=";
@@ -60,10 +44,10 @@ public class Parameter {
 	private static final String STRING_LIST_SPLIT_EXPR = "\\s*[;]\\s*";
 
 	private final String name;
-	private final int type;
+	private final ParameterType type;
 	private Object value;
 
-	public Parameter(String name, int type, Object value) {
+	public Parameter(String name, ParameterType type, Object value) {
 		this.name = name;
 		this.type = type;
 		this.value = value;
@@ -93,7 +77,7 @@ public class Parameter {
 
 	@Override
 	public int hashCode() {
-		return (value != null ? value.hashCode() : 0) + (name != null ? name.hashCode() : 0) + type;
+		return (value != null ? value.hashCode() : 0) + (name != null ? name.hashCode() : 0) + type.hashCode();
 	}
 
 	private boolean stringsEqual(String s1, String s2) {
@@ -103,26 +87,26 @@ public class Parameter {
 	public void parseValue(String lineValue) {
 		try {
 			switch (type) {
-			case Parameter.STRING_PARAM:
+			case STRING:
 				setStringValue(lineValue != null ? lineValue.replaceAll("[\\r\\n]+$", Utility.EMPTY) : null);
 				break;
-			case Parameter.INTEGER_PARAM:
+			case INTEGER:
 				setIntegerValue(lineValue != null ? Integer.valueOf(lineValue.trim()) : null);
 				break;
-			case Parameter.BOOLEAN_PARAM:
+			case BOOLEAN:
 				if (lineValue == null) {
 					setBooleanValue(false);
 				} else {
 					setBooleanValue("yes".equals(lineValue.trim()) ? Boolean.TRUE : Boolean.valueOf(lineValue.trim()));
 				}
 				break;
-			case Parameter.COLOR_PARAM:
+			case COLOR:
 				splitStringIntoColorParam(lineValue);
 				break;
-			case Parameter.FONT_PARAM:
+			case FONT:
 				setFontValue(lineValue);
 				break;
-			case Parameter.STRING_LIST_PARAM:
+			case STRING_LIST:
 				setStringListParam(lineValue);
 				break;
 			default:
@@ -155,7 +139,7 @@ public class Parameter {
 		}
 	}
 
-	public int getType() {
+	public ParameterType getType() {
 		return type;
 	}
 
@@ -184,21 +168,21 @@ public class Parameter {
 	// Getters
 
 	public Boolean getBooleanValue() {
-		if (type == BOOLEAN_PARAM && (value instanceof Boolean || value == null)) {
+		if (type == ParameterType.BOOLEAN && (value instanceof Boolean || value == null)) {
 			return (Boolean) value;
 		}
 		throw new IllegalArgumentException(name + " is not a boolean parameter.");
 	}
 
 	public Color getColorValue() {
-		if (type == COLOR_PARAM && (value instanceof Color || value == null)) {
+		if (type == ParameterType.COLOR && (value instanceof Color || value == null)) {
 			return (Color) value;
 		}
 		throw new IllegalArgumentException(name + " is not a color parameter.");
 	}
 
 	public Font getFontValue() {
-		if (type == FONT_PARAM && (value instanceof Font || value == null)) {
+		if (type == ParameterType.FONT && (value instanceof Font || value == null)) {
 			return (Font) value;
 		}
 		throw new IllegalArgumentException(name + " is not a font parameter.");
@@ -206,7 +190,7 @@ public class Parameter {
 
 	@SuppressWarnings("unchecked")
 	public List<String> getIndexedStringValue() {
-		if (type == INDEXED_STRING_PARAM) {
+		if (type == ParameterType.INDEXED_STRING) {
 			if (value == null) {
 				value = new ArrayList<>();
 			}
@@ -218,7 +202,7 @@ public class Parameter {
 	}
 
 	public Integer getIntegerValue() {
-		if (type == INTEGER_PARAM && (value instanceof Integer || value == null)) {
+		if (type == ParameterType.INTEGER && (value instanceof Integer || value == null)) {
 			return (Integer) value;
 		}
 		throw new IllegalArgumentException(name + " is not an integer parameter.");
@@ -226,7 +210,7 @@ public class Parameter {
 
 	@SuppressWarnings("unchecked")
 	public List<String> getStringListValue() {
-		if (type == STRING_LIST_PARAM) {
+		if (type == ParameterType.STRING_LIST) {
 			if (value == null) {
 				value = new ArrayList<String>();
 			}
@@ -238,7 +222,7 @@ public class Parameter {
 	}
 
 	public String getStringValue() {
-		if (type == STRING_PARAM && (value instanceof String || value == null)) {
+		if (type == ParameterType.STRING && (value instanceof String || value == null)) {
 			return (String) value;
 		}
 		throw new IllegalArgumentException(name + " is not string parameter.");
@@ -247,7 +231,7 @@ public class Parameter {
 	// Setters
 
 	public void setBooleanValue(Boolean value) {
-		if (type == BOOLEAN_PARAM) {
+		if (type == ParameterType.BOOLEAN) {
 			this.value = value;
 		} else {
 			throw new IllegalArgumentException(name + " is not a boolean parameter.");
@@ -255,7 +239,7 @@ public class Parameter {
 	}
 
 	public void setColorValue(Color value) {
-		if (type == COLOR_PARAM) {
+		if (type == ParameterType.COLOR) {
 			this.value = value;
 		} else {
 			throw new IllegalArgumentException(name + " is not a color parameter.");
@@ -263,7 +247,7 @@ public class Parameter {
 	}
 
 	public void setFontValue(Font value) {
-		if (type == FONT_PARAM) {
+		if (type == ParameterType.FONT) {
 			this.value = value;
 		} else {
 			throw new IllegalArgumentException(name + " is not a font parameter.");
@@ -282,7 +266,7 @@ public class Parameter {
 	}
 
 	public void setIndexedStringValue(List<String> list) {
-		if (type == INDEXED_STRING_PARAM) {
+		if (type == ParameterType.INDEXED_STRING) {
 			this.value = list;
 		} else {
 			throw new IllegalArgumentException(name + " is not an indexed list parameter. ");
@@ -290,7 +274,7 @@ public class Parameter {
 	}
 
 	public void setIntegerValue(Integer value) {
-		if (type == INTEGER_PARAM) {
+		if (type == ParameterType.INTEGER) {
 			this.value = value;
 		} else {
 			throw new IllegalArgumentException(name + " is not an integer parameter.");
@@ -298,7 +282,7 @@ public class Parameter {
 	}
 
 	public void setStringListValue(List<String> list) {
-		if (type == STRING_LIST_PARAM) {
+		if (type == ParameterType.STRING_LIST) {
 			this.value = list;
 		} else {
 			throw new IllegalArgumentException(name + " is not a list parameter. ");
@@ -306,7 +290,7 @@ public class Parameter {
 	}
 
 	public void setStringValue(String value) {
-		if (type == STRING_PARAM) {
+		if (type == ParameterType.STRING) {
 			this.value = value;
 		} else {
 			throw new IllegalArgumentException(name + " is not a string parameter.");
@@ -315,14 +299,14 @@ public class Parameter {
 
 	public String getParamAsString() {
 		switch (type) {
-		case Parameter.COLOR_PARAM :
+		case COLOR :
 			Color c = getColorValue();
 			return name + EQ + c.getRed() + ',' + c.getGreen() + ',' + c.getBlue() + LF;
-		case Parameter.FONT_PARAM:
+		case FONT:
 			return name + EQ + getFontAsString(getFontValue()) + LF;
-		case Parameter.STRING_LIST_PARAM:
+		case STRING_LIST:
 			return name + EQ + getStringListParamAsString() + LF;
-		case Parameter.INDEXED_STRING_PARAM:
+		case INDEXED_STRING:
 			List<String> list = getIndexedStringValue();
 			StringBuilder buf = new StringBuilder();
 			for (int i=0; i<list.size(); i++) {
@@ -330,7 +314,7 @@ public class Parameter {
 			}
 			return buf.toString();
 		default:
-			return name + EQ + String.valueOf(value) + LF;
+			return name + EQ + (value != null ? String.valueOf(value) : "") + LF;
 		}
 	}
 

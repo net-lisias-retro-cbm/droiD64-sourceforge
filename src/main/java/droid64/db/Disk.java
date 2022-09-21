@@ -4,6 +4,8 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
+import droid64.d64.DiskImageType;
+
 /**
  * Persistent value class for representing one disk image.
  * @author Henrik
@@ -20,7 +22,7 @@ public class Disk extends Value {
 	private String fileName;
 	private List<DiskFile> fileList = null;
 	private Date updated;
-	private int imageType;
+	private DiskImageType imageType;
 	private Integer errors;
 	private Integer warnings;
 	private String hostName;
@@ -76,11 +78,11 @@ public class Disk extends Value {
 		this.updated = updated;
 	}
 
-	public int getImageType() {
+	public DiskImageType getImageType() {
 		return imageType;
 	}
 
-	public void setImageType(int imageType) {
+	public void setImageType(DiskImageType imageType) {
 		this.imageType = imageType;
 	}
 

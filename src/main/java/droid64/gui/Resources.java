@@ -78,6 +78,7 @@ public class Resources {
 	public static final String DROID64_HEXVIEW_SAVETEXT = "droid64.hexview.savetext";
 	public static final String DROID64_HEXVIEW_PRINT = "droid64.hexview.print";
 	public static final String DROID64_HEXVIEW_CLOSE = "droid64.hexview.close";
+	public static final String DROID64_HEXVIEW_APPLY = "droid64.hexview.apply";
 	public static final String DROID64_HEXVIEW_CLOSE_TOOLTIP = "droid64.hexview.close.tooltip";
 	public static final String DROID64_HEXVIEW_ASMMODE = "droid64.hexview.asmmode";
 	public static final String DROID64_HEXVIEW_HEXMODE = "droid64.hexview.hexmode";
@@ -99,12 +100,15 @@ public class Resources {
 	public static final String DROID64_SETTINGS_TAB_FILES = "droid64.settings.tab.files";
 	public static final String DROID64_SETTINGS_TAB_COLORS = "droid64.settings.tab.colors";
 	public static final String DROID64_SETTINGS_TAB_DATABASE = "droid64.settings.tab.database";
+	public static final String DROID64_SETTINGS_TAB_NET = "droid64.settings.tab.net";
 	public static final String DROID64_SETTINGS_TAB_PLUGIN = "droid64.settings.tab.plugin";
 	public static final String DROID64_SETTINGS_OK = "droid64.settings.ok";
 	public static final String DROID64_SETTINGS_OK_TOOLTIP = "droid64.settings.ok.tooltip";
 	public static final String DROID64_SETTINGS_SAVEMESSAGE = "droid64.settings.savemessage";
 	public static final String DROID64_SETTINGS_LEFTDIR = "droid64.settings.leftdir";
 	public static final String DROID64_SETTINGS_RIGHTDIR = "droid64.settings.rightdir";
+	public static final String DROID64_SETTINGS_PROXY = "droid64.settings.proxy";
+
 	public static final String DROID64_SETTINGS_EXT_D64 = "droid64.settings.ext.d64";
 	public static final String DROID64_SETTINGS_EXT_D67 = "droid64.settings.ext.d67";
 	public static final String DROID64_SETTINGS_EXT_D71 = "droid64.settings.ext.d71";
@@ -191,5 +195,7 @@ public class Resources {
 	public static final String DROID64_BAM_MODE = "droid64.bam.mode";
 	public static final String DROID64_BAM_TRACK = "droid64.bam.track";
 	public static final String DROID64_BAM_SECTOR = "droid64.bam.sector";
+	public static final String DROID64_SETTINGS_EXCLUDE_IMAGE_FILES = "droid64.exclude_image_files";
+	public static final String DROID64_SETTINGS_EXCLUDE_IMAGE_FILES_TOOLTIP = "droid64.exclude_image_files.tooltip";
 
 }

@@ -2,6 +2,7 @@ package droid64.d64;
 
 import java.io.Serializable;
 import java.util.Arrays;
+import java.util.Optional;
 
 /**
  * <pre style='font-family:sans-serif;'>
@@ -34,7 +35,7 @@ public class CbmFile implements Comparable<CbmFile>, Serializable {
 
 	private static final long serialVersionUID = 1L;
 	private boolean fileScratched;
-	private int fileType;
+	private FileType fileType;
 	private boolean fileLocked;
 	private boolean fileClosed;
 	private int track;
@@ -70,19 +71,9 @@ public class CbmFile implements Comparable<CbmFile>, Serializable {
 	public static final int GEOS_AUTOEXEC = 0x0e;
 	public static final int GEOS_UNDFINED = 0xff;
 
-	/** Type of C64 file (DEL, SEQ, PRG, USR, REL) */
-	protected static final String[] FILE_TYPES = { "DEL", "SEQ", "PRG", "USR", "REL", "CBM" };
-
-	public static final int TYPE_DEL = 0;
-	public static final int TYPE_SEQ = 1;
-	public static final int TYPE_PRG = 2;
-	public static final int TYPE_USR = 3;
-	public static final int TYPE_REL = 4;
-	public static final int TYPE_CBM = 5;	// C1581 partition
-
 	public CbmFile() {
 		fileScratched = true;
-		fileType = 0;
+		fileType = FileType.DEL;
 		fileLocked = false;
 		fileClosed = false;
 		track = 0;
@@ -130,7 +121,7 @@ public class CbmFile implements Comparable<CbmFile>, Serializable {
 		this.loadAddr = that.loadAddr;
 	}
 
-	public CbmFile(String name, int fileType, int dirPosition, int track, int sector, int size) {
+	public CbmFile(String name, FileType fileType, int dirPosition, int track, int sector, int size) {
 		this.name = name;
 		this.fileType = fileType;
 		this.dirPosition = dirPosition;
@@ -154,7 +145,7 @@ public class CbmFile implements Comparable<CbmFile>, Serializable {
 		dirTrack = data[position + 0x00] & 0xff;
 		dirSector = data[position + 0x01] & 0xff;
 		fileScratched = (data[position + 0x02] & 0xff) == 0;
-		fileType = data[position + 0x02] & 0x07;
+		fileType = FileType.get(data[position + 0x02] & 0x07);
 		fileLocked = (data[position + 0x02] & 0x40) != 0;
 		fileClosed = (data[position + 0x02] & 0x80) != 0;
 		track = data[position + 0x03] & 0xff;
@@ -180,14 +171,14 @@ public class CbmFile implements Comparable<CbmFile>, Serializable {
 	 * @return file type
 	 */
 	public static String getFileType(int type) {
-		return  type < CbmFile.FILE_TYPES.length ? CbmFile.FILE_TYPES[type] : null;
+		return Optional.ofNullable(FileType.get(type)).map(FileType::name).orElse(null);
 	}
 
 	/**
 	 * @return string array of file type names
 	 */
 	public static String[] getFileTypes() {
-		return Arrays.copyOf(FILE_TYPES, FILE_TYPES.length);
+		return FileType.getNames();
 	}
 
 	/**
@@ -196,18 +187,18 @@ public class CbmFile implements Comparable<CbmFile>, Serializable {
 	 * @param fileName fileName
 	 * @return file type
 	 */
-	public static int getFileTypeFromFileExtension(String fileName) {
+	public static FileType getFileTypeFromFileExtension(String fileName) {
 		String name = fileName != null ? fileName.toLowerCase() : Utility.EMPTY;
 		if (name.endsWith(".del")) {
-			return TYPE_DEL;
+			return FileType.DEL;
 		} else if (name.endsWith(".seq")) {
-			return TYPE_SEQ;
+			return FileType.SEQ;
 		} else if (name.endsWith(".usr")) {
-			return TYPE_USR;
+			return FileType.USR;
 		} else if (name.endsWith(".rel")) {
-			return TYPE_REL;
+			return FileType.REL;
 		} else {
-			return TYPE_PRG;
+			return FileType.PRG;
 		}
 	}
 
@@ -222,8 +213,7 @@ public class CbmFile implements Comparable<CbmFile>, Serializable {
 
 	public String asDirString() {
 		return String.format("%-5s%-18s %s%-3s%s", sizeInBlocks, "\"" + name + "\"", fileClosed ? Utility.SPACE : "*",
-				fileType < CbmFile.FILE_TYPES.length ? CbmFile.FILE_TYPES[fileType] : "???",
-						fileLocked ? "<" : Utility.SPACE);
+				fileType.name(), fileLocked ? "<" : Utility.SPACE);
 	}
 
 	protected void toString(StringBuilder builder) {
@@ -270,7 +260,7 @@ public class CbmFile implements Comparable<CbmFile>, Serializable {
 	/**
 	 * @return type of file
 	 */
-	public int getFileType() {
+	public FileType getFileType() {
 		return fileType;
 	}
 
@@ -350,11 +340,11 @@ public class CbmFile implements Comparable<CbmFile>, Serializable {
 	}
 
 	/**
-	 * @param b
+	 * @param ft
 	 *            file type
 	 */
-	public void setFileType(int b) {
-		fileType = b;
+	public void setFileType(FileType ft) {
+		fileType = ft;
 	}
 
 	/**
@@ -555,7 +545,7 @@ public class CbmFile implements Comparable<CbmFile>, Serializable {
 		// file attributes
 		data[offset + 2] = 0;
 		if (!fileScratched) {
-			data[offset + 2] = (byte) fileType;
+			data[offset + 2] = (byte) fileType.type;
 			if (fileLocked) {
 				data[offset + 2] |= 64;
 			}

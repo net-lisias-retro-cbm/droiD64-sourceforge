@@ -1,9 +1,13 @@
 package droid64.d64;
 
-import java.io.ByteArrayOutputStream;
+import java.io.File;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.stream.IntStream;
+
+import droid64.gui.BAMPanel.BamState;
+import droid64.gui.BAMPanel.BamTrack;
 
 /**<pre style='font-family:sans-serif;'>
  * Created on 2015-Oct-15
@@ -33,8 +37,6 @@ import java.util.List;
 public class D80 extends DiskImage {
 
 	private static final long serialVersionUID = 1L;
-	/** Name of the image type */
-	public static final String IMAGE_TYPE_NAME = "D80";
 	/** Track of disk header block */
 	protected static final int HEADER_TRACK	= 39;
 	/** Sector of disk header block */
@@ -100,9 +102,9 @@ public class D80 extends DiskImage {
 	}
 
 	@Override
-	protected DiskImage readImage(String filename) throws CbmException {
+	protected DiskImage readImage(File file) throws CbmException {
 		bam = new CbmBam(D80Constants.D80_TRACKS.length, 5);
-		return readImage(filename, D80_SIZE, IMAGE_TYPE_NAME);
+		return readImage(file, DiskImageType.D80);
 	}
 
 	@Override
@@ -154,28 +156,7 @@ public class D80 extends DiskImage {
 		}
 		feedbackMessage.append("getFileData: ").append(number).append(" '").append(cbmFile[number].getName()).append("'\n");
 		feedbackMessage.append("Tracks / Sectors: ");
-		int thisTrack = cbmFile[number].getTrack();
-		int thisSector = cbmFile[number].getSector();
-		ByteArrayOutputStream out = new ByteArrayOutputStream();
-		do {
-			if (thisTrack >= D80Constants.D80_TRACKS.length) {
-				throw new CbmException("Track " + thisTrack + " outside of image.");
-			}
-			int blockPos = D80Constants.D80_TRACKS[thisTrack].getOffset() + (BLOCK_SIZE * thisSector);
-			int nextTrack = getCbmDiskValue(thisTrack, thisSector, 0x00);
-			int nextSector = getCbmDiskValue(thisTrack, thisSector, 0x01);
-			feedbackMessage.append(thisTrack).append('/').append(thisSector).append(Utility.SPACE);
-			if (nextTrack > 0) {
-				out.write(cbmDisk, blockPos + 2, BLOCK_SIZE - 2);
-			} else {
-				feedbackMessage.append("\nRemaining bytes: ").append(nextSector).append('\n');
-				out.write(cbmDisk, blockPos + 2, nextSector - 2 + 1);
-			}
-			thisTrack = nextTrack;
-			thisSector = nextSector;
-		} while (thisTrack != 0);
-		feedbackMessage.append("OK.\n");
-		return out.toByteArray();
+		return getData(cbmFile[number].getTrack(), cbmFile[number].getSector());
 	}
 
 	@Override
@@ -253,7 +234,7 @@ public class D80 extends DiskImage {
 	}
 
 	@Override
-	public boolean saveNewImage(String filename, String newDiskName, String newDiskID) {
+	public boolean saveNewImage(File filename, String newDiskName, String newDiskID) {
 		cbmDisk = new byte[D80_SIZE];
 		Arrays.fill(cbmDisk, (byte) 0);
 		if (!isCpmImage()) {
@@ -264,14 +245,14 @@ public class D80 extends DiskImage {
 			setCbmDiskValue(0x44e00+2, 'C');
 			setCbmDiskValue(0x44f00+1, 0xff);
 			setDiskName(Utility.cbmFileName(newDiskName, DISK_NAME_LENGTH), Utility.cbmFileName(newDiskID, DISK_NAME_LENGTH));
-			return writeImage(filename);
+			return saveAs(filename);
 		}
 		return false;
 	}
 
 	@Override
 	public boolean addDirectoryEntry(CbmFile cbmFile, int fileTrack, int fileSector, boolean isCopyFile, int lengthInBytes) {
-		feedbackMessage.append(String.format("addDirectoryEntry: \"%s\", %s, %d/%d%n", cbmFile.getName(), CbmFile.FILE_TYPES[cbmFile.getFileType()], fileTrack, fileSector));
+		feedbackMessage.append(String.format("addDirectoryEntry: \"%s\", %s, %d/%d%n", cbmFile.getName(), cbmFile.getFileType(), fileTrack, fileSector));
 		if (isCpmImage()) {
 			feedbackMessage.append("Not yet implemented for CP/M format.\n");
 			return false;
@@ -312,34 +293,28 @@ public class D80 extends DiskImage {
 	}
 
 	@Override
-	public String[][] getBamTable() {
-		String[][] bamEntry = new String[TRACK_COUNT][MAX_SECTORS + 1];
-		for (int trk = 0; trk < TRACK_COUNT; trk++) {
-			for (int sec = 0; sec <= MAX_SECTORS; sec++) {
-				bamEntry[trk][sec] =  CbmBam.INVALID;
-			}
-		}
+	public BamTrack[] getBamTable() {
+		BamTrack[] bamEntry = new BamTrack[TRACK_COUNT];
+		IntStream.range(0, TRACK_COUNT).forEach(trk -> {
+			bamEntry[trk] = new BamTrack(trk + getFirstTrack(), MAX_SECTORS + 1);
+			Arrays.fill(bamEntry[trk].bam, BamState.INVALID);
+		});
 		for (int trk = 1; trk <= TRACK_COUNT; trk++) {
 			int bitCounter = 1;
-			bamEntry[trk-1][0] = Integer.toString(trk);
 			for (int cnt = 1; cnt <= 4; cnt++) {
 				for (int bit = 0; bit < 8; bit++) {
-					if (bitCounter <= getMaxSectors(trk)) {
-						if (trk == BAM_TRACK) {
-							bamEntry[trk-1][bitCounter++] = CbmBam.RESERVED;
-						} else if ((getBam().getTrackBits(trk, cnt) & DiskImage.BYTE_BIT_MASKS[bit]) == 0) {
-							bamEntry[trk-1][bitCounter++] = CbmBam.USED;
-						} else {
-							bamEntry[trk-1][bitCounter++] = CbmBam.FREE;
-						}
+					if (bitCounter > getMaxSectors(trk)) {
+						break;
+					} else if ((getBam().getTrackBits(trk, cnt) & DiskImage.BYTE_BIT_MASKS[bit]) == 0) {
+						bamEntry[trk-1].bam[bitCounter++] = BamState.USED;
+					} else {
+						bamEntry[trk-1].bam[bitCounter++] = BamState.FREE;
 					}
 				}
 			}
 		}
 		return bamEntry;
 	}
-
-
 
 	@Override
 	public int getSectorOffset(int track, int sector) {
@@ -353,7 +328,7 @@ public class D80 extends DiskImage {
 		if (isCpmImage()) {
 			throw new CbmException("Delete not yet implemented for CP/M format.");
 		}
-		cbmFile.setFileType(0);
+		cbmFile.setFileType(FileType.DEL);
 		cbmFile.setFileScratched(true);
 		int dirEntryNumber = cbmFile.getDirPosition();
 		int dirEntryPos = getDirectoryEntryPosition(dirEntryNumber);
@@ -375,7 +350,8 @@ public class D80 extends DiskImage {
 	}
 
 	@Override
-	public Integer validate(List<Integer> repairList) {
+	public Integer validate(List<ValidationError.Error> repairList) {
+		getValidationErrorList().clear();
 		// init to null
 		Boolean[][] bamEntry = new Boolean[getTrackCount() + 1][getMaxSectorCount()];
 		for (int trk = 0; trk < bamEntry.length; trk++) {
@@ -391,10 +367,10 @@ public class D80 extends DiskImage {
 		validateDirEntries(track, sector, bamEntry);
 		// follow each file and check data blocks
 		for (int n=0; n < cbmFile.length; n++) {
-			if (cbmFile[n].getFileType() == CbmFile.TYPE_CBM) {
-				getValidationErrorList().add(new ValidationError(track, sector, ValidationError.ERROR_PARTITIONS_UNSUPPORTED, cbmFile[n].getName()));
+			if (cbmFile[n].getFileType() == FileType.CBM) {
+				getValidationErrorList().add(ValidationError.Error.ERROR_PARTITIONS_UNSUPPORTED.getError(track, sector, cbmFile[n].getName()));
 				errors++;
-			} else if (cbmFile[n].getFileType() != CbmFile.TYPE_DEL) {
+			} else if (cbmFile[n].getFileType() != FileType.DEL) {
 				track = cbmFile[n].getTrack();
 				sector = cbmFile[n].getSector();
 				if (track != 0) {
@@ -410,15 +386,25 @@ public class D80 extends DiskImage {
 				if (fileFree == null && bamFree || bamFree.equals(fileFree)) {
 					// no action
 				} else if (Boolean.FALSE.equals(fileFree) && !Boolean.FALSE.equals(bamFree)) {
-					getValidationErrorList().add(new ValidationError(trk,sec, ValidationError.ERROR_USED_SECTOR_IS_FREE));
-					errors++;
-				} else if (trk != BAM_TRACK){
-					getValidationErrorList().add(new ValidationError(trk,sec, ValidationError.ERROR_UNUSED_SECTOR_IS_ALLOCATED));
-					warnings++;
+					if (repairList != null && repairList.contains(ValidationError.Error.ERROR_USED_SECTOR_IS_FREE)) {
+						markSectorUsed(trk, sec);
+						feedbackMessage.append("Info: marked sector ").append(trk).append('/').append(sec).append(" as used.\n");
+					} else {
+						getValidationErrorList().add(ValidationError.Error.ERROR_USED_SECTOR_IS_FREE.getError(trk, sec));
+						errors++;
+					}
+				} else if (trk != BAM_TRACK && trk != HEADER_TRACK){
+					if (repairList != null && repairList.contains(ValidationError.Error.ERROR_UNUSED_SECTOR_IS_ALLOCATED)) {
+						markSectorFree(trk, sec);
+						feedbackMessage.append("Info: marked sector ").append(trk).append('/').append(sec).append(" as free.\n");
+					} else {
+						getValidationErrorList().add(ValidationError.Error.ERROR_UNUSED_SECTOR_IS_ALLOCATED.getError(trk, sec));
+						warnings++;
+					}
 				}
 			}
 		}
-		return errors;
+		return errors + warnings;
 
 	}
 
@@ -620,10 +606,10 @@ public class D80 extends DiskImage {
 		List<TrackSector> dirErrorList = new ArrayList<>();
 		do {
 			if (errors > 1000) {
-				getValidationErrorList().add(new ValidationError(track,sector, ValidationError.ERROR_TOO_MANY));
+				getValidationErrorList().add(ValidationError.Error.ERROR_TOO_MANY.getError(track, sector));
 				return;
 			} else if (track >= bamEntry.length || sector >= bamEntry[track].length) {
-				getValidationErrorList().add(new ValidationError(track,sector, ValidationError.ERROR_DIR_SECTOR_OUTSIDE_IMAGE));
+				getValidationErrorList().add(ValidationError.Error.ERROR_DIR_SECTOR_OUTSIDE_IMAGE.getError(track, sector));
 				errors++;
 				return;
 			} else if (bamEntry[track][sector] == null) {
@@ -632,15 +618,15 @@ public class D80 extends DiskImage {
 				errors++;
 				TrackSector thisBlock = new TrackSector(track, sector);
 				if (dirErrorList.contains(thisBlock)) {
-					getValidationErrorList().add(new ValidationError(track,sector, ValidationError.ERROR_DIR_SECTOR_ALREADY_SEEN));
+					getValidationErrorList().add(ValidationError.Error.ERROR_DIR_SECTOR_ALREADY_SEEN.getError(track, sector));
 					return;
 				} else {
 					dirErrorList.add(thisBlock);
 				}
 				if (bamEntry[track][sector].equals(Boolean.FALSE)) {
-					getValidationErrorList().add(new ValidationError(track,sector, ValidationError.ERROR_DIR_SECTOR_ALREADY_USED));
+					getValidationErrorList().add(ValidationError.Error.ERROR_DIR_SECTOR_ALREADY_USED.getError(track, sector));
 				} else {
-					getValidationErrorList().add(new ValidationError(track,sector, ValidationError.ERROR_DIR_SECTOR_ALREADY_FREE));
+					getValidationErrorList().add(ValidationError.Error.ERROR_DIR_SECTOR_ALREADY_FREE.getError(track, sector));
 				}
 			}
 			int tmpTrack = track;
@@ -656,10 +642,10 @@ public class D80 extends DiskImage {
 		List<TrackSector> fileErrorList = new ArrayList<>();
 		do {
 			if (errors > 1000) {
-				getValidationErrorList().add(new ValidationError(track,sector, ValidationError.ERROR_TOO_MANY));
+				getValidationErrorList().add(ValidationError.Error.ERROR_TOO_MANY.getError(track, sector));
 				return;
 			} else if (track >= bamEntry.length || sector >= bamEntry[track].length) {
-				getValidationErrorList().add(new ValidationError(track, sector, ValidationError.ERROR_FILE_SECTOR_OUTSIDE_IMAGE, cbmFile[fileNum].getName()));
+				getValidationErrorList().add(ValidationError.Error.ERROR_FILE_SECTOR_OUTSIDE_IMAGE.getError(track, sector, cbmFile[fileNum].getName()));
 				errors++;
 				return;
 			} else if (bamEntry[track][sector] == null) {
@@ -669,15 +655,15 @@ public class D80 extends DiskImage {
 				// Detect cyclic references by keeping track of all sectors used by one file and check if a sector is already seen.
 				TrackSector thisBlock = new TrackSector(track, sector);
 				if (fileErrorList.contains(thisBlock)) {
-					getValidationErrorList().add(new ValidationError(track, sector, ValidationError.ERROR_FILE_SECTOR_ALREADY_SEEN, cbmFile[fileNum].getName()));
+					getValidationErrorList().add(ValidationError.Error.ERROR_FILE_SECTOR_ALREADY_SEEN.getError(track, sector, cbmFile[fileNum].getName()));
 					return;
 				} else {
 					fileErrorList.add(thisBlock);
 				}
 				if (bamEntry[track][sector].equals(Boolean.FALSE)) {
-					getValidationErrorList().add(new ValidationError(track,sector, ValidationError.ERROR_FILE_SECTOR_ALREADY_USED));
+					getValidationErrorList().add(ValidationError.Error.ERROR_FILE_SECTOR_ALREADY_USED.getError(track, sector));
 				} else {
-					getValidationErrorList().add(new ValidationError(track,sector, ValidationError.ERROR_FILE_SECTOR_ALREADY_FREE));
+					getValidationErrorList().add(ValidationError.Error.ERROR_FILE_SECTOR_ALREADY_FREE.getError(track, sector));
 				}
 			}
 			int tmpTrack = track;

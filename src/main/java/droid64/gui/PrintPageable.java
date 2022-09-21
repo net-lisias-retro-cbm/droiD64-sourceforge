@@ -11,7 +11,6 @@ import java.awt.print.Printable;
 import java.awt.print.PrinterException;
 import java.text.AttributedString;
 
-import droid64.d64.CbmException;
 import droid64.d64.Utility;
 
 /**<pre style='font-family:sans-serif;'>
@@ -130,11 +129,7 @@ public class PrintPageable implements Pageable {
 
 	private void setCbmFont(float size) {
 		if (useCbmFont && cbmFont == null) {
-			try {
-				cbmFont = Settings.getCommodoreFont().deriveFont(size);
-			} catch (CbmException e) {	//NOSONAR
-				mainPanel.appendConsole(e.getMessage());
-			}
+			cbmFont = Setting.CBM_FONT.getFont().deriveFont(size);
 		}
 	}
 

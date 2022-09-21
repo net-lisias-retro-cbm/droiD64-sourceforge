@@ -1,6 +1,7 @@
 package droid64.db;
 
 import droid64.d64.CbmFile;
+import droid64.d64.FileType;
 
 /**
  * Persistent value class for representing one file on a disk image
@@ -12,13 +13,24 @@ public class DiskFile extends Value {
 	private long diskId;
 	private String name;
 	private int size;
-	private int fileType;
+	private FileType fileType;
 	private int flags;
 	private int fileNum;
 
 	public static final int FLAG_LOCKED = 1;
 	public static final int FLAG_NOT_CLOSED = 2;
 
+	public DiskFile() {
+		super();
+	}
+
+	public DiskFile(CbmFile cf, int fileNumber) {
+		this.name = cf.getName();
+		this.size = cf.getSizeInBlocks();
+		this.fileType = cf.getFileType();
+		this.fileNum = fileNumber;
+		this.flags = (cf.isFileLocked() ? DiskFile.FLAG_LOCKED : 0) | (cf.isFileClosed() ? 0 : DiskFile.FLAG_NOT_CLOSED);
+	}
 
 	public int getFlags() {
 		return flags;
@@ -60,11 +72,11 @@ public class DiskFile extends Value {
 		this.size = size;
 	}
 
-	public int getFileType() {
+	public FileType getFileType() {
 		return fileType;
 	}
 
-	public void setFileType(int fileType) {
+	public void setFileType(FileType fileType) {
 		this.fileType = fileType;
 	}
 
@@ -77,8 +89,7 @@ public class DiskFile extends Value {
 	}
 
 	public String getFileTypeString() {
-		String typeName = CbmFile.getFileType(fileType);
-		return typeName != null ? typeName : "???";
+		return fileType != null ? fileType.name() : "???";
 	}
 
 	@Override

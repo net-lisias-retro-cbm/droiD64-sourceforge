@@ -10,6 +10,8 @@ import java.awt.GridBagConstraints;
 import java.awt.Toolkit;
 import java.awt.Window;
 import java.awt.event.ActionListener;
+import java.awt.event.KeyEvent;
+import java.awt.event.KeyListener;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.util.ArrayList;
@@ -24,12 +26,17 @@ import javax.swing.JMenuItem;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JPopupMenu;
+import javax.swing.JScrollBar;
 import javax.swing.JScrollPane;
+import javax.swing.JTable;
 import javax.swing.JTextArea;
 import javax.swing.SwingUtilities;
 import javax.swing.UIManager;
 import javax.swing.plaf.FontUIResource;
+import javax.swing.text.JTextComponent;
 import javax.swing.text.NumberFormatter;
+
+import droid64.d64.Utility;
 
 public class GuiHelper {
 
@@ -124,9 +131,9 @@ public class GuiHelper {
 	public static JMenuItem addMenuItem(JMenu menu, String propertyKey, Character mnemonic, ActionListener listener) {
 		JMenuItem menuItem;
 		if (mnemonic== null) {
-			menuItem = new JMenuItem(Settings.getMessage(propertyKey));
+			menuItem = new JMenuItem(Utility.getMessage(propertyKey));
 		} else {
-			menuItem = new JMenuItem(Settings.getMessage(propertyKey), mnemonic);
+			menuItem = new JMenuItem(Utility.getMessage(propertyKey), mnemonic);
 		}
 		menuItem.setActionCommand(propertyKey);
 		menuItem.addActionListener(listener);
@@ -137,9 +144,9 @@ public class GuiHelper {
 	public static JMenuItem addMenuItem(JPopupMenu menu, String propertyKey, Character mnemonic, ActionListener listener) {
 		JMenuItem menuItem;
 		if (mnemonic== null) {
-			menuItem = new JMenuItem(Settings.getMessage(propertyKey));
+			menuItem = new JMenuItem(Utility.getMessage(propertyKey));
 		} else {
-			menuItem = new JMenuItem(Settings.getMessage(propertyKey), mnemonic);
+			menuItem = new JMenuItem(Utility.getMessage(propertyKey), mnemonic);
 		}
 		menuItem.setActionCommand(propertyKey);
 		menuItem.addActionListener(listener);
@@ -148,8 +155,8 @@ public class GuiHelper {
 	}
 
 	public static void setDefaultFonts() {
-		Font plainFont = new Font("Verdana", Font.PLAIN, Settings.getFontSize());
-		Font boldFont = new Font("Verdana", Font.BOLD, Settings.getFontSize());
+		Font plainFont = new Font("Verdana", Font.PLAIN, Setting.LOCAL_FONT_SIZE.getInteger());
+		Font boldFont = new Font("Verdana", Font.BOLD, Setting.LOCAL_FONT_SIZE.getInteger());
 		UIManager.put("Button.font",            new FontUIResource(plainFont));
 		UIManager.put("CheckBox.font",          new FontUIResource(plainFont));
 		UIManager.put("ComboBox.font",          new FontUIResource(plainFont));
@@ -196,7 +203,7 @@ public class GuiHelper {
 	}
 
 	public static void showInfoMessage(Component parent, String title, String message, Object...args) {
-		JOptionPane.showMessageDialog(parent, String.format(message, args), title, JOptionPane.PLAIN_MESSAGE);
+		JOptionPane.showMessageDialog(parent, String.format(message, args), title, JOptionPane.INFORMATION_MESSAGE);
 	}
 
 	public static void showException(Component parent, String title, Throwable throwable, String message, Object...args) {
@@ -230,5 +237,59 @@ public class GuiHelper {
 		List<Class<?>> list = new ArrayList<>();
 		loader.forEach(drv -> list.add(drv.getClass()));
 		return list.stream().filter(p->!p.isInterface()).map(Class::getName).sorted((a,b)->a.compareTo(b)).collect(Collectors.toList());
+	}
+
+	/**
+	 * Add keyboard navigation to text component
+	 * @param component the text component
+	 * @param scrollPane the scrollpane with the scrollbars to move
+	 */
+	public static void keyNavigateTextArea(JTextComponent component, JScrollPane scrollPane) {
+		component.addKeyListener(new KeyListener() {
+			@Override
+			public void keyTyped(KeyEvent ev) { /* Not used */ }
+
+			@Override
+			public void keyPressed(KeyEvent ev) { /* Not used */ }
+
+			@Override
+			public void keyReleased(KeyEvent ev) {
+				int keyCode = ev.getKeyCode();
+				if (keyCode == KeyEvent.VK_HOME) {
+					JScrollBar vertical = scrollPane.getVerticalScrollBar();
+					vertical.setValue(vertical.getMinimum());
+				} else if (keyCode == KeyEvent.VK_END) {
+					JScrollBar vertical = scrollPane.getVerticalScrollBar();
+					vertical.setValue(vertical.getMaximum() );
+				}
+			}
+		});
+	}
+
+	/**
+	 * Add keyboard navigation to table
+	 * @param table the table
+	 */
+	public static void keyNavigateTable(JTable table) {
+		table.addKeyListener(new KeyListener() {
+			@Override
+			public void keyTyped(KeyEvent ev) { /* Not used */ }
+
+			@Override
+			public void keyPressed(KeyEvent ev) { /* Not used */ }
+
+			@Override
+			public void keyReleased(KeyEvent ev) {
+				int keyCode = ev.getKeyCode();
+				if (keyCode == KeyEvent.VK_HOME) {
+					table.getSelectionModel().setSelectionInterval(0, 0);
+					table.scrollRectToVisible(table.getCellRect(0, 0, true));
+				} else if (keyCode == KeyEvent.VK_END) {
+					int lastRow = table.getRowCount() - 1;
+					table.getSelectionModel().setSelectionInterval(lastRow, lastRow);
+					table.scrollRectToVisible(table.getCellRect(lastRow, 0, true));
+				}
+			}
+		});
 	}
 }

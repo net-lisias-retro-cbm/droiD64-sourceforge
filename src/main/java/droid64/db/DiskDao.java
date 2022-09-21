@@ -1,15 +1,15 @@
 package droid64.db;
 
-import java.util.List;
+import java.util.stream.Stream;
 
 public interface DiskDao {
 
 	/**
-	 * Get list of all stored disks.
-	 * @return List of Disk
+	 * Get stream of all stored disks.
+	 * @return Stream of Disk
 	 * @throws DatabaseException when error
 	 */
-	public List<Disk> getAllDisks() throws DatabaseException;
+	public Stream<Disk> getAllDisks() throws DatabaseException;
 
 	/**
 	 * Get one specified disk
@@ -36,10 +36,10 @@ public interface DiskDao {
 	/**
 	 * Search for disks
 	 * @param criteria search criteria
-	 * @return List of Disk
+	 * @return Stream of Disk
 	 * @throws DatabaseException when error
 	 */
-	public List<Disk> search(DiskSearchCriteria criteria) throws DatabaseException;
+	public Stream<Disk> search(DiskSearchCriteria criteria) throws DatabaseException;
 
 	/**
 	 * Save a disk composite.

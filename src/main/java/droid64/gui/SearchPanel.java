@@ -7,7 +7,6 @@ import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.io.File;
 import java.text.NumberFormat;
-import java.util.List;
 
 import javax.swing.JButton;
 import javax.swing.JComboBox;
@@ -26,12 +25,11 @@ import javax.swing.table.DefaultTableColumnModel;
 import javax.swing.table.TableColumn;
 import javax.swing.text.NumberFormatter;
 
-import droid64.d64.CbmFile;
-import droid64.d64.DiskImage;
+import droid64.d64.DiskImageType;
+import droid64.d64.FileType;
 import droid64.d64.Utility;
 import droid64.db.DaoFactory;
 import droid64.db.DatabaseException;
-import droid64.db.Disk;
 import droid64.db.DiskFile;
 import droid64.db.DiskSearchCriteria;
 import droid64.db.SearchResultRow;
@@ -82,8 +80,7 @@ public class SearchPanel extends JPanel {
 		if (row >= 0) {
 			String path = (String) tableModel.getValueAt(row, 0);
 			String file = (String) tableModel.getValueAt(row, 1);
-			String f = path + File.separator + file;
-			diskPanel.openDiskImage(f, true);
+			diskPanel.openDiskImage(new File(path + File.separator + file), true);
 		}
 	}
 
@@ -120,16 +117,13 @@ public class SearchPanel extends JPanel {
 		fileSizePanel.add(new JLabel(" - "));
 		fileSizePanel.add(fileSizeMaxField);
 
-		final String[] fileTypes = { "<Any>", "DEL", "PRG", "REL", "SEQ", "USR" };
-
-		final JComboBox<String> fileTypeBox = new JComboBox<>(fileTypes);
+		final JComboBox<FileType> fileTypeBox = new JComboBox<>(FileType.values());
+		fileTypeBox.insertItemAt(null, 0);
 		fileTypeBox.setSelectedIndex(0);
 		JPanel fileTypePanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
 		fileTypePanel.add(fileTypeBox);
 
-		final String[] imageTypes = DiskImage.getImageTypeNames().clone();
-		final JComboBox<String> imageTypeBox = new JComboBox<>(imageTypes);
-		imageTypes[0] = "<Any>";
+		final JComboBox<DiskImageType> imageTypeBox = new JComboBox<>(DiskImageType.values());
 		imageTypeBox.setSelectedIndex(0);
 		JPanel imageTypePanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
 		imageTypePanel.add(imageTypeBox);
@@ -156,13 +150,13 @@ public class SearchPanel extends JPanel {
 		}
 		final JTable table = new JTable(tableModel, columnModel);
 		// Buttons
-		final JButton searchButton = new JButton(Settings.getMessage(Resources.DROID64_SEARCH_SEARCH));
-		final JButton openSelectedLeftButton = new JButton(Settings.getMessage(Resources.DROID64_SEARCH_OPENLEFT));
-		final JButton openSelectedRightButton = new JButton(Settings.getMessage(Resources.DROID64_SEARCH_OPENRIGHT));
+		final JButton searchButton = new JButton(Utility.getMessage(Resources.DROID64_SEARCH_SEARCH));
+		final JButton openSelectedLeftButton = new JButton(Utility.getMessage(Resources.DROID64_SEARCH_OPENLEFT));
+		final JButton openSelectedRightButton = new JButton(Utility.getMessage(Resources.DROID64_SEARCH_OPENRIGHT));
 		openSelectedLeftButton.setEnabled(false);
 		openSelectedRightButton.setEnabled(false);
 
-		searchButton.addActionListener(ae -> search(fileTypeBox.getSelectedIndex(), imageTypeBox.getSelectedIndex()));
+		searchButton.addActionListener(ae -> search((FileType) fileTypeBox.getSelectedItem(), (DiskImageType) imageTypeBox.getSelectedItem()));
 		openSelectedLeftButton.addActionListener(ae -> openSelected(mainPanel.getLeftDiskPanel(), table));
 		openSelectedRightButton.addActionListener(ae -> openSelected(mainPanel.getRightDiskPanel(), table));
 		// Button panel
@@ -182,8 +176,10 @@ public class SearchPanel extends JPanel {
 		table.setAutoResizeMode(JTable.AUTO_RESIZE_ALL_COLUMNS);
 		table.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
 
+		GuiHelper.keyNavigateTable(table);
+
 		// Title
-		JLabel titleLabel = new JLabel(Settings.getMessage(Resources.DROID64_SEARCH_SEARCH));
+		JLabel titleLabel = new JLabel(Utility.getMessage(Resources.DROID64_SEARCH_SEARCH));
 		titleLabel.setFont(new Font("Verdana",  Font.BOLD, titleLabel.getFont().getSize() * 2));
 
 		// Put widgets onto panel
@@ -214,11 +210,11 @@ public class SearchPanel extends JPanel {
 	}
 
 	private void addComponent(int row, String propKey, JPanel parent, JComponent component, GridBagConstraints gbc) {
-		GuiHelper.addToGridBag(0, row, 0.0, gbc, parent, new JLabel(Settings.getMessage(propKey)));
+		GuiHelper.addToGridBag(0, row, 0.0, gbc, parent, new JLabel(Utility.getMessage(propKey)));
 		GuiHelper.addToGridBag(1, row, 0.5, gbc, parent, component);
 	}
 
-	protected void search(int selectedFileType, int imageType ) {
+	protected void search(FileType selectedFileType, DiskImageType imageType ) {
 		DiskSearchCriteria criteria = new DiskSearchCriteria();
 		criteria.setFileName(fileNameText.getText());
 		criteria.setDiskLabel(diskLabelText.getText());
@@ -227,28 +223,8 @@ public class SearchPanel extends JPanel {
 		criteria.setFileSizeMin(Utility.parseInteger(fileSizeMinField.getText(), 10));
 		criteria.setFileSizeMax(Utility.parseInteger(fileSizeMaxField.getText(), 250));
 		criteria.setHostName(hostNameText.getText());
-
-		switch (selectedFileType) {
-		case 1:
-			criteria.setFileType(Integer.valueOf(CbmFile.TYPE_DEL));
-			break;
-		case 2:
-			criteria.setFileType(Integer.valueOf(CbmFile.TYPE_PRG));
-			break;
-		case 3:
-			criteria.setFileType(Integer.valueOf(CbmFile.TYPE_REL));
-			break;
-		case 4:
-			criteria.setFileType(Integer.valueOf(CbmFile.TYPE_SEQ));
-			break;
-		case 5:
-			criteria.setFileType(Integer.valueOf(CbmFile.TYPE_USR));
-			break;
-		default:
-			criteria.setFileType(null);
-			break;
-		}
-		criteria.setImageType(imageType > 0 && imageType < DiskImage.getImageTypeNames().length ? Integer.valueOf(imageType) : null);
+		criteria.setFileType(selectedFileType);
+		criteria.setImageType(imageType != null && imageType != DiskImageType.UNDEFINED ? imageType : null);
 		runSearch(criteria);
 	}
 
@@ -258,15 +234,14 @@ public class SearchPanel extends JPanel {
 	 */
 	private void runSearch(DiskSearchCriteria criteria) {
 		try {
-			List<Disk> result = DaoFactory.getDaoFactory().getDiskDao().search(criteria);
 			tableModel.clear();
-			for (Disk disk : result) {
+			DaoFactory.getDaoFactory().getDiskDao().search(criteria).forEach(disk -> {
 				DiskFile file = disk.getFileList().get(0);
 				SearchResultRow row = new SearchResultRow(
 						disk.getFilePath(), disk.getFileName(), disk.getLabel(),
 						file.getName(), file.getFileTypeString(), Integer.valueOf(file.getSize()), disk.getHostName());
 				tableModel.updateDirEntry(row);
-			}
+			});
 		} catch (DatabaseException e) {	//NOSONAR
 			if (mainPanel != null) {
 				mainPanel.appendConsole(e.getMessage());

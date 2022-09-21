@@ -4,6 +4,8 @@ import java.io.File;
 import java.io.Serializable;
 import java.util.zip.ZipEntry;
 
+import droid64.gui.Setting;
+
 /**<pre style='font-family:sans-serif;'>
  * Created on 05.07.2004
  *
@@ -58,7 +60,7 @@ public class DirEntry implements Serializable {
 		} else  {
 			CbmFile cbm = file;
 			blocks = cbm.getSizeInBlocks();
-			type = CbmFile.getFileType(cbm.getFileType());
+			type = cbm.getFileType()!=null ? cbm.getFileType().name() : "???";
 			name= " \"" + cbm.getName() + "\"";
 			flags = (cbm.isFileLocked() ? "<" : Utility.EMPTY) + (cbm.isFileClosed() ? Utility.EMPTY : "*");
 			track = cbm.getTrack();
@@ -73,7 +75,7 @@ public class DirEntry implements Serializable {
 		isFile = !file.isDirectory();
 		type = file.isDirectory() ? "DIR" : "FILE";
 		flags =	(file.canRead() ? "r" : "-") + (file.canWrite() ? "w" : "-") + (file.canExecute() ? "x" : "-");
-		isImageFile = isFile && DiskImage.isImageFileName(file);
+		isImageFile = isFile && Setting.isImageFileName(file);
 	}
 
 	public DirEntry(File zipFile, ZipEntry zipEntry, int fileNum) {
@@ -81,7 +83,7 @@ public class DirEntry implements Serializable {
 		name = zipEntry.getName();
 		blocks = (int) zipEntry.getSize();
 		isFile = !zipEntry.isDirectory();
-		isImageFile = isFile && DiskImage.isImageFileName(name);
+		isImageFile = isFile && Setting.isImageFileName(new File(name));
 		flags = zipEntry.getComment() != null ? zipEntry.getComment() : Utility.EMPTY;
 		this.zipFile = zipFile;
 	}

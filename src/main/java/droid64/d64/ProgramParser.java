@@ -367,7 +367,7 @@ public class ProgramParser {
 			pos += 2;
 			break;
 		case ABSY:
-			buf.append(getInt8Str(prg, pos + 1)).append(SPACE1).append(getInt8Str(prg, pos + 2)).append(SPACE3).append(op.name).append(DIRECT).append(getInt16Str(prg, pos)).append(DIRECT_Y);
+			buf.append(getInt8Str(prg, pos + 1)).append(SPACE1).append(getInt8Str(prg, pos + 2)).append(SPACE3).append(op.name).append(DIRECT).append(getInt16Str(prg, pos + 1)).append(DIRECT_Y);
 			pos += 2;
 			break;
 

@@ -1,6 +1,7 @@
 package droid64.gui;
 
 import java.awt.BorderLayout;
+import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;
@@ -11,35 +12,33 @@ import javax.swing.JPanel;
 import javax.swing.JTextField;
 import javax.swing.filechooser.FileFilter;
 
-import droid64.d64.Utility;
-
 class FilePathPanel extends JPanel {
 
 	private static final long serialVersionUID = 1L;
 	private static final String BROWSELABEL = "...";
 	private final JTextField path = new JTextField();
 	private final JButton browseButton =  new JButton(BROWSELABEL);
-	private final transient List<Consumer<String>> listeners = new ArrayList<>();
+	private final transient List<Consumer<File>> listeners = new ArrayList<>();
 	private transient FileFilter fileFilter = null;
 
 	/**
 	 *
-	 * @param defaultPath String with default path
+	 * @param defaultPath file with default path
 	 * @param mode the browser mode (e.g. JFileChooser.DIRECTORIES_ONLY, FileChooser.FILES_ONLY or JFileChooser.FILES_AND_DIRECTORIES)
 	 * @param consumer add listener for selected path
 	 */
-	public FilePathPanel(String defaultPath, int mode, Consumer<String> consumer) {
+	public FilePathPanel(File defaultPath, int mode, Consumer<File> consumer) {
 		if (consumer !=null) {
 			listeners.add(consumer);
 		}
 		setLayout(new BorderLayout());
-		path.setText(defaultPath);
+		path.setText(defaultPath.getPath());
 		add(path, BorderLayout.CENTER);
 		add(browseButton, BorderLayout.EAST);
 		browseButton.addActionListener(event -> {
-			String choosen = openDialog(path.getText(), mode);
+			File choosen = openDialog(new File(path.getText()), mode);
 			if (choosen != null) {
-				path.setText(choosen);
+				path.setText(choosen.getPath());
 				listeners.forEach(c -> c.accept(choosen));
 			}
 		});
@@ -58,7 +57,7 @@ class FilePathPanel extends JPanel {
 	/**
 	 * @param consumer add listener for selected path
 	 */
-	public void addListener(Consumer<String> consumer) {
+	public void addListener(Consumer<File> consumer) {
 		listeners.add(consumer);
 	}
 
@@ -75,9 +74,9 @@ class FilePathPanel extends JPanel {
 	 * Open a browser dialog.
 	 * @param directory String with default path
 	 * @param mode the browser mode (e.g. JFileChooser.DIRECTORIES_ONLY, FileChooser.FILES_ONLY or JFileChooser.FILES_AND_DIRECTORIES)
-	 * @return String with selected path, or null if nothing was selected.
+	 * @return File with selected path, or null if nothing was selected.
 	 */
-	private String openDialog(String directory, int mode) {
+	private File openDialog(File directory, int mode) {
 		JFileChooser chooser = new JFileChooser(directory);
 		chooser.setFileSelectionMode(mode);
 		chooser.setMultiSelectionEnabled(false);
@@ -85,7 +84,7 @@ class FilePathPanel extends JPanel {
 			chooser.setFileFilter(fileFilter);
 		}
 		if (chooser.showOpenDialog(this) == JFileChooser.APPROVE_OPTION) {
-			return chooser.getSelectedFile() + Utility.EMPTY;
+			return chooser.getSelectedFile();
 		}
 		return null;
 	}

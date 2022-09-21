@@ -14,12 +14,16 @@ import java.net.UnknownHostException;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.text.MessageFormat;
 import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Enumeration;
 import java.util.List;
 import java.util.Map;
+import java.util.MissingResourceException;
+import java.util.ResourceBundle;
 import java.util.Scanner;
 import java.util.stream.IntStream;
 import java.util.zip.GZIPInputStream;
@@ -28,7 +32,7 @@ import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 import java.util.zip.ZipOutputStream;
 
-import droid64.gui.Settings;
+import droid64.gui.Setting;
 
 /**<pre style='font-family:sans-serif;'>
  * Created on 07.07.2017<br>
@@ -54,6 +58,8 @@ import droid64.gui.Settings;
  * </pre>
  */
 public class Utility {
+
+	private static final ResourceBundle RESOURCE_BUNDLE = ResourceBundle.getBundle("droid64");
 
 	public static final String EMPTY = "";
 	public static final String SPACE = " ";
@@ -249,15 +255,13 @@ public class Utility {
 	/**
 	 * Read gzipped file.
 	 *
-	 * @param fileName
-	 *            name of zip file
+	 * @param file the zip file
 	 * @return byte array with uncompressed data
-	 * @throws CbmException
-	 *             when failure
+	 * @throws CbmException when failure
 	 */
-	public static byte[] readGZippedFile(String fileName) throws CbmException {
+	public static byte[] readGZippedFile(File file) throws CbmException {
 		byte[] buf = new byte[INPUT_BUFFER_SIZE];
-		try (GZIPInputStream gis = new GZIPInputStream(new FileInputStream(fileName), INPUT_BUFFER_SIZE);
+		try (GZIPInputStream gis = new GZIPInputStream(new FileInputStream(file), INPUT_BUFFER_SIZE);
 				ByteArrayOutputStream bos = new ByteArrayOutputStream(OUTPUT_BUFFER_SIZE);) {
 			while (true) {
 				int size = gis.read(buf);
@@ -275,18 +279,18 @@ public class Utility {
 	/**
 	 * Write data to a gzipped file
 	 *
-	 * @param fileName
-	 *            name of zip file to create
+	 * @param file
+	 *            the zip file to create
 	 * @param data
 	 *            the data
 	 * @throws CbmException
 	 *             when error
 	 */
-	public static void writeGZippedFile(String fileName, byte[] data) throws CbmException {
+	public static void writeGZippedFile(File file, byte[] data) throws CbmException {
 		if (data == null) {
 			return;
 		}
-		try (FileOutputStream output = new FileOutputStream(fileName);
+		try (FileOutputStream output = new FileOutputStream(file);
 				GZIPOutputStream zipStream = new GZIPOutputStream(output)) {
 			zipStream.write(data);
 		} catch (IOException e) {
@@ -345,22 +349,22 @@ public class Utility {
 	/**
 	 * Extract data from an entry in a Zip file.
 	 *
-	 * @param zipFileName
-	 *            name of zip file
+	 * @param zipFile
+	 *            the zip file
 	 * @param entryName
 	 *            zip file entry to extract
 	 * @return file data in a byte[].
 	 * @throws IOException
 	 *             when error
 	 */
-	public static byte[] getDataFromZipFileEntry(String zipFileName, String entryName) throws IOException {
+	public static byte[] getDataFromZipFileEntry(File zipFile, String entryName) throws IOException {
 		byte[] data = null;
-		try (ZipFile zipFile = new ZipFile(zipFileName)) {
-			Enumeration<? extends ZipEntry> entries = zipFile.entries();
+		try (ZipFile zf = new ZipFile(zipFile)) {
+			Enumeration<? extends ZipEntry> entries = zf.entries();
 			while (entries.hasMoreElements()) {
 				ZipEntry entry = entries.nextElement();
 				if (entryName.equals(entry.getName())) {
-					InputStream zin = zipFile.getInputStream(entry);
+					InputStream zin = zf.getInputStream(entry);
 					ByteArrayOutputStream bos = new ByteArrayOutputStream();
 					byte[] bytesIn = new byte[1024];
 					int read;
@@ -385,7 +389,7 @@ public class Utility {
 	 * @throws CbmException
 	 *             if error
 	 */
-	public static boolean isGZipped(String file) throws CbmException {
+	public static boolean isGZipped(File file) throws CbmException {
 		try (RandomAccessFile raf = new RandomAccessFile(file, "r")) {
 			return GZIPInputStream.GZIP_MAGIC == (raf.read() & 0xff | ((raf.read() << 8) & 0xff00));
 		} catch (IOException e) {
@@ -453,6 +457,14 @@ public class Utility {
 			return s.isEmpty() ? null : s;
 		}
 		return null;
+	}
+
+	/**
+	 * @param s the string
+	 * @return true if string is null or empty
+	 */
+	public static boolean isEmpty(String s) {
+		return s == null || s.isEmpty();
 	}
 
 	/**
@@ -541,6 +553,23 @@ public class Utility {
 			return defaultValue;
 		}
 	}
+
+
+
+	/**
+	 * Parse integer from hexadecimal string, and return default value if string can't be parsed.
+	 * @param string to be parsed
+	 * @param defaultValue the default value
+	 * @return the parsed value or defaultValue
+	 */
+	public static int parseHexInteger(String string, int defaultValue) {
+		try {
+			return Integer.parseInt(string, 16);
+		} catch (NumberFormatException e) {
+			return defaultValue;
+		}
+	}
+
 
 	public static String getString(byte[] data, int pos, int length) {
 		char[] chars = new char[length];
@@ -656,7 +685,7 @@ public class Utility {
 					fileName = fileName.substring(0, i) + '_' + fileName.substring(i + 1, fileName.length());
 				}
 			}
-			return fileName + '.' + CbmFile.FILE_TYPES[cbmFile.getFileType()].toLowerCase();
+			return fileName + '.' + cbmFile.getFileType().name().toLowerCase();
 		}
 	}
 
@@ -699,7 +728,7 @@ public class Utility {
 	 * @return String
 	 */
 	public static String getResource(String resourceFile) {
-		try (InputStream in = Settings.class.getResourceAsStream(resourceFile); Scanner scanner = new Scanner(in, "utf-8")) {
+		try (InputStream in = Setting.class.getResourceAsStream(resourceFile); Scanner scanner = new Scanner(in, "utf-8")) {
 			return scanner.useDelimiter("\\Z").next();
 		} catch (Exception e) {	//NOSONAR
 			return "Failed to read " + resourceFile + " resource: \n"+e.getMessage();
@@ -778,5 +807,96 @@ public class Utility {
 			}
 		}
 		return buf.toString();
+	}
+
+	/**
+	 * @param str test string
+	 * @param starters strings to check
+	 * @return true when str starts with one of the strings in starters
+	 */
+	public static boolean stringStartsWith(String str, String...starters) {
+		if (isEmpty(str) || starters == null ||  starters.length < 1) {
+			return false;
+		}
+		for (String s : starters) {
+			if (!isEmpty(s) && str.startsWith(s)) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	/**
+	 * @param <T> the type of the list
+	 * @param list the list
+	 * @param index the index
+	 * @return item at index from list if list is not null and list has the size, else return null
+	 */
+	public static <T> T getListItem(List<T> list, int index) {
+		return index >= 0 && list != null && index < list.size() ? list.get(index) : null;
+	}
+
+	/**
+	 * @param <T> the type of the list
+	 * @param list the list
+	 * @param index the index
+	 * @param value the value of type T to set
+	 * @return the list
+	 */
+	public static <T> List<T> setListItem(List<T> list, int index, T value) {
+		if (index >= 0 && list != null) {
+			for (int i = list.size(); i <= index; i++) {
+				list.add(null);
+			}
+			list.set(index, value);
+		}
+		return list;
+	}
+
+	public static <T> List<T> joinLists(List<T> list1, List<T> list2) {
+		List<T> list = new ArrayList<>();
+		list.addAll(list1);
+		list.addAll(list2);
+		return list;
+	}
+
+	/**
+	 * Get message property
+	 * @param key name of property
+	 * @return the message, or the key of the property could not be found.
+	 */
+	public static String getMessage(String key) {
+		try {
+			return RESOURCE_BUNDLE.getString(String.valueOf(key));
+		} catch (MissingResourceException e) {
+			return key;
+		}
+	}
+
+	public static String getMessage(String key, Object...args) {
+		try {
+			return MessageFormat.format(RESOURCE_BUNDLE.getString(key), args);
+		} catch (MissingResourceException e) {
+			return key;
+		}
+	}
+
+	@SafeVarargs
+	public static <T> List<T> makeList(T...items) {
+		ArrayList<T> list = new ArrayList<>();
+		if (items != null) {
+			return Arrays.asList(items);
+		}
+		return list;
+	}
+
+	public static <T> List<T> cloneList(Collection<T> collection) {
+		ArrayList<T> list = new ArrayList<>();
+		if (collection != null) {
+			for (T item : collection) {
+				list.add(item);
+			}
+		}
+		return list;
 	}
 }

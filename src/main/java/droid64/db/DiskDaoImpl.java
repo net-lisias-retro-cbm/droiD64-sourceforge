@@ -7,10 +7,11 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.sql.Timestamp;
-import java.util.ArrayList;
 import java.util.Date;
-import java.util.List;
+import java.util.stream.Stream;
 
+import droid64.d64.DiskImageType;
+import droid64.d64.FileType;
 import droid64.d64.Utility;
 
 /**
@@ -25,7 +26,7 @@ public class DiskDaoImpl implements DiskDao {
 	private static final String AND_SPACE = "AND ";
 
 	@Override
-	public List<Disk> getAllDisks() throws DatabaseException {
+	public Stream<Disk> getAllDisks() throws DatabaseException {
 		String sql = SELECT + COLUMN_NAMES + " FROM disk";
 		try (PreparedStatement stmt = DaoFactoryImpl.prepareStatement(sql)) {
 			ResultSet rs = stmt.executeQuery();
@@ -98,7 +99,7 @@ public class DiskDaoImpl implements DiskDao {
 			stmt.setString(2, disk.getFilePath());
 			stmt.setString(3, disk.getFileName());
 			stmt.setDate(4, new java.sql.Date(disk.getUpdated().getTime()));
-			stmt.setInt(5, disk.getImageType());
+			stmt.setInt(5, disk.getImageType().type);
 			setInteger(stmt, 6, disk.getErrors());
 			setInteger(stmt, 7, disk.getWarnings());
 			stmt.setString(8, disk.getHostName());
@@ -135,8 +136,9 @@ public class DiskDaoImpl implements DiskDao {
 	}
 
 	@Override
-	public List<Disk> search(DiskSearchCriteria criteria) throws DatabaseException {
-		List<Disk> result = new ArrayList<>();
+	public Stream<Disk> search(DiskSearchCriteria criteria) throws DatabaseException {
+		Stream.Builder<Disk> builder = Stream.builder();
+
 		String columns = "d.diskid, d.filepath, d.filename, d.label, df.fileid, df.name, df.filetype, df.size, df.fileNum, df.flags, d.updated, d.imagetype, d.errors, d.warnings, d.hostname";
 		StringBuilder sqlBuf = new StringBuilder();
 		sqlBuf.append(SELECT);
@@ -158,9 +160,9 @@ public class DiskDaoImpl implements DiskDao {
 			setSearchCriterias(stmt, criteria);
 			rs = stmt.executeQuery();
 			while (rs.next()) {
-				result.add(consumeDiskComposite(rs));
+				builder.add(consumeDiskComposite(rs));
 			}
-			return result;
+			return builder.build();
 		}  catch (SQLException e) {
 			throw new DatabaseException(e);
 		} finally {
@@ -241,13 +243,13 @@ public class DiskDaoImpl implements DiskDao {
 				stmt.setInt(idx++, criteria.getFileSizeMax());
 			}
 			if (criteria.getFileType()!=null) {
-				stmt.setInt(idx++, criteria.getFileType());
+				stmt.setInt(idx++, criteria.getFileType().type);
 			}
 			if (!isStringNullOrEmpty(criteria.getHostName())) {
 				stmt.setString(idx++, "%"+criteria.getHostName().toUpperCase()+"%");
 			}
 			if (criteria.getImageType()!=null) {
-				stmt.setInt(idx++, criteria.getImageType());
+				stmt.setInt(idx++, criteria.getImageType().type);
 			}
 		}
 		if (DaoFactory.getLimitType() == DaoFactory.LimitType.LIMIT || DaoFactory.getLimitType() == DaoFactory.LimitType.FETCH) {
@@ -265,13 +267,13 @@ public class DiskDaoImpl implements DiskDao {
 		disk.setLabel(rs.getString(4));
 		file.setFileId(rs.getLong(5));
 		file.setName(rs.getString(6));
-		file.setFileType(rs.getInt(7));
+		file.setFileType(FileType.get(rs.getInt(7)));
 		file.setSize(rs.getInt(8));
 		file.setFileNum(rs.getInt(9));
 		file.setFlags(rs.getInt(10));
 		Timestamp updated = rs.getTimestamp(11);
 		disk.setUpdated(updated!=null ? new Date(updated.getTime()) : null);
-		disk.setImageType(rs.getInt(12));
+		disk.setImageType(DiskImageType.get(rs.getInt(12)));
 		disk.setErrors(getInteger(rs, 13));
 		disk.setWarnings(getInteger(rs, 14));
 		disk.setHostName(rs.getString(15));
@@ -348,7 +350,7 @@ public class DiskDaoImpl implements DiskDao {
 			disk.setFilePath(rs.getString(2));
 			disk.setFileName(rs.getString(3));
 			disk.setLabel(rs.getString(4));
-			disk.setImageType(rs.getInt(11));
+			disk.setImageType(DiskImageType.get(rs.getInt(11)));
 			disk.setErrors(getInteger(rs, 12));
 			disk.setWarnings(getInteger(rs, 13));
 			disk.setHostName(rs.getString(14));
@@ -362,7 +364,7 @@ public class DiskDaoImpl implements DiskDao {
 			oldFile.setFileId(fileId);
 			oldFile.setDiskId(rs.getLong(1));
 			oldFile.setName(rs.getString(6));
-			oldFile.setFileType(rs.getInt(7));
+			oldFile.setFileType(FileType.get(rs.getInt(7)));
 			oldFile.setSize(rs.getInt(8));
 			oldFile.setFileNum(rs.getInt(9));
 			oldFile.setFlags(rs.getInt(10));
@@ -425,7 +427,7 @@ public class DiskDaoImpl implements DiskDao {
 			stmt.setString(2, disk.getFilePath());
 			stmt.setString(3, disk.getFileName());
 			stmt.setTimestamp(4, new Timestamp(new Date().getTime()));
-			stmt.setInt(5, disk.getImageType());
+			stmt.setInt(5, disk.getImageType().type);
 			setInteger(stmt, 6, disk.getErrors());
 			setInteger(stmt, 7, disk.getWarnings());
 			stmt.setString(8, disk.getHostName());
@@ -464,7 +466,7 @@ public class DiskDaoImpl implements DiskDao {
 			stmt.setString(2, disk.getFilePath());
 			stmt.setString(3, disk.getFileName());
 			stmt.setTimestamp(4, new Timestamp(new Date().getTime()));
-			stmt.setInt(5, disk.getImageType());
+			stmt.setInt(5, disk.getImageType().type);
 			setInteger(stmt, 6, disk.getErrors());
 			setInteger(stmt, 7, disk.getWarnings());
 			stmt.setString(8, disk.getHostName());
@@ -500,7 +502,7 @@ public class DiskDaoImpl implements DiskDao {
 			try (PreparedStatement stmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
 				stmt.setLong(idx++, file.getDiskId());
 				stmt.setString(idx++, file.getName());
-				stmt.setInt(idx++, file.getFileType());
+				stmt.setInt(idx++, file.getFileType().type);
 				stmt.setInt(idx++, file.getSize());
 				stmt.setInt(idx++, file.getFileNum());
 				stmt.setInt(idx++, file.getFlags());
@@ -512,7 +514,7 @@ public class DiskDaoImpl implements DiskDao {
 			String sql = "UPDATE diskfile SET name=?,filetype=?,size=?,filenum=?,flags=? WHERE diskid=? AND fileid=?";
 			try (PreparedStatement stmt = conn.prepareStatement(sql)) {
 				stmt.setString(idx++, file.getName());
-				stmt.setInt(idx++, file.getFileType());
+				stmt.setInt(idx++, file.getFileType()!=null?file.getFileType().type:0);
 				stmt.setInt(idx++, file.getSize());
 				stmt.setInt(idx++, file.getFileNum());
 				stmt.setInt(idx++, file.getFlags());
@@ -544,17 +546,17 @@ public class DiskDaoImpl implements DiskDao {
 
 
 	/**
-	 * Convert ResultSet to a List of Disk.
+	 * Convert ResultSet to a Stream of Disk.
 	 * @param rs ResultSet
-	 * @return List of Disk
+	 * @return Stream of Disk
 	 * @throws SQLException
 	 */
-	private List<Disk> consumeRows(ResultSet rs) throws SQLException {
-		List<Disk> list = new ArrayList<>();
+	private Stream<Disk> consumeRows(ResultSet rs) throws SQLException {
+		Stream.Builder<Disk> builder = Stream.builder();
 		while (rs.next()) {
-			list.add(consumeRow(rs));
+			builder.add(consumeRow(rs));
 		}
-		return list;
+		return builder.build();
 	}
 
 	/**
@@ -570,7 +572,7 @@ public class DiskDaoImpl implements DiskDao {
 		vo.setFilePath(rs.getString(3));
 		vo.setFileName(rs.getString(4));
 		vo.setUpdated(new java.util.Date(rs.getDate(5).getTime()));
-		vo.setImageType(rs.getInt(6));
+		vo.setImageType(DiskImageType.get(rs.getInt(6)));
 		vo.setErrors(getInteger(rs, 7));
 		vo.setWarnings(getInteger(rs, 8));
 		vo.setHostName(rs.getString(9));

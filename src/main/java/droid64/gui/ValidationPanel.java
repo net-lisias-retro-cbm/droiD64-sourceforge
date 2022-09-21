@@ -6,7 +6,7 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.HashMap;
+import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
 
@@ -34,18 +34,19 @@ public class ValidationPanel extends JPanel {
 	private static final String HEADER_TRACK_SECTOR = "\nTrack/Sector\n------------\n";
 	private static final String HEADER_TRACK_SECTOR_FILE = "\nTrack/Sector\t File\n------------\t ----------------\n";
 
-	private final Map<Integer,List<ValidationError>> errorMap = new HashMap<>();
+	private final EnumMap<ValidationError.Error, List<ValidationError>> errorMap = new EnumMap<>(ValidationError.Error.class);
 	private final JButton repairButton = new JButton("Repair");
 	private final JTextArea textArea = new JTextArea();
 	private final Frame parentFrame;
 	private final JButton closeButton = new JButton("Close");
-
+	private JDialog dialog;
 	private JCheckBox[] boxes;
-	private List<Integer> keys;
+	private List<ValidationError.Error> keys;
 	private DiskPanel diskPanel;
 
 	public ValidationPanel(Frame parentFrame) {
 		this.parentFrame = parentFrame;
+		 this.dialog = new JDialog(parentFrame, "Validation", true);
 
 		DefaultTableColumnModel columnModel = new DefaultTableColumnModel();
 		TableColumn col1 = new TableColumn(0, 10);
@@ -106,21 +107,21 @@ public class ValidationPanel extends JPanel {
 			textArea.setText("No validation errors found.");
 		}
 		GuiHelper.setPreferredSize(this, 2, 2);
+		closeButton.addActionListener(e -> dialog.dispose());
 
-		final JDialog dialog = new JDialog(parentFrame, "Validation errors", true);
+		dialog.setTitle("Validation errors (" + diskPanel.getDiskImageType() + ")");
 		dialog.setContentPane(this);
 		dialog.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
-		closeButton.addActionListener(e -> dialog.dispose());
 		dialog.pack();
 		dialog.setLocationRelativeTo(parentFrame);
 		dialog.setVisible(true);
 	}
 
 	private void repair(JTable errorTable, JTextArea textArea) {
-		if (!errorMap.isEmpty()) {
+		if (errorMap.isEmpty()) {
 			return;
 		}
-		List<Integer> repairList = new ArrayList<>();
+		List<ValidationError.Error> repairList = new ArrayList<>();
 		for (int i=0; i<boxes.length; i++) {
 			if (boxes[i].isSelected()) {
 				repairList.add(keys.get(i));
@@ -140,7 +141,7 @@ public class ValidationPanel extends JPanel {
 		errorMap.clear();
 		if (errorList != null) {
 			errorList.forEach(error -> {
-				Integer code = Integer.valueOf(error.getErrorCode());
+				ValidationError.Error code = error.getError();
 				if (!errorMap.containsKey(code)) {
 					errorMap.put(code, new ArrayList<>());
 				}
@@ -151,12 +152,12 @@ public class ValidationPanel extends JPanel {
 		for (int i=0; i < boxes.length; i++) {
 			boxes[i] = new JCheckBox();
 		}
-		Integer[] keyArr = errorMap.keySet().toArray(new Integer[errorMap.size()]);
+		ValidationError.Error[] keyArr = errorMap.keySet().toArray(new ValidationError.Error[errorMap.size()]);
 		Arrays.sort(keyArr);
 		keys = Arrays.asList(keyArr);
 	}
 
-	private String getErrorDataString(Integer key, Map<Integer,List<ValidationError>> errorMap) {
+	private String getErrorDataString(ValidationError.Error key, Map<ValidationError.Error, List<ValidationError>> errorMap) {
 		if (key == null) {
 			return null;
 		}
@@ -166,7 +167,7 @@ public class ValidationPanel extends JPanel {
 		}
 		boolean hasFile = hasFile(key);
 		StringBuilder buf = new StringBuilder();
-		buf.append(ValidationError.getErrorText(key));
+		buf.append(key);
 		buf.append(hasFile ? HEADER_TRACK_SECTOR_FILE : HEADER_TRACK_SECTOR);
 		int i=0;
 		for (ValidationError error : errorList) {
@@ -179,17 +180,21 @@ public class ValidationPanel extends JPanel {
 		return buf.toString();
 	}
 
-	private boolean hasFile(Integer key) {
+	private boolean hasFile(ValidationError.Error key) {
 		switch (key) {
-		case ValidationError.ERROR_PARTITIONS_UNSUPPORTED:
-		case ValidationError.ERROR_FILE_SECTOR_OUTSIDE_IMAGE:
-		case ValidationError.ERROR_FILE_SECTOR_ALREADY_SEEN:
-		case ValidationError.ERROR_FILE_SECTOR_ALREADY_USED:
-		case ValidationError.ERROR_FILE_SECTOR_ALREADY_FREE:
+		case ERROR_PARTITIONS_UNSUPPORTED:
+		case ERROR_FILE_SECTOR_OUTSIDE_IMAGE:
+		case ERROR_FILE_SECTOR_ALREADY_SEEN:
+		case ERROR_FILE_SECTOR_ALREADY_USED:
+		case ERROR_FILE_SECTOR_ALREADY_FREE:
 			return true;
 		default:
 			return false;
 		}
+	}
+
+	protected void setDialog(JDialog dialog) {
+		this.dialog = dialog;
 	}
 
 	class ValidationTableModel extends AbstractTableModel {
@@ -211,7 +216,7 @@ public class ValidationPanel extends JPanel {
 			case 0:  return Boolean.valueOf(boxes[row].isSelected());
 			case 1:  return keys.get(row).toString();
 			case 2:  return Integer.toString(errorMap.get(keys.get(row)).size());
-			case 3:  return ValidationError.getErrorText(keys.get(row));
+			case 3:  return keys.get(row);
 			default: return Utility.EMPTY;
 			}
 		}

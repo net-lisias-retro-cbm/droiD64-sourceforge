@@ -1,8 +1,11 @@
 package droid64.d64;
 
+import java.io.File;
 import java.text.ParseException;
 import java.util.Arrays;
 import java.util.List;
+
+import droid64.gui.BAMPanel.BamTrack;
 
 /**
  * <p> Created on 2015-Oct-15 </p>
@@ -24,8 +27,6 @@ import java.util.List;
 public class LNX extends DiskImage {
 
 	private static final long serialVersionUID = 1L;
-	/** Name of the image type */
-	public static final String IMAGE_TYPE_NAME = "LNX";
 	/** All LNX blocks are 254 bytes. No track/sector byte first in each block.*/
 	private static final int LNX_BLOCK_SIZE = 254;
 	/** The CR delimiter used in the LNX directory structure. */
@@ -46,9 +47,9 @@ public class LNX extends DiskImage {
 	}
 
 	@Override
-	protected DiskImage readImage(String filename) throws CbmException {
+	protected DiskImage readImage(File file) throws CbmException {
 		bam = new CbmBam(1, 1);
-		return readImage(filename, 0, IMAGE_TYPE_NAME);
+		return readImage(file, DiskImageType.LNX);
 	}
 
 	@Override
@@ -163,7 +164,7 @@ public class LNX extends DiskImage {
 	}
 
 	@Override
-	public boolean saveNewImage(String filename, String newDiskName, String newDiskID) {
+	public boolean saveNewImage(File file, String newDiskName, String newDiskID) {
 		return false;
 	}
 
@@ -173,8 +174,8 @@ public class LNX extends DiskImage {
 	}
 
 	@Override
-	public String[][] getBamTable() {
-		return new String[0][0];
+	public BamTrack[] getBamTable() {
+		return new BamTrack[0];
 	}
 
 	@Override
@@ -188,7 +189,7 @@ public class LNX extends DiskImage {
 	}
 
 	@Override
-	public Integer validate(List<Integer> repairList) {
+	public Integer validate(List<ValidationError.Error> repairList) {
 		return null;
 	}
 
@@ -226,13 +227,13 @@ public class LNX extends DiskImage {
 	 * @param lnxType
 	 * @return DiskImage.TYPE_&lt;<i>fileType</i>&gt;
 	 */
-	private int getTypeFromLnxType(String lnxType) {
+	private FileType getTypeFromLnxType(String lnxType) {
 		switch (lnxType) {
-		case "D": return CbmFile.TYPE_DEL;
-		case "R": return CbmFile.TYPE_REL;
-		case "S": return CbmFile.TYPE_SEQ;
-		case "U": return CbmFile.TYPE_USR;
-		default:  return CbmFile.TYPE_PRG;
+		case "D": return FileType.DEL;
+		case "R": return FileType.REL;
+		case "S": return FileType.SEQ;
+		case "U": return FileType.USR;
+		default:  return FileType.PRG;
 		}
 	}
 

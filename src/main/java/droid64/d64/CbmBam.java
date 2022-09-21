@@ -36,13 +36,6 @@ public class CbmBam implements Serializable {
 	private String diskName;	//string[16]
 	private String diskId;	//string[5]
 
-	public static final String USED = "x";
-	public static final String FREE = "-";
-	public static final String INVALID = Utility.SPACE;
-	public static final String RESERVED = "X";
-	public static final String FREE_PART = "=";
-	public static final String USED_PART = "#";
-
 	public CbmBam(int numTracks, int numTrackBytes) {
 		freeSectors = new int[numTracks];
 		trackBits =  new int[numTracks][numTrackBytes - 1];

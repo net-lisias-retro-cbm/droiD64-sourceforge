@@ -1,14 +1,16 @@
 package droid64.gui;
 
+import droid64.d64.DiskImageType;
+import droid64.d64.FileType;
 import droid64.d64.Utility;
 
 public class RenameResult {
 
 	private String fileName = Utility.EMPTY;
-	private int fileType = 0;
+	private FileType fileType = FileType.DEL;
 	private String diskName = Utility.EMPTY;
 	private String diskID = Utility.EMPTY;
-	private int diskType = 0;
+	private DiskImageType diskType = DiskImageType.UNDEFINED;
 	private boolean compressedDisk = false;
 	private boolean cpmDisk = false;
 	private int partitionSectorCount;
@@ -21,15 +23,15 @@ public class RenameResult {
 		this.fileName = fileName;
 	}
 
-	public int getFileType() {
+	public FileType getFileType() {
 		return fileType;
 	}
 
-	public void setFileType(int fileType) {
+	public void setFileType(FileType fileType) {
 		this.fileType = fileType;
 	}
 
-	public void setDiskType(int diskType) {
+	public void setDiskType(DiskImageType diskType) {
 		this.diskType = diskType;
 	}
 
@@ -49,7 +51,7 @@ public class RenameResult {
 		this.diskID = diskID;
 	}
 
-	public int getDiskType() {
+	public DiskImageType getDiskType() {
 		return diskType;
 	}
 

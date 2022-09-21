@@ -19,6 +19,7 @@ import javax.swing.text.Document;
 
 import droid64.d64.CbmException;
 import droid64.d64.CbmFile;
+import droid64.d64.FileType;
 
 /*
  * Created on 26.06.2004
@@ -56,7 +57,7 @@ public class RenameFilePanel extends JPanel {
 	private final JTextField cbmNameTextField = new JTextField(16);
 	private final JTextField idField = new JTextField(5);
 	private final JTextField cbmIdTextField = new JTextField(5);
-	private final JComboBox<String> fileTypeBox = new JComboBox<>();
+	private final JComboBox<FileType> fileTypeBox = new JComboBox<>();
 	private final LimitLengthDocument nameLengthDocument = new LimitLengthDocument();
 	private final LimitLengthDocument idLengthDocument = new LimitLengthDocument();
 	private final JLabel oldNameLabel = new JLabel("Old name:");
@@ -105,7 +106,7 @@ public class RenameFilePanel extends JPanel {
 	 * @param createPartition true if it is a partition (CBM) file type
 	 * @return a RenameResult or null if cancelled
 	 */
-	public RenameResult show(String title, String fileName, Integer fileType, boolean isCbmFile, boolean createPartition) {
+	public RenameResult show(String title, String fileName, FileType fileType, boolean isCbmFile, boolean createPartition) {
 
 		nameLengthDocument.setText(fileName);
 		nameLengthDocument.setLimit(isCbmFile ? 16 : Integer.MAX_VALUE);
@@ -124,7 +125,7 @@ public class RenameFilePanel extends JPanel {
 		cbmIdTextField.setVisible(createPartition);
 
 		fileTypeBox.setVisible(isCbmFile);
-		fileTypeBox.setEnabled(isCbmFile && !createPartition && !Integer.valueOf(CbmFile.TYPE_CBM).equals(fileType));
+		fileTypeBox.setEnabled(isCbmFile && !createPartition && !FileType.CBM.equals(fileType));
 		fileTypeLabel.setVisible(isCbmFile && !createPartition);
 
 		idField.setVisible(createPartition);
@@ -135,7 +136,7 @@ public class RenameFilePanel extends JPanel {
 		sizeLabel.setVisible(createPartition);
 
 		if (fileType != null) {
-			fileTypeBox.setSelectedItem(CbmFile.getFileType(fileType));
+			fileTypeBox.setSelectedItem(fileType);
 		}
 
 		newNameTextField.setRequestFocusEnabled(true);
@@ -150,32 +151,32 @@ public class RenameFilePanel extends JPanel {
 		RenameResult result = new RenameResult();
 		result.setFileName(newNameTextField.getText());
 		if (fileTypeBox.getSelectedIndex() != -1) {
-			result.setFileType(fileTypeBox.getSelectedIndex());
+			result.setFileType((FileType) fileTypeBox.getSelectedItem());
 		}
 		result.setPartitionSectorCount((int) sizeField.getValue());
 		result.setDiskID(idField.getText());
 		return result;
 	}
 
-	private void initGUI() throws CbmException {
+	private void initGUI() {
 
 		fileTypeBox.setToolTipText("Select a filetype here.");
-		for (String s : CbmFile.getFileTypes()) {
-			fileTypeBox.addItem(s);
+		for (FileType ft : FileType.values()) {
+			fileTypeBox.addItem(ft);
 		}
 
 		oldNameTextField.setEditable(false);
 
 		cbmNameTextField.setEditable(false);
-		cbmNameTextField.setFont(Settings.getCommodoreFont());
-		cbmNameTextField.setBackground(Settings.getDirColorBg());
-		cbmNameTextField.setForeground(Settings.getDirColorFg());
+		cbmNameTextField.setFont(Setting.CBM_FONT.getFont());
+		cbmNameTextField.setBackground(Setting.DIR_BG.getColor());
+		cbmNameTextField.setForeground(Setting.DIR_FG.getColor());
 		cbmNameTextField.setBorder(BorderFactory.createCompoundBorder(cbmNameTextField.getBorder(), BorderFactory.createEmptyBorder(4, 4, 4, 4)));
 
 		cbmIdTextField.setEditable(false);
-		cbmIdTextField.setFont(Settings.getCommodoreFont());
-		cbmIdTextField.setBackground(Settings.getDirColorBg());
-		cbmIdTextField.setForeground(Settings.getDirColorFg());
+		cbmIdTextField.setFont(Setting.CBM_FONT.getFont());
+		cbmIdTextField.setBackground(Setting.DIR_BG.getColor());
+		cbmIdTextField.setForeground(Setting.DIR_FG.getColor());
 		cbmIdTextField.setBorder(BorderFactory.createCompoundBorder(cbmIdTextField.getBorder(), BorderFactory.createEmptyBorder(4, 4, 4, 4)));
 
 		newNameTextField.setEditable(true);

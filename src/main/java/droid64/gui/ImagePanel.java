@@ -2,6 +2,8 @@ package droid64.gui;
 
 import java.awt.Dimension;
 import java.awt.Graphics;
+import java.awt.Graphics2D;
+import java.awt.Image;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
 
@@ -49,6 +51,24 @@ public class ImagePanel extends JPanel {
 			invalidate();
 			repaint();
 		}
+	}
+
+	public void setImage(Image img, String name) {
+		this.name = name;
+		   if (img instanceof BufferedImage) {
+		        image = (BufferedImage) img;
+		    } else {
+			    image = new BufferedImage(img.getWidth(null), img.getHeight(null), BufferedImage.TYPE_INT_ARGB);
+			    Graphics2D bGr = image.createGraphics();
+			    bGr.drawImage(img, 0, 0, null);
+			    bGr.dispose();
+		    }
+			Dimension dim = new Dimension(image.getWidth(), image.getHeight());
+			setSize(dim);
+			setMinimumSize(dim);
+			setPreferredSize(dim);
+			invalidate();
+			repaint();
 	}
 
 	@Override

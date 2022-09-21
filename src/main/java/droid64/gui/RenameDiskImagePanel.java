@@ -4,8 +4,6 @@ import java.awt.FlowLayout;
 import java.awt.Font;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
-import java.util.LinkedHashMap;
-import java.util.Map;
 
 import javax.swing.BorderFactory;
 import javax.swing.JCheckBox;
@@ -20,8 +18,8 @@ import javax.swing.event.DocumentListener;
 import javax.swing.text.BadLocationException;
 import javax.swing.text.JTextComponent;
 
-import droid64.d64.CbmException;
 import droid64.d64.DiskImage;
+import droid64.d64.DiskImageType;
 import droid64.d64.Utility;
 
 /*
@@ -54,13 +52,12 @@ import droid64.d64.Utility;
 public class RenameDiskImagePanel extends JPanel {
 
 	private static final long serialVersionUID = 1L;
-	private static final LinkedHashMap<String, Integer> DISK_TYPE_MAP = getDiskTypeMap();
 
 	private final JTextField nameTextField = new JTextField(Utility.EMPTY, 16);
 	private final JTextField idTextField = new JTextField(Utility.EMPTY, 5);
 	private final JCheckBox compressedBox = new JCheckBox("Compressed image", false);
 	private final JCheckBox cpmBox = new JCheckBox("CP/M formatted", false);
-	private final JComboBox<String> diskTypeBox = new JComboBox<>();
+	private final JComboBox<DiskImageType> diskTypeBox = new JComboBox<>(DiskImageType.stream().sorted((a,b)-> a.id.compareTo(b.id)).toArray(DiskImageType[]::new));
 	private final MainPanel mainPanel;
 	private boolean isNewImage;
 
@@ -98,9 +95,7 @@ public class RenameDiskImagePanel extends JPanel {
 			idTextField.setText(diskImage.getBam().getDiskId());
 			cpmBox.setSelected(diskImage.isCpmImage());
 			compressedBox.setSelected(diskImage.isCompressed());
-			diskTypeBox.setSelectedItem(
-					DISK_TYPE_MAP.entrySet().stream().filter(me -> me.getValue().equals(diskImage.getDiskImageType()))
-							.map(Map.Entry::getKey).findFirst().orElse(null));
+			diskTypeBox.setSelectedItem(DiskImageType.stream().filter(dt -> dt == diskImage.getDiskImageType()).findFirst().orElse(null));
 		}
 
 		cpmBox.setEnabled(isNewImage);
@@ -115,20 +110,9 @@ public class RenameDiskImagePanel extends JPanel {
 
 	private RenameResult getResult() {
 		String diskId = Utility.truncate(idTextField.getText(), 5);
-		Integer diskType = DISK_TYPE_MAP.get(diskTypeBox.getSelectedItem());
+		DiskImageType diskType = (DiskImageType) diskTypeBox.getSelectedItem();
 		if (diskId.length() <= 2) {
-			String dosVer;
-			switch (diskType) {
-			case DiskImage.D81_IMAGE_TYPE:
-				dosVer = "3D";
-				break;
-			case DiskImage.D88_IMAGE_TYPE:
-				dosVer = "3A";
-				break;
-			default:
-				dosVer = "2A";
-				break;
-			}
+			String dosVer = diskType != null ? diskType.dosVersion : "  ";
 			diskId = (diskId + "  ").substring(0, 2) + "\u00a0" + dosVer;
 		}
 		RenameResult result = new RenameResult();
@@ -144,8 +128,6 @@ public class RenameDiskImagePanel extends JPanel {
 
 
 	private void initGUI() {
-
-		DISK_TYPE_MAP.keySet().forEach(diskTypeBox::addItem);
 
 		nameTextField.setToolTipText("The label of your image (max 16 characters)");
 		nameTextField.setDocument(new LimitLengthDocument(16, ""));
@@ -163,8 +145,8 @@ public class RenameDiskImagePanel extends JPanel {
 		cpmBox.setToolTipText("Format for CP/M.");
 
 		final JTextField nameTextField2 = new JTextField(Utility.EMPTY, 16);
-		nameTextField2.setBackground(Settings.getDirColorBg());
-		nameTextField2.setForeground(Settings.getDirColorFg());
+		nameTextField2.setBackground(Setting.DIR_BG.getColor());
+		nameTextField2.setForeground(Setting.DIR_FG.getColor());
 		nameTextField2.setEditable(false);
 		nameTextField2.setText("");
 		nameTextField2.setBorder(BorderFactory.createCompoundBorder(nameTextField2.getBorder(),
@@ -172,21 +154,17 @@ public class RenameDiskImagePanel extends JPanel {
 		nameTextField.getDocument().addDocumentListener(new MyDocumentListener(nameTextField2));
 
 		final JTextField idTextField2 = new JTextField(Utility.EMPTY, 5);
-		idTextField2.setBackground(Settings.getDirColorBg());
-		idTextField2.setForeground(Settings.getDirColorFg());
+		idTextField2.setBackground(Setting.DIR_BG.getColor());
+		idTextField2.setForeground(Setting.DIR_FG.getColor());
 		idTextField2.setEditable(false);
 		idTextField2.setText("");
 		idTextField2.setBorder(BorderFactory.createCompoundBorder(idTextField2.getBorder(),
 				BorderFactory.createEmptyBorder(4, 4, 4, 4)));
 		idTextField.getDocument().addDocumentListener(new MyDocumentListener(idTextField2));
 
-		try {
-			Font cbmFont = Settings.getCommodoreFont();
-			nameTextField2.setFont(cbmFont);
-			idTextField2.setFont(cbmFont);
-		} catch (CbmException e) { // NOSONAR
-			mainPanel.appendConsole("Failed to get Commdore font: " + e.getMessage());
-		}
+		Font cbmFont = Setting.CBM_FONT.getFont();
+		nameTextField2.setFont(cbmFont);
+		idTextField2.setFont(cbmFont);
 
 		setLayout(new GridBagLayout());
 
@@ -215,19 +193,6 @@ public class RenameDiskImagePanel extends JPanel {
 		GuiHelper.addToGridBag(0, row, 1.0, 1.0, 3, gbc, this, new JPanel());
 
 		addHierarchyListener(e -> GuiHelper.hierarchyListenerResizer(SwingUtilities.getWindowAncestor(this)));
-	}
-
-	private static final LinkedHashMap<String, Integer> getDiskTypeMap() {
-		LinkedHashMap<String, Integer> map = new LinkedHashMap<>();
-		map.put("D64 (C1541)", DiskImage.D64_IMAGE_TYPE);
-		map.put("D67 (C2040)", DiskImage.D67_IMAGE_TYPE);
-		map.put("D71 (C1571)", DiskImage.D71_IMAGE_TYPE);
-		map.put("D80 (C8050)", DiskImage.D80_IMAGE_TYPE);
-		map.put("D81 (C1581)", DiskImage.D81_IMAGE_TYPE);
-		map.put("D82 (C8250)", DiskImage.D82_IMAGE_TYPE);
-		map.put("D88 (C8280)", DiskImage.D88_IMAGE_TYPE);
-		map.put("T64 (C1530)", DiskImage.T64_IMAGE_TYPE);
-		return map;
 	}
 
 	private class MyDocumentListener implements DocumentListener {

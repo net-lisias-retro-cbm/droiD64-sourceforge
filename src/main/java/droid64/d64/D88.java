@@ -1,8 +1,12 @@
 package droid64.d64;
 
-import java.io.ByteArrayOutputStream;
+import java.io.File;
 import java.util.Arrays;
 import java.util.List;
+import java.util.stream.IntStream;
+
+import droid64.gui.BAMPanel.BamState;
+import droid64.gui.BAMPanel.BamTrack;
 
 /**<pre style='font-family:sans-serif;'>
  * Created on 2019-Jan-15
@@ -32,8 +36,6 @@ import java.util.List;
 public class D88 extends DiskImage {
 
 	private static final long serialVersionUID = 1L;
-	/** Name of the image type */
-	public static final String IMAGE_TYPE_NAME = "D88";
 	/** Max number of directory entries in image : (26*2-1)*8 = 408 */
 	protected static final int FILE_NUMBER_LIMIT = 408;
 	/** The normal size of a D88 image (77 * 52 * 256) */
@@ -112,9 +114,9 @@ public class D88 extends DiskImage {
 		return blocksFree;
 	}
 	@Override
-	protected DiskImage readImage(String filename) throws CbmException {
+	protected DiskImage readImage(File file) throws CbmException {
 		bam = new CbmBam(TRACK_COUNT, BYTES_PER_BAM_GROUP * HEAD_COUNT - 1);
-		return readImage(filename, D88_SIZE, IMAGE_TYPE_NAME);
+		return readImage(file, DiskImageType.D88);
 	}
 
 	@Override
@@ -194,36 +196,7 @@ public class D88 extends DiskImage {
 		}
 		feedbackMessage.append("getFileData: ").append(number).append(" '").append(cbmFile[number].getName()).append("'\n");
 		feedbackMessage.append("Tracks / Sectors: ");
-		// write ints
-		int thisTrack = cbmFile[number].getTrack();
-		int thisSector = cbmFile[number].getSector();
-		ByteArrayOutputStream out = new ByteArrayOutputStream();
-		int readBlocks = 0;
-		do {
-			try {
-				verifyTrackSector(thisTrack, thisSector);
-			} catch (CbmException e) {
-				throw new CbmException(e.getMessage()+" Read " + readBlocks + " blocks.");
-			}
-			int blockPos = getSectorOffset(thisTrack, thisSector);
-			int nextTrack  = getCbmDiskValue(blockPos + 0);
-			int nextSector = getCbmDiskValue(blockPos + 1);
-			feedbackMessage.append(thisTrack).append('/').append(thisSector).append(Utility.SPACE);
-			if (nextTrack > 0) {
-				out.write(cbmDisk, blockPos + 2, BLOCK_SIZE - 2);
-			} else {
-				feedbackMessage.append("\nRemaining bytes: ").append(nextSector).append('\n');
-				out.write(cbmDisk, blockPos + 2, nextSector - 2 + 1);
-			}
-			thisTrack = nextTrack;
-			thisSector = nextSector;
-			if ((readBlocks++) > 10000) {
-				// just to break eternal loops
-				throw new CbmException("Too many blocks!");
-			}
-		} while (thisTrack != 0);
-		feedbackMessage.append("\nOK.\n");
-		return out.toByteArray();
+		return getData(cbmFile[number].getTrack(), cbmFile[number].getSector());
 	}
 
 	@Override
@@ -478,7 +451,7 @@ public class D88 extends DiskImage {
 	}
 
 	@Override
-	public boolean saveNewImage(String filename, String newDiskName, String newDiskID) {
+	public boolean saveNewImage(File file, String newDiskName, String newDiskID) {
 		cbmDisk = new byte[D88_SIZE];
 		Arrays.fill(cbmDisk, (byte) 0);
 		if (!isCpmImage()) {
@@ -525,7 +498,7 @@ public class D88 extends DiskImage {
 			setCbmDiskValue(38, 10, 1, 0xff);	// first dir block pointer to next.
 
 			setDiskName(Utility.cbmFileName(newDiskName, DISK_NAME_LENGTH), Utility.cbmFileName(newDiskID, DISK_ID_LENGTH));
-			return writeImage(filename);
+			return saveAs(file);
 		}
 		return false;
 	}
@@ -563,7 +536,7 @@ public class D88 extends DiskImage {
 
 	@Override
 	public boolean addDirectoryEntry(CbmFile cbmFile, int fileTrack, int fileSector, boolean isCopyFile, int lengthInBytes) {
-		feedbackMessage.append(String.format("addDirectoryEntry: \"%s\", %s, %d/%d%n", cbmFile.getName(), CbmFile.FILE_TYPES[cbmFile.getFileType()], fileTrack, fileSector));
+		feedbackMessage.append(String.format("addDirectoryEntry: \"%s\", %s, %d/%d%n", cbmFile.getName(), cbmFile.getFileType(), fileTrack, fileSector));
 		if (isCpmImage()) {
 			feedbackMessage.append("Not yet implemented for CP/M format.\n");
 			return false;
@@ -714,20 +687,23 @@ public class D88 extends DiskImage {
 	}
 
 	@Override
-	public String[][] getBamTable() {
-		String[][] bamEntry = new String[TRACK_COUNT][52 + 1];
+	public BamTrack[] getBamTable() {
+		BamTrack[] bamEntry = new BamTrack[TRACK_COUNT];
+		IntStream.range(0, TRACK_COUNT).forEach(trk -> {
+			bamEntry[trk] = new BamTrack(trk, MAX_SECTORS + 1);
+			Arrays.fill(bamEntry[trk].bam, BamState.INVALID);
+		});
 		for (int trk = getFirstTrack(); trk < TRACK_COUNT + getFirstTrack(); trk++) {
-			bamEntry[trk-getFirstTrack()][0] = Integer.toString(trk + getFirstTrack());  // leftmost column with track number
 			for (int s=1; s<=26; s++) {
 				if (trk ==0) {
-					bamEntry[trk][s] = CbmBam.RESERVED;
-					bamEntry[trk][s+26] = CbmBam.RESERVED;
+					bamEntry[trk].bam[s] = BamState.RESERVED;
+					bamEntry[trk].bam[s+26] = BamState.RESERVED;
 				} else {
 					boolean u1 = (bam.getTrackBits(trk+1, (s/8)+1) & DiskImage.BYTE_BIT_MASKS[s%8]) == 0;
-					bamEntry[trk][s] = u1 ? CbmBam.USED : CbmBam.FREE;
+					bamEntry[trk].bam[s] = u1 ? BamState.USED : BamState.FREE;
 
 					boolean u2 = (bam.getTrackBits(trk+1, (s/8)+1+4) & DiskImage.BYTE_BIT_MASKS[s%8]) == 0;
-					bamEntry[trk][s+26] = u2 ? CbmBam.USED : CbmBam.FREE;
+					bamEntry[trk].bam[s+26] = u2 ? BamState.USED : BamState.FREE;
 				}
 			}
 		}
@@ -764,7 +740,7 @@ public class D88 extends DiskImage {
 		if (isCpmImage()) {
 			throw new CbmException("Delete not yet implemented for CP/M format.");
 		}
-		cbmFile.setFileType(0);
+		cbmFile.setFileType(FileType.DEL);
 		cbmFile.setFileScratched(true);
 		int dirEntryNumber = cbmFile.getDirPosition();
 		int dirEntryPos = getDirectoryEntryPosition(dirEntryNumber);
@@ -786,7 +762,7 @@ public class D88 extends DiskImage {
 	}
 
 	@Override
-	public Integer validate(List<Integer> repairList) {
+	public Integer validate(List<ValidationError.Error> repairList) {
 		return 0;
 	}
 

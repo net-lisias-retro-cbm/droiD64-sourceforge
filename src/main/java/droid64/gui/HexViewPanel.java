@@ -52,37 +52,22 @@ public class HexViewPanel extends JPanel {
 
 	private static final long serialVersionUID = 1L;
 
-	private static final Color ADDR_SELECTED_FOREGROUND  = Color.BLACK;
-	private static final Color ADDR_SELECTED_BACKGROUND  = new Color(100,100,100);
-	private static final Color ASCII_SELECTED_FOREGROUND = Color.BLACK;
-	private static final Color ASCII_SELECTED_BACKGROUND = new Color(100,100,100);
-	private static final Color HEX_SELECTED_FOREGROUND   = Color.BLACK;
-	private static final Color HEX_SELECTED_BACKGROUND   = new Color(232,232,232);
-	private static final Color ADDR_NORMAL_FOREGROUND    = Color.BLACK;
-	private static final Color ADDR_NORMAL_BACKGROUND    = new Color(200,200,200);
-	private static final Color ASCII_NORMAL_FOREGROUND   = Color.BLACK;
-	private static final Color ASCII_NORMAL_BACKGROUND   = new Color(200,200,200);
-	private static final Color HEX_NORMAL_ASC_FOREGROUND = Color.BLACK;
-	private static final Color HEX_NORMAL_HEX_FOREGROUND = new Color(  0,  0, 80);
-	private static final Color HEX_NORMAL_BACKGROUND     = Color.WHITE;
-
-	private static final Color[][] COLORS = {
-			{ADDR_SELECTED_FOREGROUND, ADDR_SELECTED_BACKGROUND},
-			{ADDR_NORMAL_FOREGROUND, ADDR_NORMAL_BACKGROUND},
-			{ASCII_SELECTED_FOREGROUND, ASCII_SELECTED_BACKGROUND},
-			{ASCII_NORMAL_FOREGROUND, ASCII_NORMAL_BACKGROUND},
-			{HEX_SELECTED_FOREGROUND, HEX_SELECTED_BACKGROUND},
-			{HEX_NORMAL_HEX_FOREGROUND, HEX_NORMAL_BACKGROUND},
-			{HEX_NORMAL_ASC_FOREGROUND, HEX_NORMAL_BACKGROUND}
-	};
-
-	private static final String ASM_MODE = Settings.getMessage(Resources.DROID64_HEXVIEW_ASMMODE);
-	private static final String HEX_MODE = Settings.getMessage(Resources.DROID64_HEXVIEW_HEXMODE);
+	private static final String ASM_MODE = Utility.getMessage(Resources.DROID64_HEXVIEW_ASMMODE);
+	private static final String HEX_MODE = Utility.getMessage(Resources.DROID64_HEXVIEW_HEXMODE);
 	private final MainPanel mainPanel;
 	private final JButton modeButton = new JButton(HEX_MODE);
 	private final JTextArea asmTextArea = new JTextArea();
 	private final JPanel cards = new JPanel(new CardLayout());
-	private final HexTableModel model = new HexTableModel();
+	private final HexTableModel model = new HexTableModel() {
+
+		private static final long serialVersionUID = 1L;
+
+		@Override
+		public void setValue(int index, int value) {
+			diskImage.setCbmDiskValue(pos + index, value);
+		}
+
+	};
 	private final JTable table = new JTable(model) {
 		private static final long serialVersionUID = 1L;
 		private final CustomCellRenderer renderer = new CustomCellRenderer();
@@ -92,35 +77,40 @@ public class HexViewPanel extends JPanel {
 		}
 	};
 	private final JToggleButton c64ModeButton = new JToggleButton("C64 mode");
-	private final JButton okButton = new JButton(Settings.getMessage(Resources.DROID64_HEXVIEW_CLOSE));
+	private final JButton okButton = new JButton(Utility.getMessage(Resources.DROID64_HEXVIEW_CLOSE));
+	private final JButton applyButton = new JButton(Utility.getMessage(Resources.DROID64_HEXVIEW_APPLY));
 
 	private final boolean[] c64Modes = {false, false};
 	private byte[] data;
+	private final DiskImage diskImage;
 
 	private JFormattedTextField trkField;
 	private JFormattedTextField secField;
-	private JTextField offset;
+	private final JTextField offset = new JTextField("0", 8);
+
 	private final JButton goBlockButton = new JButton("---:---");
 
 	private final String title;
 	private int selectedTrack = -1;
 	private int selectedSector = -1;
 
+	private int pos = 0;
+
+	/**
+	 * Constructor for disk image block
+	 * @param title the title
+	 * @param mainPanel the maninPanel
+	 * @param track the track
+	 * @param sector the sector
+	 * @param diskImage the diskImage
+	 * @throws CbmException when block could not be retrieved
+	 */
 	public HexViewPanel (String title,  MainPanel mainPanel, int track, int sector, DiskImage diskImage) throws CbmException {
-		this.title = title;
-		this.data = diskImage.getBlock(track, sector);
-		this.mainPanel = mainPanel;
-		setLayout(new BorderLayout());
-		add(createTrackSectorPanel(track, sector, diskImage), BorderLayout.NORTH);
-
-		setup(data, data.length, "block", false);
-
-		table.getSelectionModel().addListSelectionListener(ev ->  tableSelectionAction(diskImage));
-		table.getColumnModel().addColumnModelListener(new DiskImageTableModelListener(diskImage));
+		this(title, mainPanel, "", diskImage.getBlock(track, sector), DiskImage.BLOCK_SIZE, false, track, sector, diskImage);
 	}
 
 	/**
-	 * Constructor
+	 * Constructor for file
 	 * @param title String with window title
 	 * @param mainPanel main panel
 	 * @param fileName String with the file name to show.
@@ -129,12 +119,23 @@ public class HexViewPanel extends JPanel {
 	 * @param readLoadAddr read load address
 	 */
 	public HexViewPanel (String title, MainPanel mainPanel, final String fileName, final byte[] data, final int length, final boolean readLoadAddr) {
-		this.title = title;
-		this.mainPanel = mainPanel;
-		this.data = data;
-		setLayout(new BorderLayout());
-		add(new JLabel(fileName), BorderLayout.NORTH);
+		this(title, mainPanel, fileName, data, length, readLoadAddr, 0, 0, null);
+	}
 
+	private HexViewPanel (String title, MainPanel mainPanel, final String fileName, final byte[] data, final int length, final boolean readLoadAddr, int track, int sector, DiskImage diskImage) {
+		this.title = title;
+		this.data = data;
+		this.mainPanel = mainPanel;
+		this.diskImage = diskImage;
+
+		setLayout(new BorderLayout());
+		if (diskImage != null) {
+			add(createTrackSectorPanel(track, sector, diskImage), BorderLayout.NORTH);
+			model.setReadOnly(false);
+		} else {
+			add(new JLabel(fileName), BorderLayout.NORTH);
+			model.setReadOnly(true);
+		}
 		setup(data, length, fileName, readLoadAddr);
 	}
 
@@ -156,15 +157,26 @@ public class HexViewPanel extends JPanel {
 		table.setShowGrid(true);
 		table.setFont(getTableFont(false));
 		table.getTableHeader().setReorderingAllowed(false);
+
+		GuiHelper.keyNavigateTable(table);
+
 		resizeTable(false);
 
+		applyButton.setEnabled(false);
+		applyButton.setVisible(!model.isReadOnly());
+
+		table.addPropertyChangeListener(e -> applyButton.setEnabled(model.isDirty()));
+
+		JScrollPane asmScrollPane = new JScrollPane(asmTextArea);
 		asmTextArea.setText(Utility.EMPTY);
 		asmTextArea.setEditable(false);
 		asmTextArea.setFont(getTableFont(false));
 
+		GuiHelper.keyNavigateTextArea(asmTextArea, asmScrollPane);
+
 		// Setup cards
 		cards.add(new JScrollPane(table), HEX_MODE);
-		cards.add(new JScrollPane(asmTextArea), ASM_MODE);
+		cards.add(asmScrollPane, ASM_MODE);
 		add(cards, BorderLayout.CENTER);
 
 		add(drawButtons(length, readLoadAddr, label), BorderLayout.SOUTH);
@@ -205,7 +217,9 @@ public class HexViewPanel extends JPanel {
 	}
 
 	private JPanel createTrackSectorPanel(int track, int sector, final DiskImage diskImage) {
-		offset = new JTextField(getOffset(track, sector, diskImage), 8);
+
+		pos = diskImage.getSectorOffset(track, sector);
+		offset.setText(getOffset(track, sector, diskImage));
 		offset.setEditable(false);
 
 		trkField = GuiHelper.getNumField(diskImage.getFirstTrack(), diskImage.getTrackCount() + diskImage.getFirstTrack(), track, 3);
@@ -238,6 +252,9 @@ public class HexViewPanel extends JPanel {
 		JPanel upDownPanel = new JPanel(new GridLayout(1, 2));
 		upDownPanel.add(downButton);
 		upDownPanel.add(upButton);
+
+		table.getSelectionModel().addListSelectionListener(ev ->  tableSelectionAction(diskImage));
+		table.getColumnModel().addColumnModelListener(new DiskImageTableModelListener(diskImage));
 
 		JPanel panel = new JPanel(new FlowLayout(FlowLayout.LEFT));
 		panel.add(new JLabel("Track:"));
@@ -272,6 +289,7 @@ public class HexViewPanel extends JPanel {
 			trkField.setValue(track);
 			secField.setValue(sector);
 			model.loadData(data, data.length);
+			pos = diskImage.getSectorOffset(track, sector);
 			offset.setText(getOffset(track, sector, diskImage));
 			String code = ProgramParser.parse(data, DiskImage.BLOCK_SIZE, false);
 			asmTextArea.setText(code);
@@ -286,19 +304,22 @@ public class HexViewPanel extends JPanel {
 		c64ModeButton.addActionListener(ae -> switchFont(c64ModeButton.isSelected()));
 
 		okButton.setMnemonic('o');
-		okButton.setToolTipText(Settings.getMessage(Resources.DROID64_HEXVIEW_CLOSE_TOOLTIP));
+		okButton.setToolTipText(Utility.getMessage(Resources.DROID64_HEXVIEW_CLOSE_TOOLTIP));
 
-		final JButton printButton = new JButton(Settings.getMessage(Resources.DROID64_HEXVIEW_PRINT));
+		final JButton printButton = new JButton(Utility.getMessage(Resources.DROID64_HEXVIEW_PRINT));
 		printButton.setMnemonic('p');
 		printButton.addActionListener(ae -> print(data, c64Modes[isHexMode() ? 0 : 1], fileName, isHexMode()));
 
-		final JButton saveButton = new JButton(Settings.getMessage(Resources.DROID64_HEXVIEW_SAVETEXT));
+		final JButton saveButton = new JButton(Utility.getMessage(Resources.DROID64_HEXVIEW_SAVETEXT));
 		saveButton.setMnemonic('s');
 		saveButton.addActionListener(ae-> saveText(data, fileName, isHexMode()));
 
-		final JButton saveDataButton = new JButton(Settings.getMessage(Resources.DROID64_HEXVIEW_SAVEDATA));
+		final JButton saveDataButton = new JButton(Utility.getMessage(Resources.DROID64_HEXVIEW_SAVEDATA));
 		saveDataButton.setMnemonic('d');
 		saveDataButton.addActionListener(ae-> saveData(data, fileName));
+
+		applyButton.setMnemonic('a');
+		applyButton.addActionListener(ae-> applyData());
 
 		JPanel buttonPanel = new JPanel();
 		buttonPanel.add(modeButton);
@@ -306,6 +327,7 @@ public class HexViewPanel extends JPanel {
 		buttonPanel.add(printButton);
 		buttonPanel.add(saveButton);
 		buttonPanel.add(saveDataButton);
+		buttonPanel.add(applyButton);
 		buttonPanel.add(okButton);
 		return buttonPanel;
 	}
@@ -375,17 +397,12 @@ public class HexViewPanel extends JPanel {
 	}
 
 	private Font getTableFont(boolean useCbmFont) {
-		try {
-			return useCbmFont ? Settings.getCommodoreFont() : new Font("Courier", Font.PLAIN, Settings.getFontSize());
-		} catch (CbmException e) {
-			mainPanel.appendConsole("Failed to set Commodore font. Using default font.\n"+e);
-			return new JPanel().getFont();
-		}
+		return useCbmFont ? Setting.CBM_FONT.getFont() : Setting.SYS_FONT.getFont();
 	}
 
 	private void saveText(byte[] data, String fileName, boolean hexMode) {
 		String[] ext = hexMode ? new String[] {".txt", ".asm"} : new String[] {".asm", ".txt"};
-		String ftitle = hexMode ? Settings.getMessage(Resources.DROID64_HEXVIEW_SAVEHEX) : Settings.getMessage(Resources.DROID64_HEXVIEW_SAVEASM);
+		String ftitle = hexMode ? Utility.getMessage(Resources.DROID64_HEXVIEW_SAVEHEX) : Utility.getMessage(Resources.DROID64_HEXVIEW_SAVEASM);
 		String fname = FileDialogHelper.openTextFileDialog(ftitle, null, fileName, true, ext);
 		if (fname != null) {
 			String outString = hexMode ? Utility.hexDump(data) : asmTextArea.getText();
@@ -397,7 +414,7 @@ public class HexViewPanel extends JPanel {
 
 	private void saveData(byte[] data, String fileName) {
 		String[] ext = new String[] {".dat", ".bin"};
-		String ftitle = Settings.getMessage(Resources.DROID64_HEXVIEW_SAVEDATA);
+		String ftitle = Utility.getMessage(Resources.DROID64_HEXVIEW_SAVEDATA);
 		String fname = FileDialogHelper.openTextFileDialog(ftitle, null, fileName, true, ext);
 		if (fname != null) {
 			File file = new File(fname);
@@ -407,6 +424,12 @@ public class HexViewPanel extends JPanel {
 				mainPanel.appendConsole("Error: failed to write to file "+file.getName()+'\n'+e.getMessage());
 			}
 		}
+	}
+
+	private void applyData() {
+		diskImage.save();
+		model.setDirty(false);
+		applyButton.setEnabled(false);
 	}
 
 	private void writeToFile(File saveFile, String outString) {
@@ -466,34 +489,44 @@ public class HexViewPanel extends JPanel {
 	}
 
 	/** Class to handle colors of the table cells */
-	private class CustomCellRenderer extends DefaultTableCellRenderer {
+	private static class CustomCellRenderer extends DefaultTableCellRenderer {
+
+		private enum HexColor {
+			ADDR_SELECTED(Color.BLACK, new Color(100, 100, 100)),
+			ASCII_SELECTED(Color.BLACK, new Color(100, 100, 100)),
+			HEX_SELECTED(Color.BLACK, new Color(232, 232, 232)),
+			ADDR(Color.BLACK, new Color(200, 200, 200)),
+			ASCII(Color.BLACK, new Color(200, 200, 200)),
+			HEX(new Color(0, 0, 80), Color.WHITE);
+
+			public final Color fg;
+			public final Color bg;
+
+			private HexColor(Color fg, Color bg) {
+				this.fg = fg;
+				this.bg = bg;
+			}
+		}
+
 		private static final long serialVersionUID = 1L;
 		@Override
 		public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
 			Component rendererComp = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
-			int color = getColorIndex(column, row, isSelected, table);
-			return setColors(rendererComp, COLORS[color][0], COLORS[color][1]);
+			setColor(rendererComp, column, isSelected, table);
+			return rendererComp;
 		}
-		private int getColorIndex(int column, int row, boolean isSelected, JTable table) {
+
+		private void setColor(Component comp, int column, boolean isSelected, JTable table) {
 			if (column == 0) {
-				return isSelected ? 0 : 1;
+				comp.setForeground(isSelected ? HexColor.ADDR_SELECTED.fg : HexColor.ADDR.fg);
+				comp.setBackground(isSelected ? HexColor.ADDR_SELECTED.bg : HexColor.ADDR.bg);
 			} else if (column == table.getColumnCount() - 1) {
-				return isSelected ? 2 : 3;
-			} else if (isSelected) {
-				return 4;
+				comp.setForeground(isSelected ? HexColor.ASCII_SELECTED.fg : HexColor.ASCII.fg);
+				comp.setBackground(isSelected ? HexColor.ASCII_SELECTED.bg : HexColor.ASCII.bg);
 			} else {
-				Integer v = model.getByteAt(row, column);
-				if (v != null && (v < 0x20 || v > 0x7f) ) {
-					return 5;
-				} else {
-					return 6;
-				}
+				comp.setForeground(isSelected ? HexColor.HEX_SELECTED.fg : HexColor.HEX.fg);
+				comp.setBackground(isSelected ? HexColor.HEX_SELECTED.bg : HexColor.HEX.bg);
 			}
-		}
-		private Component setColors(Component comp, Color fg, Color bg) {
-			comp.setForeground(fg);
-			comp.setBackground(bg);
-			return comp;
 		}
 	}
 }

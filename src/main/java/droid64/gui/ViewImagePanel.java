@@ -3,6 +3,7 @@ package droid64.gui;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.GridBagConstraints;
+import java.awt.Image;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.print.PrinterException;
@@ -56,10 +57,12 @@ public class ViewImagePanel extends JPanel {
 	private final ImagePanel imgPanel = new ImagePanel();
 	private final String title;
 	private final JButton closeButton = new JButton("Close");
+	private JDialog dialog;
 
 	public ViewImagePanel(String title, MainPanel mainPanel) {
 		this.mainPanel = mainPanel;
 		this.title = title;
+		this.dialog = new JDialog(mainPanel.getParent(), title, true);
 		initGUI();
 		addHierarchyListener(e -> GuiHelper.hierarchyListenerResizer(SwingUtilities.getWindowAncestor(this)));
 	}
@@ -70,12 +73,20 @@ public class ViewImagePanel extends JPanel {
 		currentIndex = 0;
 		imgPanel.setImage(getNextImage());
 
-		final JDialog dialog = new JDialog(mainPanel.getParent(), title, true);
-		dialog.setContentPane(this);
-		dialog.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
+		showImage();
+	}
 
+	public void show(Image img, String name) {
+		imgPanel.setImage(img, name);
+		showImage();
+	}
+
+	private void showImage() {
 		closeButton.addActionListener(e -> dialog.dispose());
 
+		dialog.setTitle(title);
+		dialog.setContentPane(this);
+		dialog.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
 		dialog.pack();
 		dialog.setLocationRelativeTo(mainPanel.getParent());
 		dialog.setVisible(true);
@@ -158,5 +169,9 @@ public class ViewImagePanel extends JPanel {
 				mainPanel.appendConsole("Failed to print image.\n"+e.getMessage());
 			}
 		}
+	}
+
+	protected void setDialog(JDialog dialog) {
+		this.dialog = dialog;
 	}
 }

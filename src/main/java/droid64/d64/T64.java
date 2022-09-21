@@ -1,7 +1,10 @@
 package droid64.d64;
 
+import java.io.File;
 import java.util.Arrays;
 import java.util.List;
+
+import droid64.gui.BAMPanel.BamTrack;
 
 /**<pre style='font-family:sans-serif;'>
  * Created on 2015-Oct-15
@@ -31,8 +34,6 @@ import java.util.List;
 public class T64 extends DiskImage {
 
 	private static final long serialVersionUID = 1L;
-	/** Name of the image type */
-	public static final String IMAGE_TYPE_NAME = "T64";
 	private static final String T64_SIGNATURE = "C64S tape file\r\n";
 	private static final byte SPACE = 0x20;
 
@@ -55,9 +56,9 @@ public class T64 extends DiskImage {
 	}
 
 	@Override
-	protected DiskImage readImage(String filename) throws CbmException {
+	protected DiskImage readImage(File file) throws CbmException {
 		bam = new CbmBam(1, 1);
-		readImage(filename, 0, IMAGE_TYPE_NAME);
+		readImage(file, DiskImageType.T64);
 		int entryCapacity = Utility.getInt16(cbmDisk, 0x22);
 		filesUsedCount = Utility.getInt16(cbmDisk, 0x24);
 		initCbmFile(entryCapacity);
@@ -91,7 +92,7 @@ public class T64 extends DiskImage {
 				int size = loadEndAddr - loadStartAddr;
 				int offset = Utility.getInt32(cbmDisk, pos + 0x08);
 				String name = Utility.trimTrailing(Utility.getString(cbmDisk, pos+0x10, 16));
-				CbmFile cf = new CbmFile(name, cbmDisk[pos + 0x01] & 0x07, dirPosition, dirPosition++, offset, size);
+				CbmFile cf = new CbmFile(name, FileType.get(cbmDisk[pos + 0x01] & 0x07), dirPosition, dirPosition++, offset, size);
 				cf.setTrack(Utility.getInt16(cbmDisk, pos + 0x08));
 				cf.setSector(Utility.getInt16(cbmDisk,pos + 0x0a));
 				cf.setOffSet(offset);
@@ -103,7 +104,7 @@ public class T64 extends DiskImage {
 				cbmFile[i] = cf;
 				filesUsedCount++;
 			} else {
-				cbmFile[i].setFileType(0);
+				cbmFile[i].setFileType(FileType.DEL);
 			}
 		}
 	}
@@ -117,7 +118,7 @@ public class T64 extends DiskImage {
 	public byte[] getFileData(int number) throws CbmException {
 		if (number < cbmFile.length && number >= 0) {
 			CbmFile cf = cbmFile[number];
-			if (cf.getFileType() == 0) {
+			if (cf.getFileType() == FileType.DEL) {
 				feedbackMessage.append("getFileData ["+number+"]: No data!\n");
 				return null;
 			}
@@ -166,17 +167,17 @@ public class T64 extends DiskImage {
 	}
 
 	@Override
-	public boolean saveNewImage(String filename, String newDiskName, String newDiskID) {
+	public boolean saveNewImage(File file, String newDiskName, String newDiskID) {
 		cbmDisk = null;
 		expand(0);
 		Utility.setPaddedString(cbmDisk, 0x00, T64_SIGNATURE, T64_SIGNATURE.length());
 		setDiskName(Utility.cbmFileName(newDiskName, DISK_NAME_LENGTH), Utility.cbmFileName(newDiskID, DISK_NAME_LENGTH));
-		return writeImage(filename);
+		return saveAs(file);
 	}
 
 	@Override
-	public String[][] getBamTable() {
-		return new String[0][0];
+	public BamTrack[] getBamTable() {
+		return new BamTrack[0];
 	}
 
 	@Override
@@ -192,14 +193,14 @@ public class T64 extends DiskImage {
 			feedbackMessage.append("deleteFile [").append(num).append("]: ").append(cf.getName()).append('\n');
 			filesUsedCount = filesUsedCount > 0 ? filesUsedCount - 1 : 0;
 			cbmDisk[pos] = 0;
-			cbmFile[num].setFileType(0);
+			cbmFile[num].setFileType(FileType.DEL);
 		} else {
 			feedbackMessage.append("deleteFile [").append(num).append("]: already deleted. ").append(cf.getName()).append('\n');
 		}
 	}
 
 	@Override
-	public Integer validate(List<Integer> repairList) {
+	public Integer validate(List<ValidationError.Error> repairList) {
 		feedbackMessage.append("validate: not supported for T64 images.\n");
 		return 0;
 	}
@@ -318,7 +319,7 @@ public class T64 extends DiskImage {
 			}
 			int pos = 0x40 + entryNum * DIR_ENTRY_SIZE;
 			cbmDisk[pos + 0x00] = 1;	// normal file
-			cbmDisk[pos + 0x01] = (byte) ((cf.getFileType() | 0x80 ) & 0xff);
+			cbmDisk[pos + 0x01] = (byte) ((cf.getFileType().type | 0x80 ) & 0xff);
 			Utility.setInt16(cbmDisk, pos + 0x02, loadAddr);	// loadAddr
 			Utility.setInt16(cbmDisk, pos + 0x04, endAddr);		// loadAddr + dataLength = endAddr
 			Utility.setInt32(cbmDisk, pos + 0x08, dataPos);		// offset into container for data
