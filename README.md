@@ -2,7 +2,9 @@
 
 Public, non official, repository for http://droid64.sourceforge.net/
 
+Now also on https://github.com/hwetters/droid64
+
 
 ## Last update
 
-2017-09-24 - 0.13b @ 2018-02-05
+2020-12-27 - 0.5b @ 2022-09-21
