@@ -3,8 +3,6 @@ import java.awt.BorderLayout;
 import java.awt.Container;
 import java.awt.Dimension;
 import java.awt.Toolkit;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
 
 import javax.swing.JButton;
 import javax.swing.JFrame;
@@ -73,14 +71,7 @@ public class BugsFrame extends JFrame {
 	private JPanel drawButtonPanel() {
 		final JButton okButton = new JButton(Settings.getMessage(Resources.DROID64_BUGS_OK));
 		okButton.setMnemonic('o');
-		okButton.addActionListener(new ActionListener() {
-			@Override
-			public void actionPerformed(ActionEvent event) {
-				if (event.getSource() == okButton ) {
-					dispose();
-				}
-			}
-		});
+		okButton.addActionListener(ae->dispose());
 		JPanel buttonPanel = new JPanel();
 		buttonPanel.add(okButton);
 		return buttonPanel;

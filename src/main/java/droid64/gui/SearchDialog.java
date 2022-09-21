@@ -8,8 +8,6 @@ import java.awt.Font;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.Toolkit;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
 import java.io.File;
 import java.text.NumberFormat;
 import java.util.List;
@@ -26,8 +24,6 @@ import javax.swing.JScrollPane;
 import javax.swing.JTable;
 import javax.swing.JTextField;
 import javax.swing.ListSelectionModel;
-import javax.swing.event.ListSelectionEvent;
-import javax.swing.event.ListSelectionListener;
 import javax.swing.table.DefaultTableColumnModel;
 import javax.swing.table.TableColumn;
 import javax.swing.text.NumberFormatter;
@@ -170,24 +166,11 @@ public class SearchDialog extends JDialog {
 		final JButton openSelectedRightButton = new JButton(Settings.getMessage(Resources.DROID64_SEARCH_OPENRIGHT));
 		openSelectedLeftButton.setEnabled(false);
 		openSelectedRightButton.setEnabled(false);
-		ActionListener buttonListener = new ActionListener() {
-			@Override
-			public void actionPerformed(ActionEvent event) {
-				if (event.getSource() == searchButton) {
-					search(fileTypeBox.getSelectedIndex(), imageTypeBox.getSelectedIndex());
-				} else if (event.getSource() == closeButton) {
-					dispose();
-				} else if (event.getSource() == openSelectedLeftButton) {
-					openSelected(mainPanel.getLeftDiskPanel(), table);
-				} else if ( event.getSource() == openSelectedRightButton ) {
-					openSelected(mainPanel.getRightDiskPanel(), table);
-				}
-			}
-		};
-		searchButton.addActionListener(buttonListener);
-		closeButton.addActionListener(buttonListener);
-		openSelectedLeftButton.addActionListener(buttonListener);
-		openSelectedRightButton.addActionListener(buttonListener);
+
+		searchButton.addActionListener(ae -> search(fileTypeBox.getSelectedIndex(), imageTypeBox.getSelectedIndex()));
+		closeButton.addActionListener(ae -> dispose());
+		openSelectedLeftButton.addActionListener(ae -> openSelected(mainPanel.getLeftDiskPanel(), table));
+		openSelectedRightButton.addActionListener(ae -> openSelected(mainPanel.getRightDiskPanel(), table));
 		// Button panel
 		JPanel buttonPanel = new JPanel();
 		buttonPanel.add(searchButton);
@@ -195,13 +178,10 @@ public class SearchDialog extends JDialog {
 		buttonPanel.add(openSelectedRightButton);
 		buttonPanel.add(closeButton);
 
-		table.getSelectionModel().addListSelectionListener(new ListSelectionListener() {
-			@Override
-			public void valueChanged(ListSelectionEvent e) {
-				boolean selected = table.getSelectedRows().length > 0;
-				openSelectedLeftButton.setEnabled(selected);
-				openSelectedRightButton.setEnabled(selected);
-			}
+		table.getSelectionModel().addListSelectionListener(e -> {
+			boolean selected = table.getSelectedRows().length > 0;
+			openSelectedLeftButton.setEnabled(selected);
+			openSelectedRightButton.setEnabled(selected);
 		});
 
 		JScrollPane tableScrollPane = new JScrollPane( table);

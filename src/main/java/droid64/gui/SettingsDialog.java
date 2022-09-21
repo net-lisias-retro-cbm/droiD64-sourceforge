@@ -8,7 +8,6 @@ import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.Point;
 import java.awt.Toolkit;
-import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.BufferedReader;
 import java.io.File;
@@ -36,7 +35,6 @@ import javax.swing.JTabbedPane;
 import javax.swing.JTextArea;
 import javax.swing.JTextField;
 import javax.swing.SpinnerNumberModel;
-import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
 
 import droid64.d64.DiskImage;
@@ -82,7 +80,6 @@ public class SettingsDialog extends JDialog {
 	private JSlider distSlider2;
 	private JTextField winSizePosField;
 
-
 	private JTextField fileExtD64;
 	private JTextField fileExtD67;
 	private JTextField fileExtD71;
@@ -126,7 +123,6 @@ public class SettingsDialog extends JDialog {
 	private JComboBox<String> limitTypeBox;
 	/** Colors */
 	private static final String[] COLORS = { "gray", "red", "green", "blue", "light-blue", "dark-grey", "cyan" };
-
 
 	private JTextField status = new JTextField();
 
@@ -182,25 +178,20 @@ public class SettingsDialog extends JDialog {
 	 * @return JPanel
 	 */
 	private JPanel drawGeneralPanel(final MainPanel mainPanel) {
-		JPanel generalPanel = new JPanel(new BorderLayout());
-		JPanel buttonPanel = new JPanel();
 		final JButton okButton = new JButton(Settings.getMessage(Resources.DROID64_SETTINGS_OK));
 		okButton.setToolTipText(Settings.getMessage(Resources.DROID64_SETTINGS_OK_TOOLTIP));
-		okButton.addActionListener(new ActionListener(){
-			@Override
-			public void actionPerformed(ActionEvent event){
-				if ( event.getSource()==okButton ) {
-					copyValuesToSettings(mainPanel);
-					Settings.parseExternalPrograms();
-					Settings.saveSettingsToFile();
-					dispose();
-				}
-			}
+		okButton.addActionListener(ae -> {
+			copyValuesToSettings(mainPanel);
+			Settings.parseExternalPrograms();
+			Settings.saveSettingsToFile();
+			dispose();
 		});
+		JPanel buttonPanel = new JPanel();
 		buttonPanel.add(okButton);
 		JPanel txtPanel = new JPanel();
 		txtPanel.setAlignmentX(CENTER_ALIGNMENT);
 		txtPanel.add(new JLabel(Settings.getMessage(Resources.DROID64_SETTINGS_SAVEMESSAGE)));
+		JPanel generalPanel = new JPanel(new BorderLayout());
 		generalPanel.add(txtPanel, BorderLayout.NORTH);
 		generalPanel.add(buttonPanel, BorderLayout.SOUTH);
 		return generalPanel;
@@ -213,30 +204,24 @@ public class SettingsDialog extends JDialog {
 
 		final JTextField defaultImgDir = new JTextField(Settings.getDefaultImageDir());
 		final JTextField defaultImgDir2 = new JTextField(Settings.getDefaultImageDir2());
-		final JButton defaultImgButton = new JButton("..");
-		final JButton defaultImgButton2 = new JButton("..");
 
-		ActionListener defaultImgDirListener = new ActionListener(){
-			@Override
-			public void actionPerformed(ActionEvent event){
-				if ( event.getSource() == defaultImgButton ) {
-					String choosen = openImgDirDialog(defaultImgDir.getText());
-					if (choosen != null) {
-						defaultImgDir.setText(choosen);
-						Settings.setDefaultImageDir(choosen);
-					}
-				}
-				if ( event.getSource() == defaultImgButton2 ) {
-					String choosen = openImgDirDialog(defaultImgDir2.getText());
-					if (choosen != null) {
-						defaultImgDir2.setText(choosen);
-						Settings.setDefaultImageDir2(choosen);
-					}
-				}
+		final JButton defaultImgButton = new JButton("..");
+		defaultImgButton.addActionListener(event -> {
+			String choosen = openImgDirDialog(defaultImgDir.getText());
+			if (choosen != null) {
+				defaultImgDir.setText(choosen);
+				Settings.setDefaultImageDir(choosen);
 			}
-		};
-		defaultImgButton.addActionListener(defaultImgDirListener);
-		defaultImgButton2.addActionListener(defaultImgDirListener);
+		});
+
+		final JButton defaultImgButton2 = new JButton("..");
+		defaultImgButton2.addActionListener(event -> {
+			String choosen = openImgDirDialog(defaultImgDir2.getText());
+			if (choosen != null) {
+				defaultImgDir2.setText(choosen);
+				Settings.setDefaultImageDir2(choosen);
+			}
+		});
 
 		JPanel imgDirPanel = new JPanel(new BorderLayout());
 		imgDirPanel.add(defaultImgDir, BorderLayout.CENTER);
@@ -312,33 +297,27 @@ public class SettingsDialog extends JDialog {
 		fontSizeSpinner.setToolTipText(Settings.getMessage(Resources.DROID64_SETTINGS_FONTSIZE_TOOLTIP));
 		localFontSizeSpinner.setToolTipText(Settings.getMessage(Resources.DROID64_SETTINGS_FONTSIZE_TOOLTIP));
 
-		ChangeListener fontSizeListener = new ChangeListener() {
-			@Override
-			public void stateChanged(ChangeEvent event) {
-				try {
-					if (event.getSource() == fontSizeSpinner) {
-						int fs = Integer.parseInt(fontSizeSpinner.getValue().toString());
-						Settings.setFontSize(fs);
-					} else if (event.getSource() == localFontSizeSpinner) {
-						int fs = Integer.parseInt(localFontSizeSpinner.getValue().toString());
-						Settings.setLocalFontSize(fs);
-					}
-				} catch (NumberFormatException e) { /* don't care */ }
-			}
+		ChangeListener fontSizeListener = event -> {
+			try {
+				if (event.getSource() == fontSizeSpinner) {
+					int fs = Integer.parseInt(fontSizeSpinner.getValue().toString());
+					Settings.setFontSize(fs);
+				} else if (event.getSource() == localFontSizeSpinner) {
+					int fs = Integer.parseInt(localFontSizeSpinner.getValue().toString());
+					Settings.setLocalFontSize(fs);
+				}
+			} catch (NumberFormatException e) { /* don't care */ }
 		};
 		fontSizeSpinner.addChangeListener(fontSizeListener);
 		localFontSizeSpinner.addChangeListener(fontSizeListener);
 
 		winSizePosField = new JTextField(getWindowSizePosString());
 		JButton getWinSizeButton = new JButton(Settings.getMessage(Resources.DROID64_SETTINGS_WINDOWSIZE_FETCH));
-		getWinSizeButton.addActionListener(new ActionListener() {
-			@Override
-			public void actionPerformed(ActionEvent e) {
-				Dimension size = mainPanel.getParent().getSize();
-				Point location = mainPanel.getParent().getLocation();
-				String str = String.format("%d:%d,%d:%d", (int)size.getWidth(), (int)size.getHeight(), (int)location.getX(), (int)location.getY());
-				winSizePosField.setText(str);
-			}
+		getWinSizeButton.addActionListener(ae -> {
+			Dimension size = mainPanel.getParent().getSize();
+			Point location = mainPanel.getParent().getLocation();
+			String str = String.format("%d:%d,%d:%d", (int)size.getWidth(), (int)size.getHeight(), (int)location.getX(), (int)location.getY());
+			winSizePosField.setText(str);
 		});
 
 		JPanel winSizePanel = new JPanel(new BorderLayout());
@@ -473,26 +452,21 @@ public class SettingsDialog extends JDialog {
 		fgButton.setBackground(Settings.getColorParam(bg));
 		bgButton.setForeground(Settings.getColorParam(fg));
 		bgButton.setBackground(Settings.getColorParam(bg));
-		ActionListener listener = new ActionListener(){
-			@Override
-			public void actionPerformed(ActionEvent event) {
-				if ( event.getSource()==fgButton ) {
-					Color c = JColorChooser.showDialog(fgButton, LBL_FOREGROUND, fgButton.getForeground());
-					fgButton.setForeground(c);
-					bgButton.setForeground(c);
-					Settings.setColorParam(fg, fgButton.getForeground());
-					Settings.setColorParam(bg, bgButton.getBackground());
-				} else if ( event.getSource()==bgButton ) {
-					Color c = JColorChooser.showDialog(bgButton, LBL_BACKGROUND, bgButton.getBackground());
-					fgButton.setBackground(c);
-					bgButton.setBackground(c);
-					Settings.setColorParam(fg, fgButton.getForeground());
-					Settings.setColorParam(bg, bgButton.getBackground());
-				}
-			}
-		};
-		fgButton.addActionListener(listener);
-		bgButton.addActionListener(listener);
+
+		fgButton.addActionListener(event -> {
+			Color c = JColorChooser.showDialog(fgButton, LBL_FOREGROUND, fgButton.getForeground());
+			fgButton.setForeground(c);
+			bgButton.setForeground(c);
+			Settings.setColorParam(fg, fgButton.getForeground());
+			Settings.setColorParam(bg, bgButton.getBackground());
+		});
+		bgButton.addActionListener(event -> {
+			Color c = JColorChooser.showDialog(bgButton, LBL_BACKGROUND, bgButton.getBackground());
+			fgButton.setBackground(c);
+			bgButton.setBackground(c);
+			Settings.setColorParam(fg, fgButton.getForeground());
+			Settings.setColorParam(bg, bgButton.getBackground());
+		});
 	}
 
 	/**
@@ -512,38 +486,21 @@ public class SettingsDialog extends JDialog {
 
 		final JButton colorActiveBorderButton = new JButton(Settings.getMessage(Resources.DROID64_SETTINGS_COLOR_ACTIVE));
 		colorActiveBorderButton.setBorder(BorderFactory.createLineBorder(Settings.getActiveBorderColor(), 3));
-		colorActiveBorderButton.addActionListener(new ActionListener(){
-			@Override
-			public void actionPerformed(ActionEvent event) {
-				if ( event.getSource()==colorActiveBorderButton ) {
-					Color c = JColorChooser.showDialog(colorActiveBorderButton, LBL_FOREGROUND, Settings.getActiveBorderColor());
-					colorActiveBorderButton.setBorder(BorderFactory.createLineBorder(c));
-					Settings.setActiveBorderColor(c);
-				}
-			}
+		colorActiveBorderButton.addActionListener(ae -> {
+			Color c = JColorChooser.showDialog(colorActiveBorderButton, LBL_FOREGROUND, Settings.getActiveBorderColor());
+			colorActiveBorderButton.setBorder(BorderFactory.createLineBorder(c));
+			Settings.setActiveBorderColor(c);
 		});
 		final JButton colorInactiveBorderButton = new JButton(Settings.getMessage(Resources.DROID64_SETTINGS_COLOR_INACTIVE));
 		colorInactiveBorderButton.setBorder(BorderFactory.createLineBorder(Settings.getInactiveBorderColor(), 3));
-		colorInactiveBorderButton.addActionListener(new ActionListener(){
-			@Override
-			public void actionPerformed(ActionEvent event) {
-				if ( event.getSource()==colorInactiveBorderButton ) {
-					Color c = JColorChooser.showDialog(colorInactiveBorderButton, LBL_BACKGROUND, Settings.getInactiveBorderColor());
-					colorInactiveBorderButton.setBorder(BorderFactory.createLineBorder(c));
-					Settings.setInactiveBorderColor(c);
-				}
-			}
+		colorInactiveBorderButton.addActionListener(ae -> {
+			Color c = JColorChooser.showDialog(colorInactiveBorderButton, LBL_BACKGROUND, Settings.getInactiveBorderColor());
+			colorInactiveBorderButton.setBorder(BorderFactory.createLineBorder(c));
+			Settings.setInactiveBorderColor(c);
 		});
 
 		final JButton colorResetButton = new JButton(Settings.getMessage(Resources.DROID64_SETTINGS_COLOR_RESET));
-		colorResetButton.addActionListener(new ActionListener(){
-			@Override
-			public void actionPerformed(ActionEvent event) {
-				if ( event.getSource()==colorResetButton ) {
-					resetButtonColors(colorActiveBorderButton, colorInactiveBorderButton);
-				}
-			}
-		});
+		colorResetButton.addActionListener(ae -> resetButtonColors(colorActiveBorderButton, colorInactiveBorderButton));
 
 		JPanel colorPanel = new JPanel(new GridBagLayout());
 		GridBagConstraints gbc = new GridBagConstraints();
@@ -601,30 +558,20 @@ public class SettingsDialog extends JDialog {
 		status.setFont(new Font("Verdana", Font.PLAIN, status.getFont().getSize()));
 		status.setEditable(false);
 		maxRows = SearchDialog.getNumericField(Settings.getMaxRows(), 8);
-		useJdbcCheckBox.addActionListener(new ActionListener() {
-			@Override
-			public void actionPerformed(ActionEvent event) {
-				if (event.getSource() == useJdbcCheckBox) {
-					boolean enabled = useJdbcCheckBox.isSelected();
-					jdbcDriver.setEnabled(enabled);
-					jdbcUrl.setEnabled(enabled);
-					jdbcUser.setEnabled(enabled);
-					jdbcPassword.setEnabled(enabled);
-					maxRows.setEnabled(enabled);
-					testConnectionButton.setEnabled(enabled);
-				}
-			}
+		useJdbcCheckBox.addActionListener(ae-> {
+			boolean enabled = useJdbcCheckBox.isSelected();
+			jdbcDriver.setEnabled(enabled);
+			jdbcUrl.setEnabled(enabled);
+			jdbcUser.setEnabled(enabled);
+			jdbcPassword.setEnabled(enabled);
+			maxRows.setEnabled(enabled);
+			testConnectionButton.setEnabled(enabled);
 		});
 
 		testConnectionButton.setToolTipText(Settings.getMessage(Resources.DROID64_SETTINGS_JDBC_TEST_TOOLTIP));
-		testConnectionButton.addActionListener(new ActionListener() {
-			@Override
-			public void actionPerformed(ActionEvent event) {
-				if (event.getSource() == testConnectionButton) {
-					String errStr = DaoFactoryImpl.testConnection(jdbcDriver.getText(), jdbcUrl.getText(), jdbcUser.getText(), new String(jdbcPassword.getPassword()));
-					status.setText(errStr == null ? Settings.getMessage(Resources.DROID64_SETTINGS_OK) : errStr);
-				}
-			}
+		testConnectionButton.addActionListener(ae -> {
+			String errStr = DaoFactoryImpl.testConnection(jdbcDriver.getText(), jdbcUrl.getText(), jdbcUser.getText(), new String(jdbcPassword.getPassword()));
+			status.setText(errStr == null ? Settings.getMessage(Resources.DROID64_SETTINGS_OK) : errStr);
 		});
 
 		boolean jdbcEnabled = useJdbcCheckBox.isSelected();
@@ -649,14 +596,7 @@ public class SettingsDialog extends JDialog {
 		final String sql = getSqlSetupScript(mainPanel);
 		final JButton viewSqlButton = new JButton(Settings.getMessage(Resources.DROID64_SETTINGS_JDBC_SQL));
 		final SettingsDialog thisDialog = this;
-		viewSqlButton.addActionListener(new ActionListener() {
-			@Override
-			public void actionPerformed(ActionEvent event) {
-				if (event.getSource() == viewSqlButton) {
-					new TextViewDialog(thisDialog, "DroiD64","SQL database setup", sql, true, Utility.MIMETYPE_TEXT, mainPanel);
-				}
-			}
-		});
+		viewSqlButton.addActionListener(ae -> new TextViewDialog(thisDialog, "DroiD64","SQL database setup", sql, true, Utility.MIMETYPE_TEXT, mainPanel));
 
 		final JTextArea messageTextArea = new JTextArea(10,45);
 		messageTextArea.setBackground(new Color(230,230,230));
@@ -702,13 +642,10 @@ public class SettingsDialog extends JDialog {
 	private JPanel[] drawPluginPanel(final MainPanel mainPanel){
 		JPanel[] pluginPanel = new JPanel[Settings.MAX_PLUGINS];
 		final JButton[] browseButtons = new JButton[Settings.MAX_PLUGINS];
-		ActionListener browseButtonListener = new ActionListener() {
-			@Override
-			public void actionPerformed(ActionEvent event) {
-				for (int i=0; i<browseButtons.length; i++) {
-					if (browseButtons[i] != null && event.getSource() == browseButtons[i]) {
-						browseCommand(browseButtons[i], mainPanel, pluginCommandTextField[i]);
-					}
+		ActionListener browseButtonListener = event -> {
+			for (int i=0; i<browseButtons.length; i++) {
+				if (browseButtons[i] != null && event.getSource() == browseButtons[i]) {
+					browseCommand(browseButtons[i], mainPanel, pluginCommandTextField[i]);
 				}
 			}
 		};
@@ -803,7 +740,7 @@ public class SettingsDialog extends JDialog {
 				StringBuilder buf = new StringBuilder();
 				for (String line = input.readLine(); line != null; line = input.readLine()) {
 					buf.append(line);
-					buf.append("\n");
+					buf.append('\n');
 				}
 				sqlSetupScript = buf.toString();
 			} catch (IOException e) {	//NOSONAR

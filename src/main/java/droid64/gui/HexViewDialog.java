@@ -4,13 +4,9 @@ import java.awt.BorderLayout;
 import java.awt.CardLayout;
 import java.awt.Color;
 import java.awt.Component;
-import java.awt.Container;
 import java.awt.Dimension;
 import java.awt.Font;
-import java.awt.FontMetrics;
 import java.awt.Toolkit;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
 import java.awt.print.PrinterException;
 import java.awt.print.PrinterJob;
 import java.io.File;
@@ -26,6 +22,7 @@ import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTable;
 import javax.swing.JTextArea;
+import javax.swing.JToggleButton;
 import javax.swing.ListSelectionModel;
 import javax.swing.ToolTipManager;
 import javax.swing.table.DefaultTableCellRenderer;
@@ -33,6 +30,7 @@ import javax.swing.table.TableCellRenderer;
 import javax.swing.table.TableColumn;
 
 import droid64.DroiD64;
+import droid64.d64.CbmException;
 import droid64.d64.ProgramParser;
 import droid64.d64.Utility;
 
@@ -45,19 +43,19 @@ public class HexViewDialog extends JDialog {
 
 	private static final long serialVersionUID = 1L;
 
-	private static final Color ADDR_SELECTED_FOREGROUND  = new Color(  0,  0,  0);
+	private static final Color ADDR_SELECTED_FOREGROUND  = Color.BLACK;
 	private static final Color ADDR_SELECTED_BACKGROUND  = new Color(100,100,100);
-	private static final Color ASCII_SELECTED_FOREGROUND = new Color(  0,  0,  0);
+	private static final Color ASCII_SELECTED_FOREGROUND = Color.BLACK;
 	private static final Color ASCII_SELECTED_BACKGROUND = new Color(100,100,100);
-	private static final Color HEX_SELECTED_FOREGROUND   = new Color(  0,  0,  0);
+	private static final Color HEX_SELECTED_FOREGROUND   = Color.BLACK;
 	private static final Color HEX_SELECTED_BACKGROUND   = new Color(232,232,232);
-	private static final Color ADDR_NORMAL_FOREGROUND    = new Color(  0,  0,  0);
+	private static final Color ADDR_NORMAL_FOREGROUND    = Color.BLACK;
 	private static final Color ADDR_NORMAL_BACKGROUND    = new Color(200,200,200);
-	private static final Color ASCII_NORMAL_FOREGROUND   = new Color(  0,  0,  0);
+	private static final Color ASCII_NORMAL_FOREGROUND   = Color.BLACK;
 	private static final Color ASCII_NORMAL_BACKGROUND   = new Color(200,200,200);
-	private static final Color HEX_NORMAL_ASC_FOREGROUND = new Color(  0,  0,  0);
+	private static final Color HEX_NORMAL_ASC_FOREGROUND = Color.BLACK;
 	private static final Color HEX_NORMAL_HEX_FOREGROUND = new Color(  0,  0, 80);
-	private static final Color HEX_NORMAL_BACKGROUND     = new Color(255,255,255);
+	private static final Color HEX_NORMAL_BACKGROUND     = Color.WHITE;
 
 	private static final Color[][] COLORS = {
 			{ADDR_SELECTED_FOREGROUND, ADDR_SELECTED_BACKGROUND},
@@ -76,6 +74,7 @@ public class HexViewDialog extends JDialog {
 	private JButton modeButton;
 	private JTextArea asmTextPane;
 	private JPanel cards;
+	private JTable table;
 
 	/**
 	 * Constructor
@@ -90,11 +89,10 @@ public class HexViewDialog extends JDialog {
 		setTitle(topText);
 		setModal(true);
 		this.mainPanel = mainPanel;
-		Container cp = getContentPane();
-		cp.setLayout(new BorderLayout());
+		setLayout(new BorderLayout());
 
 		// Setup title
-		cp.add(new JLabel(fileName), BorderLayout.NORTH);
+		add(new JLabel(fileName), BorderLayout.NORTH);
 
 		// Setup hex panel
 		JTable hexTable = drawHexPanel(data, length);
@@ -103,7 +101,7 @@ public class HexViewDialog extends JDialog {
 		asmTextPane = new JTextArea();
 		asmTextPane.setText("");
 		asmTextPane.setEditable(false);
-		asmTextPane.setFont(new Font("Courier", Font.PLAIN, Settings.getFontSize()));
+		asmTextPane.setFont(getTableFont(false));
 
 		disasmPanel.add(asmTextPane, BorderLayout.CENTER);
 		JScrollPane asmScrollPane = new JScrollPane(disasmPanel);
@@ -112,9 +110,10 @@ public class HexViewDialog extends JDialog {
 		cards = new JPanel(new CardLayout());
 		cards.add(new JScrollPane(hexTable), HEX_MODE);
 		cards.add(asmScrollPane, ASM_MODE);
-		cp.add(cards, BorderLayout.CENTER);
-		cp.add(drawButtons(data, length, readLoadAddr, fileName), BorderLayout.SOUTH);
-		cp.setSize(hexTable.getWidth(), hexTable.getHeight());
+
+		add(cards, BorderLayout.CENTER);
+		add(drawButtons(data, length, readLoadAddr, fileName), BorderLayout.SOUTH);
+		setSize(hexTable.getWidth(), hexTable.getHeight());
 
 		Dimension dim = Toolkit.getDefaultToolkit().getScreenSize();
 		setLocation( (int)((dim.width - getSize().getWidth()) / 3),	(int)((dim.height - getSize().getHeight()) / 3)	);
@@ -127,43 +126,30 @@ public class HexViewDialog extends JDialog {
 	private JPanel drawButtons(final byte[] data, final int length, final boolean readLoadAddr, final String fileName) {
 		// Setup buttons
 		modeButton = new JButton(ASM_MODE);
-		modeButton.addActionListener(new ActionListener() {
-			@Override
-			public void actionPerformed(ActionEvent event) {
-				switchHexAsmMode(data, length, readLoadAddr);
-			}
-		});
+		modeButton.addActionListener(ae -> switchHexAsmMode(data, length, readLoadAddr));
 
 		final JButton okButton = new JButton(Settings.getMessage(Resources.DROID64_HEXVIEW_CLOSE));
 		okButton.setMnemonic('o');
 		okButton.setToolTipText(Settings.getMessage(Resources.DROID64_HEXVIEW_CLOSE_TOOLTIP));
-		okButton.addActionListener(new ActionListener() {
-			@Override
-			public void actionPerformed(ActionEvent event) {
-				dispose();
-			}
+		okButton.addActionListener(ae -> dispose());
+
+		final JToggleButton c64ModeButton = new JToggleButton("C64 mode");
+		c64ModeButton.addActionListener(ae -> {
+			table.setFont(getTableFont(c64ModeButton.isSelected()));
+			asmTextPane.setFont(getTableFont(c64ModeButton.isSelected()));
 		});
 
 		final JButton printButton = new JButton(Settings.getMessage(Resources.DROID64_HEXVIEW_PRINT));
 		printButton.setMnemonic('p');
-		printButton.addActionListener(new ActionListener() {
-			@Override
-			public void actionPerformed(ActionEvent event) {
-				print(data, fileName, ASM_MODE.equals(modeButton.getText()), asmTextPane.getText());
-			}
-		});
+		printButton.addActionListener(ae -> print(data, c64ModeButton.isSelected(), fileName, ASM_MODE.equals(modeButton.getText()), asmTextPane.getText()));
 
 		final JButton saveButton = new JButton(Settings.getMessage(Resources.DROID64_HEXVIEW_SAVETEXT));
 		saveButton.setMnemonic('s');
-		saveButton.addActionListener(new ActionListener() {
-			@Override
-			public void actionPerformed(ActionEvent event) {
-				saveText(data, fileName, ASM_MODE.equals(modeButton.getText()), asmTextPane.getText());
-			}
-		});
+		saveButton.addActionListener(ae-> saveText(data, fileName, ASM_MODE.equals(modeButton.getText()), asmTextPane.getText()));
 
 		JPanel buttonPanel = new JPanel();
 		buttonPanel.add(modeButton);
+		buttonPanel.add(c64ModeButton);
 		buttonPanel.add(printButton);
 		buttonPanel.add(saveButton);
 		buttonPanel.add(okButton);
@@ -215,7 +201,7 @@ public class HexViewDialog extends JDialog {
 	private JTable drawHexPanel(byte[] data, int length) {
 		model = new HexTableModel(data, length);
 		final CustomCellRenderer renderer = new CustomCellRenderer();
-		JTable table  = new JTable(model) {
+		table  = new JTable(model) {
 			private static final long serialVersionUID = 1L;
 			@Override
 			public TableCellRenderer getCellRenderer(int row, int column) {
@@ -225,9 +211,9 @@ public class HexViewDialog extends JDialog {
 		table.setSelectionMode(ListSelectionModel.SINGLE_INTERVAL_SELECTION);
 		table.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
 		table.setShowGrid(true);
-		table.setFont(new Font("Monospaced", Font.PLAIN, table.getFont().getSize()));
-		FontMetrics fontMetrics= table.getFontMetrics(table.getFont());
-		int chrWdt = fontMetrics.stringWidth("w");
+		table.setFont(getTableFont(false));
+
+		int chrWdt = Math.max(table.getFontMetrics(getTableFont(true)).stringWidth("w"), table.getFontMetrics(getTableFont(false)).stringWidth("w"));
 		int colWdt = chrWdt * 3;
 		int addrWdt = chrWdt * 10;
 		int ascWdt = chrWdt * (model.getColumnCount() - 2 +2);
@@ -253,24 +239,32 @@ public class HexViewDialog extends JDialog {
 		return table;
 	}
 
-	private void print(final byte[] data, final String title, boolean hexmode, String asmText) {
+	private Font getTableFont(boolean useCbmFont) {
+		try {
+			return useCbmFont ? Settings.getCommodoreFont() : new Font("Courier", Font.PLAIN, Settings.getFontSize());
+		} catch (CbmException e) {
+			mainPanel.appendConsole("Failed to set Commodore font. Using default font.\n"+e);
+			return new JPanel().getFont();
+		}
+	}
+
+	private void print(final byte[] data, boolean useCbmfont, final String title, boolean hexmode, String asmText) {
 		PrinterJob job = PrinterJob.getPrinterJob();
 		if (hexmode) {
-			job.setPageable(new PrintPageable(data, title,mainPanel));
+			job.setPageable(new PrintPageable(data, useCbmfont, title, mainPanel));
 		} else {
-			job.setPageable(new PrintPageable(
-					"; Created by " + DroiD64.PROGNAME + " version " + DroiD64.VERSION + "\n" +
-							"; " + new Date() + "\n \n" +
-							asmText,
-							"; " + title,
-							false, true, mainPanel));
+			String header = "; Created by " + DroiD64.PROGNAME + " version " + DroiD64.VERSION + "\n" + "; "
+					+ new Date() + "\n \n";
+			if (useCbmfont) {
+				header = header.toUpperCase();
+			}
+			job.setPageable(new PrintPageable(header + asmText, "; " + title, useCbmfont, true, mainPanel));
 		}
-		boolean doPrint = job.printDialog();
-		if (doPrint) {
+		if (job.printDialog()) {
 			try {
 				job.print();
 			} catch (PrinterException e) {
-				mainPanel.appendConsole("Failed to print: "+e);
+				mainPanel.appendConsole("Failed to print: " + e);
 			}
 		}
 	}

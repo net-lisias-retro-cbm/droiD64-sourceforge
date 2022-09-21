@@ -33,6 +33,11 @@ public class Settings {
 	private static final JPanel DEFAULT_PANEL = new JPanel();
 	public static final int MAX_PLUGINS = 4;
 
+	private static final String EMPTY = "";
+	private static final String DELIM = ";";
+	private static final String LF = "\n";
+	private static final String EQ = "=";
+
 	public static final Color DIR_BG_COLOR_C64 = new Color( 64, 64, 224);
 	public static final Color DIR_FG_COLOR_C64 = new Color(160,160, 255);
 	public static final Color DIR_BG_COLOR_CPM = new Color( 16,  16,  16);
@@ -96,15 +101,6 @@ public class Settings {
 	private static final String SETTING_FILE_EXT_D82_GZ        = "file_ext_d82_gz";
 	private static final String SETTING_FILE_EXT_LNX_GZ        = "file_ext_lnx_gz";
 
-	// Types of parameters
-	private static final int STRING_PARAM 			= 1;
-	private static final int INTEGER_PARAM	 		= 2;
-	private static final int BOOLEAN_PARAM 			= 3;
-	private static final int COLOR_PARAM			= 4;
-	private static final int FONT_PARAM				= 5;
-	private static final int STRING_LIST_PARAM		= 6;
-	private static final int INDEXED_STRING_PARAM	= 7;	// param_name.1=value
-
 	// For convenience
 	private static final String USER_HOME = System.getProperty("user.home");
 
@@ -121,59 +117,59 @@ public class Settings {
 
 	private static Map<String,Parameter> initMap() {
 		Map<String,Parameter> map = new HashMap<>();
-		map.put(SETTING_ASK_QUIT,			new Parameter(SETTING_ASK_QUIT,				BOOLEAN_PARAM,	Boolean.TRUE));
-		map.put(SETTING_BORDER_ACTIVE,		new Parameter(SETTING_BORDER_ACTIVE,		COLOR_PARAM,	ACTIVE_BORDER_COLOR));
-		map.put(SETTING_BORDER_INACTIVE,	new Parameter(SETTING_BORDER_INACTIVE,		COLOR_PARAM,	INACTIVE_BORDER_COLOR));
-		map.put(SETTING_COLOUR,				new Parameter(SETTING_COLOUR,				INTEGER_PARAM,	Integer.valueOf(1)));
-		map.put(SETTING_DEFAULT_IMAGE_DIR,	new Parameter(SETTING_DEFAULT_IMAGE_DIR,	STRING_PARAM,	USER_HOME));
-		map.put(SETTING_DEFAULT_IMAGE_DIR2,	new Parameter(SETTING_DEFAULT_IMAGE_DIR2,	STRING_PARAM,	USER_HOME));
-		map.put(SETTING_DIR_BG,				new Parameter(SETTING_DIR_BG,				COLOR_PARAM,	DIR_BG_COLOR_C64));
-		map.put(SETTING_DIR_FG,				new Parameter(SETTING_DIR_FG,				COLOR_PARAM,	DIR_FG_COLOR_C64));
-		map.put(SETTING_DIR_CPM_BG,			new Parameter(SETTING_DIR_CPM_BG,			COLOR_PARAM,	DIR_BG_COLOR_CPM));
-		map.put(SETTING_DIR_CPM_FG,			new Parameter(SETTING_DIR_CPM_FG,			COLOR_PARAM,	DIR_FG_COLOR_CPM));
-		map.put(SETTING_DIR_LOCAL_BG,		new Parameter(SETTING_DIR_LOCAL_BG,			COLOR_PARAM,	DIR_BG_COLOR_LOCAL));
-		map.put(SETTING_DIR_LOCAL_FG,		new Parameter(SETTING_DIR_LOCAL_FG,			COLOR_PARAM,	DIR_FG_COLOR_LOCAL));
-		map.put(SETTING_FONT_SIZE,			new Parameter(SETTING_FONT_SIZE,			INTEGER_PARAM,	Integer.valueOf(10)));
-		map.put(SETTING_LOCAL_FONT_SIZE,	new Parameter(SETTING_LOCAL_FONT_SIZE,		INTEGER_PARAM,	Integer.valueOf(10)));
-		map.put(SETTING_WINDOW,				new Parameter(SETTING_WINDOW,				STRING_PARAM,	""));
-		map.put(SETTING_JDBC_DRIVER,		new Parameter(SETTING_JDBC_DRIVER,			STRING_PARAM,	"com.mysql.jdbc.Driver"));
-		map.put(SETTING_JDBC_URL,			new Parameter(SETTING_JDBC_URL,				STRING_PARAM,	"jdbc:mysql://localhost:3306/droid64"));
-		map.put(SETTING_JDBC_USER,			new Parameter(SETTING_JDBC_USER,			STRING_PARAM,	DROID64));
-		map.put(SETTING_JDBC_PASS,			new Parameter(SETTING_JDBC_PASS,			STRING_PARAM,	"uridium"));
-		map.put(SETTING_JDBC_LIMIT_TYPE,	new Parameter(SETTING_JDBC_LIMIT_TYPE,		INTEGER_PARAM,	Integer.valueOf(0)));
-		map.put(SETTING_MAX_ROWS,			new Parameter(SETTING_MAX_ROWS,				INTEGER_PARAM,	Integer.valueOf(25)));
-		map.put(SETTING_ROW_HEIGHT,			new Parameter(SETTING_ROW_HEIGHT,			INTEGER_PARAM,	Integer.valueOf(10)));
-		map.put(SETTING_LOCAL_ROW_HEIGHT,	new Parameter(SETTING_LOCAL_ROW_HEIGHT,		INTEGER_PARAM,	Integer.valueOf(10)));
-		map.put(SETTING_USE_DB,				new Parameter(SETTING_USE_DB,				BOOLEAN_PARAM,	Boolean.FALSE));
-		map.put(SETTING_LOOK_AND_FEEL,		new Parameter(SETTING_LOOK_AND_FEEL,		INTEGER_PARAM,	Integer.valueOf(1)));
-		map.put(SETTING_PLUGIN_COMMAND,		new Parameter(SETTING_PLUGIN_COMMAND,		INDEXED_STRING_PARAM,
+		map.put(SETTING_ASK_QUIT,			new Parameter(SETTING_ASK_QUIT,				Parameter.BOOLEAN_PARAM,	Boolean.TRUE));
+		map.put(SETTING_BORDER_ACTIVE,		new Parameter(SETTING_BORDER_ACTIVE,		Parameter.COLOR_PARAM,	ACTIVE_BORDER_COLOR));
+		map.put(SETTING_BORDER_INACTIVE,	new Parameter(SETTING_BORDER_INACTIVE,		Parameter.COLOR_PARAM,	INACTIVE_BORDER_COLOR));
+		map.put(SETTING_COLOUR,				new Parameter(SETTING_COLOUR,				Parameter.INTEGER_PARAM,	Integer.valueOf(1)));
+		map.put(SETTING_DEFAULT_IMAGE_DIR,	new Parameter(SETTING_DEFAULT_IMAGE_DIR,	Parameter.STRING_PARAM,	USER_HOME));
+		map.put(SETTING_DEFAULT_IMAGE_DIR2,	new Parameter(SETTING_DEFAULT_IMAGE_DIR2,	Parameter.STRING_PARAM,	USER_HOME));
+		map.put(SETTING_DIR_BG,				new Parameter(SETTING_DIR_BG,				Parameter.COLOR_PARAM,	DIR_BG_COLOR_C64));
+		map.put(SETTING_DIR_FG,				new Parameter(SETTING_DIR_FG,				Parameter.COLOR_PARAM,	DIR_FG_COLOR_C64));
+		map.put(SETTING_DIR_CPM_BG,			new Parameter(SETTING_DIR_CPM_BG,			Parameter.COLOR_PARAM,	DIR_BG_COLOR_CPM));
+		map.put(SETTING_DIR_CPM_FG,			new Parameter(SETTING_DIR_CPM_FG,			Parameter.COLOR_PARAM,	DIR_FG_COLOR_CPM));
+		map.put(SETTING_DIR_LOCAL_BG,		new Parameter(SETTING_DIR_LOCAL_BG,			Parameter.COLOR_PARAM,	DIR_BG_COLOR_LOCAL));
+		map.put(SETTING_DIR_LOCAL_FG,		new Parameter(SETTING_DIR_LOCAL_FG,			Parameter.COLOR_PARAM,	DIR_FG_COLOR_LOCAL));
+		map.put(SETTING_FONT_SIZE,			new Parameter(SETTING_FONT_SIZE,			Parameter.INTEGER_PARAM,	Integer.valueOf(10)));
+		map.put(SETTING_LOCAL_FONT_SIZE,	new Parameter(SETTING_LOCAL_FONT_SIZE,		Parameter.INTEGER_PARAM,	Integer.valueOf(10)));
+		map.put(SETTING_WINDOW,				new Parameter(SETTING_WINDOW,				Parameter.STRING_PARAM,	EMPTY));
+		map.put(SETTING_JDBC_DRIVER,		new Parameter(SETTING_JDBC_DRIVER,			Parameter.STRING_PARAM,	"com.mysql.jdbc.Driver"));
+		map.put(SETTING_JDBC_URL,			new Parameter(SETTING_JDBC_URL,				Parameter.STRING_PARAM,	"jdbc:mysql://localhost:3306/droid64"));
+		map.put(SETTING_JDBC_USER,			new Parameter(SETTING_JDBC_USER,			Parameter.STRING_PARAM,	DROID64));
+		map.put(SETTING_JDBC_PASS,			new Parameter(SETTING_JDBC_PASS,			Parameter.STRING_PARAM,	"uridium"));
+		map.put(SETTING_JDBC_LIMIT_TYPE,	new Parameter(SETTING_JDBC_LIMIT_TYPE,		Parameter.INTEGER_PARAM,	Integer.valueOf(0)));
+		map.put(SETTING_MAX_ROWS,			new Parameter(SETTING_MAX_ROWS,				Parameter.INTEGER_PARAM,	Integer.valueOf(25)));
+		map.put(SETTING_ROW_HEIGHT,			new Parameter(SETTING_ROW_HEIGHT,			Parameter.INTEGER_PARAM,	Integer.valueOf(10)));
+		map.put(SETTING_LOCAL_ROW_HEIGHT,	new Parameter(SETTING_LOCAL_ROW_HEIGHT,		Parameter.INTEGER_PARAM,	Integer.valueOf(10)));
+		map.put(SETTING_USE_DB,				new Parameter(SETTING_USE_DB,				Parameter.BOOLEAN_PARAM,	Boolean.FALSE));
+		map.put(SETTING_LOOK_AND_FEEL,		new Parameter(SETTING_LOOK_AND_FEEL,		Parameter.INTEGER_PARAM,	Integer.valueOf(1)));
+		map.put(SETTING_PLUGIN_COMMAND,		new Parameter(SETTING_PLUGIN_COMMAND,		Parameter.INDEXED_STRING_PARAM,
 				Arrays.asList( "d64copy", "x64", "128", "cbmctrl" )));
-		map.put(SETTING_PLUGIN_ARGUMENTS,	new Parameter(SETTING_PLUGIN_ARGUMENTS,		INDEXED_STRING_PARAM,
+		map.put(SETTING_PLUGIN_ARGUMENTS,	new Parameter(SETTING_PLUGIN_ARGUMENTS,		Parameter.INDEXED_STRING_PARAM,
 				Arrays.asList( "{Image} 8", "-drive8type {DriveType} {ImageFiles}", "-drive8type {DriveType} {ImageFiles}", "dir 8" )));
-		map.put(SETTING_PLUGIN_DESCRIPTION,	new Parameter(SETTING_PLUGIN_DESCRIPTION,	INDEXED_STRING_PARAM,
+		map.put(SETTING_PLUGIN_DESCRIPTION,	new Parameter(SETTING_PLUGIN_DESCRIPTION,	Parameter.INDEXED_STRING_PARAM,
 				Arrays.asList(
 						"Transfer this disk image to a real floppy.", "Invoke VICE 64 emulator with this disk image",
 						"Invoke VICE 128 emulator with this disk image", "List files using OpenCBM" )));
-		map.put(SETTING_PLUGIN_LABEL,		new Parameter(SETTING_PLUGIN_LABEL,			INDEXED_STRING_PARAM,
+		map.put(SETTING_PLUGIN_LABEL,		new Parameter(SETTING_PLUGIN_LABEL,			Parameter.INDEXED_STRING_PARAM,
 				Arrays.asList( "d64copy", "VICE 64", "VICE 128", "CBM dir" )));
-		map.put(SETTING_PLUGIN_FORK,		new Parameter(SETTING_PLUGIN_FORK,			INDEXED_STRING_PARAM,
+		map.put(SETTING_PLUGIN_FORK,		new Parameter(SETTING_PLUGIN_FORK,			Parameter.INDEXED_STRING_PARAM,
 				Arrays.asList( "true", "true", "true", "true" )));
-		map.put(SETTING_FILE_EXT_D64,		new Parameter(SETTING_FILE_EXT_D64,			STRING_LIST_PARAM,	Arrays.asList(".d64".split(";")) ));
-		map.put(SETTING_FILE_EXT_D67,		new Parameter(SETTING_FILE_EXT_D67,			STRING_LIST_PARAM,	Arrays.asList(".d67".split(";")) ));
-		map.put(SETTING_FILE_EXT_D71,		new Parameter(SETTING_FILE_EXT_D71,			STRING_LIST_PARAM,	Arrays.asList(".d71".split(";")) ));
-		map.put(SETTING_FILE_EXT_D81,		new Parameter(SETTING_FILE_EXT_D81,			STRING_LIST_PARAM,	Arrays.asList(".d81".split(";")) ));
-		map.put(SETTING_FILE_EXT_T64,		new Parameter(SETTING_FILE_EXT_T64,			STRING_LIST_PARAM,	Arrays.asList(".t64".split(";")) ));
-		map.put(SETTING_FILE_EXT_D80,		new Parameter(SETTING_FILE_EXT_D80,			STRING_LIST_PARAM,	Arrays.asList(".d80".split(";")) ));
-		map.put(SETTING_FILE_EXT_D82,		new Parameter(SETTING_FILE_EXT_D82,			STRING_LIST_PARAM,	Arrays.asList(".d82".split(";")) ));
-		map.put(SETTING_FILE_EXT_LNX,		new Parameter(SETTING_FILE_EXT_LNX,			STRING_LIST_PARAM,	Arrays.asList(".lnx".split(";")) ));
-		map.put(SETTING_FILE_EXT_D64_GZ,	new Parameter(SETTING_FILE_EXT_D64_GZ,		STRING_LIST_PARAM,	Arrays.asList("d64.gz".split(";")) ));
-		map.put(SETTING_FILE_EXT_D67_GZ,	new Parameter(SETTING_FILE_EXT_D67_GZ,		STRING_LIST_PARAM,	Arrays.asList("d67.gz".split(";")) ));
-		map.put(SETTING_FILE_EXT_D71_GZ,	new Parameter(SETTING_FILE_EXT_D71_GZ,		STRING_LIST_PARAM,	Arrays.asList("d71.gz".split(";")) ));
-		map.put(SETTING_FILE_EXT_D81_GZ,	new Parameter(SETTING_FILE_EXT_D81_GZ,		STRING_LIST_PARAM,	Arrays.asList("d81.gz".split(";")) ));
-		map.put(SETTING_FILE_EXT_T64_GZ,	new Parameter(SETTING_FILE_EXT_T64_GZ,		STRING_LIST_PARAM,	Arrays.asList("t64.gz".split(";")) ));
-		map.put(SETTING_FILE_EXT_D80_GZ,	new Parameter(SETTING_FILE_EXT_D80_GZ,		STRING_LIST_PARAM,	Arrays.asList("d80.gz".split(";")) ));
-		map.put(SETTING_FILE_EXT_D82_GZ,	new Parameter(SETTING_FILE_EXT_D82_GZ,		STRING_LIST_PARAM,	Arrays.asList("d82.gz".split(";")) ));
-		map.put(SETTING_FILE_EXT_LNX_GZ,	new Parameter(SETTING_FILE_EXT_LNX_GZ,		STRING_LIST_PARAM,	Arrays.asList("lnx.gz".split(";")) ));
+		map.put(SETTING_FILE_EXT_D64,		new Parameter(SETTING_FILE_EXT_D64,			Parameter.STRING_LIST_PARAM,	Arrays.asList(".d64".split(DELIM)) ));
+		map.put(SETTING_FILE_EXT_D67,		new Parameter(SETTING_FILE_EXT_D67,			Parameter.STRING_LIST_PARAM,	Arrays.asList(".d67".split(DELIM)) ));
+		map.put(SETTING_FILE_EXT_D71,		new Parameter(SETTING_FILE_EXT_D71,			Parameter.STRING_LIST_PARAM,	Arrays.asList(".d71".split(DELIM)) ));
+		map.put(SETTING_FILE_EXT_D81,		new Parameter(SETTING_FILE_EXT_D81,			Parameter.STRING_LIST_PARAM,	Arrays.asList(".d81".split(DELIM)) ));
+		map.put(SETTING_FILE_EXT_T64,		new Parameter(SETTING_FILE_EXT_T64,			Parameter.STRING_LIST_PARAM,	Arrays.asList(".t64".split(DELIM)) ));
+		map.put(SETTING_FILE_EXT_D80,		new Parameter(SETTING_FILE_EXT_D80,			Parameter.STRING_LIST_PARAM,	Arrays.asList(".d80".split(DELIM)) ));
+		map.put(SETTING_FILE_EXT_D82,		new Parameter(SETTING_FILE_EXT_D82,			Parameter.STRING_LIST_PARAM,	Arrays.asList(".d82".split(DELIM)) ));
+		map.put(SETTING_FILE_EXT_LNX,		new Parameter(SETTING_FILE_EXT_LNX,			Parameter.STRING_LIST_PARAM,	Arrays.asList(".lnx".split(DELIM)) ));
+		map.put(SETTING_FILE_EXT_D64_GZ,	new Parameter(SETTING_FILE_EXT_D64_GZ,		Parameter.STRING_LIST_PARAM,	Arrays.asList("d64.gz".split(DELIM)) ));
+		map.put(SETTING_FILE_EXT_D67_GZ,	new Parameter(SETTING_FILE_EXT_D67_GZ,		Parameter.STRING_LIST_PARAM,	Arrays.asList("d67.gz".split(DELIM)) ));
+		map.put(SETTING_FILE_EXT_D71_GZ,	new Parameter(SETTING_FILE_EXT_D71_GZ,		Parameter.STRING_LIST_PARAM,	Arrays.asList("d71.gz".split(DELIM)) ));
+		map.put(SETTING_FILE_EXT_D81_GZ,	new Parameter(SETTING_FILE_EXT_D81_GZ,		Parameter.STRING_LIST_PARAM,	Arrays.asList("d81.gz".split(DELIM)) ));
+		map.put(SETTING_FILE_EXT_T64_GZ,	new Parameter(SETTING_FILE_EXT_T64_GZ,		Parameter.STRING_LIST_PARAM,	Arrays.asList("t64.gz".split(DELIM)) ));
+		map.put(SETTING_FILE_EXT_D80_GZ,	new Parameter(SETTING_FILE_EXT_D80_GZ,		Parameter.STRING_LIST_PARAM,	Arrays.asList("d80.gz".split(DELIM)) ));
+		map.put(SETTING_FILE_EXT_D82_GZ,	new Parameter(SETTING_FILE_EXT_D82_GZ,		Parameter.STRING_LIST_PARAM,	Arrays.asList("d82.gz".split(DELIM)) ));
+		map.put(SETTING_FILE_EXT_LNX_GZ,	new Parameter(SETTING_FILE_EXT_LNX_GZ,		Parameter.STRING_LIST_PARAM,	Arrays.asList("lnx.gz".split(DELIM)) ));
 		return map;
 	}
 
@@ -227,12 +223,12 @@ public class Settings {
 		List <String> labelList = getIndexStringList(SETTING_PLUGIN_LABEL);
 		List <String> forkList = getIndexStringList(SETTING_PLUGIN_FORK);
 		for (int i=0; i < Settings.MAX_PLUGINS; i++) {
-			String cmd = i <cmdList.size() ? cmdList.get(i) : "";
-			String args = i <argList.size() ? argList.get(i) : "";
-			String descr = i <descrList.size() ? descrList.get(i) : "";
-			String label = i <labelList.size() ? labelList.get(i) : "";
+			String cmd = i <cmdList.size() ? cmdList.get(i) : EMPTY;
+			String args = i <argList.size() ? argList.get(i) : EMPTY;
+			String descr = i <descrList.size() ? descrList.get(i) : EMPTY;
+			String label = i <labelList.size() ? labelList.get(i) : EMPTY;
 			boolean forkThread = i <forkList.size() ? Boolean.valueOf(forkList.get(i)) : true;
-			if ("".equals(cmd) && "".equals(descr) && "".equals(label)) {
+			if (EMPTY.equals(cmd) && EMPTY.equals(descr) && EMPTY.equals(label)) {
 				list.add(null);
 			} else {
 				list.add(new ExternalProgram(cmd, args, descr, label, forkThread));
@@ -240,14 +236,15 @@ public class Settings {
 		}
 		externalPrograms = list.toArray(new ExternalProgram[Settings.MAX_PLUGINS]);
 	}
+
 	public static ExternalProgram[] getExternalPrograms() {
 		return externalPrograms;
 	}
+
 	private static List<String> getIndexStringList(String key) {
 		Parameter param = settingTypeMap.get(key);
 		if (param != null) {
-			List <String> list = param.getListValue();
-			return list == null ? new ArrayList<String>() : list;
+			return param.getIndexedStringValue();
 		} else {
 			return new ArrayList<>();
 		}
@@ -262,9 +259,9 @@ public class Settings {
 	}
 	private static void setIndexedString(String key, int num, String value) {
 		Parameter param = settingTypeMap.get(key);
-		List<String> list = param.getListValue();
+		List<String> list = param.getIndexedStringValue();
 		for (int i=list.size(); i <= num; i++) {
-			list.add("");
+			list.add(EMPTY);
 		}
 		list.set(num, value);
 	}
@@ -276,12 +273,12 @@ public class Settings {
 			String value = String.format("%d:%d,%d:%d", sizeLocation[0], sizeLocation[1], sizeLocation[2], sizeLocation[3]);
 			setStringParameter(SETTING_WINDOW, value);
 		} else {
-			setStringParameter(SETTING_WINDOW, "");
+			setStringParameter(SETTING_WINDOW, EMPTY);
 		}
 	}
 
 	public static int[] getWindow() {
-		String str = getStringParameter(SETTING_WINDOW);
+		String str = getStringParameter(SETTING_WINDOW, null);
 		if (str == null) {
 			return new int[0];
 		} else {
@@ -305,88 +302,77 @@ public class Settings {
 	}
 
 	public static int getColourChoice() {
-		Integer size = getIntegerParameter(SETTING_COLOUR);
-		return size != null ? size.intValue() : 1;
+		return getIntegerParameter(SETTING_COLOUR, 1);
 	}
 	public static void setColourChoice(int choice) {
 		setIntegerParameter(SETTING_COLOUR, choice);
 	}
 
 	public static String getDefaultImageDir() {
-		String dir = getStringParameter(SETTING_DEFAULT_IMAGE_DIR);
-		return dir != null ? dir : ".";
+		return getStringParameter(SETTING_DEFAULT_IMAGE_DIR, ".");
 	}
 	public static void setDefaultImageDir(String dir) {
 		setStringParameter(SETTING_DEFAULT_IMAGE_DIR, dir);
 	}
 
 	public static String getDefaultImageDir2() {
-		String dir2 = getStringParameter(SETTING_DEFAULT_IMAGE_DIR2);
-		return dir2 != null ? dir2 : ".";
+		return getStringParameter(SETTING_DEFAULT_IMAGE_DIR2, ".");
 	}
 	public static void setDefaultImageDir2(String dir2) {
 		setStringParameter(SETTING_DEFAULT_IMAGE_DIR2, dir2);
 	}
 
 	public static int getFontSize() {
-		Integer size = getIntegerParameter(SETTING_FONT_SIZE);
-		return size != null ? size.intValue() : 10;
+		return getIntegerParameter(SETTING_FONT_SIZE, 10);
 	}
 	public static void setFontSize(int fontSize) {
 		setIntegerParameter(SETTING_FONT_SIZE, fontSize);
 	}
 
 	public static int getLocalFontSize() {
-		Integer size = getIntegerParameter(SETTING_LOCAL_FONT_SIZE);
-		return size != null ? size.intValue() : 10;
+		return getIntegerParameter(SETTING_LOCAL_FONT_SIZE, 10);
 	}
 	public static void setLocalFontSize(int fontSize) {
 		setIntegerParameter(SETTING_LOCAL_FONT_SIZE, fontSize);
 	}
 
 	public static int getLookAndFeel() {
-		Integer laf = getIntegerParameter(SETTING_LOOK_AND_FEEL);
-		return laf != null ? laf.intValue() : 1;
+		return getIntegerParameter(SETTING_LOOK_AND_FEEL, 1);
 	}
 	public static void setLookAndFeel(int laf) {
 		setIntegerParameter(SETTING_LOOK_AND_FEEL, laf);
 	}
 
 	public static String getJdbcDriver() {
-		String driver = getStringParameter(SETTING_JDBC_DRIVER);
-		return driver != null ? driver : "com.mysql.jdbc.Driver";
+		return getStringParameter(SETTING_JDBC_DRIVER, "com.mysql.jdbc.Driver");
 	}
 	public static void setJdbcDriver(String driver) {
 		setStringParameter(SETTING_JDBC_DRIVER, driver);
 	}
 
 	public static String getJdbcUrl() {
-		String url = getStringParameter(SETTING_JDBC_URL);
-		return url != null ? url : "jdbc:mysql://localhost:3306/droid64";
+		return getStringParameter(SETTING_JDBC_URL, "jdbc:mysql://localhost:3306/droid64");
 	}
 	public static void setJdbcUrl(String url) {
 		setStringParameter(SETTING_JDBC_URL, url);
 	}
 
 	public static String getJdbcUser() {
-		String url = getStringParameter(SETTING_JDBC_USER);
-		return url != null ? url : DROID64;
+		return getStringParameter(SETTING_JDBC_USER, DROID64);
 	}
-	public static void setJdbcUser(String url) {
-		setStringParameter(SETTING_JDBC_USER, url);
+	public static void setJdbcUser(String usr) {
+		setStringParameter(SETTING_JDBC_USER, usr);
 	}
 
 	public static String getJdbcPassword() {
-		String pass = getStringParameter(SETTING_JDBC_PASS);
-		return pass != null ? pass : "uridium";
+		return getStringParameter(SETTING_JDBC_PASS, "uridium");
 	}
 	public static void setJdbcPassword(String pass) {
 		setStringParameter(SETTING_JDBC_PASS, pass);
 	}
 
 	public static int getMaxRows() {
-		Integer rows = getIntegerParameter(SETTING_MAX_ROWS);
-		return rows != null ? rows.intValue() : 25;
+		return getIntegerParameter(SETTING_MAX_ROWS, 25);
 	}
 	public static void setMaxRows(long rows) {
 		int r = (int) (rows > Integer.MAX_VALUE ? Integer.MAX_VALUE : rows);
@@ -394,24 +380,21 @@ public class Settings {
 	}
 
 	public static int getJdbcLimitType() {
-		Integer limitType = getIntegerParameter(SETTING_JDBC_LIMIT_TYPE);
-		return limitType != null ? limitType : 0;
+		return getIntegerParameter(SETTING_JDBC_LIMIT_TYPE, 0);
 	}
 	public static void setJdbcLimitType(int limitType) {
 		setIntegerParameter(SETTING_JDBC_LIMIT_TYPE, limitType);
 	}
 
 	public static int getRowHeight() {
-		Integer rows = getIntegerParameter(SETTING_ROW_HEIGHT);
-		return rows != null ? rows.intValue() : 10;
+		return getIntegerParameter(SETTING_ROW_HEIGHT, 10);
 	}
 	public static void setRowHeight(int hgt) {
 		setIntegerParameter(SETTING_ROW_HEIGHT, hgt);
 	}
 
 	public static int getLocalRowHeight() {
-		Integer rows = getIntegerParameter(SETTING_LOCAL_ROW_HEIGHT);
-		return rows != null ? rows.intValue() : 10;
+		return getIntegerParameter(SETTING_LOCAL_ROW_HEIGHT, 10);
 	}
 	public static void setLocalRowHeight(int hgt) {
 		setIntegerParameter(SETTING_LOCAL_ROW_HEIGHT, hgt);
@@ -512,7 +495,7 @@ public class Settings {
 			StringBuilder buf = new StringBuilder();
 			for (String ext : typeList) {
 				if (b) {
-					buf.append(';');
+					buf.append(DELIM);
 				} else {
 					b = true;
 				}
@@ -553,10 +536,7 @@ public class Settings {
 
 	public static String getAllAsString() {
 		StringBuilder buf = new StringBuilder();
-		for(String key: new TreeSet<String>(settingTypeMap.keySet())) {
-			buf.append(key).append("=").append(settingTypeMap.get(key)).append('\n');
-
-		}
+		new TreeSet<String>(settingTypeMap.keySet()).forEach(key -> buf.append(key).append(EQ).append(settingTypeMap.get(key)).append(LF));
 		return buf.toString();
 	}
 
@@ -577,17 +557,15 @@ public class Settings {
 		settingsFileName = getSettingFileName(fileName);
 		if ((new File(settingsFileName)).exists()) {
 			System.out.println("loadSettings: exists settingsFileName=" + settingsFileName);	//NOSONAR
-			try (FileReader fr = new FileReader(settingsFileName)) {
+			try (FileReader fr = new FileReader(settingsFileName); BufferedReader br = new BufferedReader(fr)) {
 				String line;
-				BufferedReader br = new BufferedReader(fr);
 				while ((line = br.readLine()) != null) {
-					if ( !line.trim().startsWith("#") && line.contains("=") ) {
+					if ( !line.trim().startsWith("#") && line.contains(EQ) ) {
 						String lineKey = line.substring( 0, line.indexOf('=') ) .trim();
 						String lineValue = line.substring(line.indexOf('=')+1).trim();
 						parseParameter(settingTypeMap.get(lineKey), lineKey, lineValue);
 					}
 				}
-				br.close();
 				parseExternalPrograms();
 			} catch (IOException e) {	//NOSONAR
 				System.err.println("Load settings failed: "+e.getMessage());	// NOSONAR
@@ -600,48 +578,11 @@ public class Settings {
 
 	private static void parseParameter(Parameter param, String lineKey, String lineValue) {
 		if (param != null) {
-			try {
-				switch (param.type) {
-				case STRING_PARAM:
-					param.value = lineValue;
-					break;
-				case INTEGER_PARAM:
-					param.value = Integer.valueOf(lineValue);
-					break;
-				case BOOLEAN_PARAM:
-					param.value = "yes".equals(lineValue) ? Boolean.TRUE : Boolean.valueOf(lineValue);
-					break;
-				case COLOR_PARAM:
-					splitStringIntoColorParam(lineValue, param);
-					break;
-				case FONT_PARAM:
-					Font fnt = getFontFromString(lineValue);
-					if (fnt != null) {
-						param.value = fnt;
-					}
-					break;
-				case STRING_LIST_PARAM:
-					param.value = Arrays.asList(lineValue.split("[ \t]*[;][ \t]*"));
-					break;
-				default:
-				}
-			} catch (IllegalArgumentException e) {	//NOSONAR
-				System.err.println("Failed to parse setting: "+e.getMessage());	//NOSONAR
-			}
+			param.parseValue(lineValue);
 		} else {
 			if (!parseIndexedParam(lineKey, lineValue) && !migrateConfig(lineKey, lineValue)) {
 				System.err.println("Unknown parameter '" + lineKey + "'");	//NOSONAR
 			}
-		}
-	}
-
-	private static void splitStringIntoColorParam(String str, Parameter param) {
-		String[] split = str.split("[ \t]*[,;.][ \t]*");
-		if (split.length >= 3) {
-			int r = Integer.parseInt(split[0]) & 0xff;
-			int g = Integer.parseInt(split[1]) & 0xff;
-			int b = Integer.parseInt(split[2]) & 0xff;
-			param.value = new Color(r, g, b);
 		}
 	}
 
@@ -693,19 +634,12 @@ public class Settings {
 	}
 
 	private static boolean parseIndexedParamValue(int index, Parameter param, String value) {
-		if (index >= 0 && param != null && param.type == INDEXED_STRING_PARAM) {
-			@SuppressWarnings("unchecked")
-			List<String> list = (List<String>) param.value;
-			if (list == null || list.isEmpty()) {
-				list = new ArrayList<>(index+1);
-				list.set(index, value);
-			} else {
-				for (int i=list.size(); i<=index; i++) {
-					list.add(null);
-				}
-				list.set(index, value);
+		if (index >= 0 && param != null && param.getType() == Parameter.INDEXED_STRING_PARAM) {
+			List<String> list = param.getIndexedStringValue();
+			for (int i=list.size(); i<=index; i++) {
+				list.add(null);
 			}
-			param.value = list;
+			list.set(index, value);
 			return true;
 		}
 		return false;
@@ -722,93 +656,62 @@ public class Settings {
 	 */
 	protected static void saveSettingsToFile(String fileName) {
 		try (FileWriter output = new FileWriter(fileName)) {
-			output.write("# Configuration file for "+DroiD64.PROGNAME+" v"+DroiD64.VERSION+"\n");
-			output.write("# Saved " + new Date() + "\n");
-			output.write("#\n");
+			output.write("# Configuration file for " + DroiD64.PROGNAME + " v" + DroiD64.VERSION + LF);
+			output.write("# Saved " + new Date() + LF);
+			output.write("#" + LF);
 			List<String> settingKeyList = new ArrayList<>(settingTypeMap.keySet());
 			Collections.sort(settingKeyList);
 			for (String key : settingKeyList) {
 				Parameter param = settingTypeMap.get(key);
-				String value;
-				switch (param.type) {
-				case COLOR_PARAM :
-					Color c = (Color) param.value;
-					value = c.getRed()+","+c.getGreen()+","+c.getBlue();
-					output.write(key + "=" + value + "\n");
-					break;
-				case FONT_PARAM:
-					Font fnt = (Font) param.value;
-					value = fnt.getName()+";"+fnt.getStyle()+";"+fnt.getSize();
-					output.write(key + "=" + value + "\n");
-					break;
-				case STRING_LIST_PARAM:
-					value = getStringListParamAsString(param.name);
-					output.write(key + "=" + value + "\n");
-					break;
-				case INDEXED_STRING_PARAM:
-					@SuppressWarnings("unchecked")
-					List<String> list = (List<String>) param.value;
-					for (int i=0; i<list.size(); i++) {
-						output.write(key + "."+i+"=" + list.get(i) + "\n");
-					}
-					break;
-				default:
-					value = param.value.toString();
-					output.write(key + "=" + value + "\n");
-					break;
-				}
+				output.write(param.getParamAsString());
 			}
 			output.write("# End of file\n");
-		} catch (IOException e) {	//NOSONAR
+		} catch (IOException | IllegalArgumentException e) {	//NOSONAR
 			System.err.println("Save settings failed: " + e.getMessage()); //NOSONAR
 		}
 	}
 
 	public static String getStringParameter(String name) {
+		return getStringParameter(name, null);
+	}
+
+	public static String getStringParameter(String name, String defaultValue) {
 		Parameter param = settingTypeMap.get(name);
-		if (param == null || param.type != STRING_PARAM) {
-			return null;
-		} else {
-			return (String) param.value;
-		}
+		return param != null ? param.getStringValue() : defaultValue;
 	}
 
 	public static void setStringParameter(String name, String value) {
 		Parameter param = settingTypeMap.get(name);
-		if (param != null && param.type == STRING_PARAM) {
-			param.setValue(value);
+		if (param != null) {
+			param.setStringValue(value);
 		}
 	}
 
 	public static Integer getIntegerParameter(String name) {
+		return getIntegerParameter(name, null);
+	}
+
+	public static Integer getIntegerParameter(String name, Integer defaultValue) {
 		Parameter param = settingTypeMap.get(name);
-		if (param == null || param.type != INTEGER_PARAM) {
-			return null;
-		} else {
-			return (Integer) param.value;
-		}
+		return param != null ? param.getIntegerValue() : defaultValue;
 	}
 
 	public static void setIntegerParameter(String name, int value) {
 		Parameter param = settingTypeMap.get(name);
-		if (param != null && param.type == INTEGER_PARAM) {
-			param.value = value;
+		if (param != null) {
+			param.setIntegerValue(value);
 		}
 	}
 
 	public static Boolean getBooleanParameter(String name) {
 		Parameter param = settingTypeMap.get(name);
-		if (param == null || param.type != BOOLEAN_PARAM) {
-			return null;	//NOSONAR
-		} else {
-			return (Boolean) param.value;
-		}
+		return param != null ? param.getBooleanValue() : null;
 	}
 
 	public static void setBooleanParameter(String name, boolean value) {
 		Parameter param = settingTypeMap.get(name);
-		if (param != null && param.type == BOOLEAN_PARAM) {
-			param.value = value;
+		if (param != null) {
+			param.setBooleanValue(value);
 		}
 	}
 
@@ -818,7 +721,7 @@ public class Settings {
 			String userHome = null;
 			try {
 				userHome = System.getProperty("user.home");
-			} catch (SecurityException e) {	//NOSONAR
+			} catch (SecurityException e) {	/** ignore */
 			} finally {
 				if (userHome != null) {
 					fileName = userHome + File.separator + DEFAULT_SETTING_FILE_NAME;
@@ -832,151 +735,51 @@ public class Settings {
 
 	public static Font getFontParameter(String name) {
 		Parameter param = settingTypeMap.get(name);
-		if (param == null || param.type != FONT_PARAM) {
-			return null;
-		} else {
-			return (Font) param.value;
-		}
+		return param != null ? param.getFontValue() : null;
 	}
 
 	public static void setFontParameter(String name, Font font) {
 		Parameter param = settingTypeMap.get(name);
-		if (param != null && param.type == FONT_PARAM) {
-			param.value = font;
+		if (param != null) {
+			param.setFontValue(font);
 		}
-	}
-
-	private static Font getFontFromString(String str) {
-		if (str != null) {
-			String[] s = str.split("[ \t]*[;][ \t]*");
-			if (s.length >= 3) {
-				return new Font(s[0], Integer.parseInt(s[1]), Integer.parseInt(s[2]));
-			}
-		}
-		return null;
 	}
 
 	public static void setColorParam(String name, Color value) {
 		Parameter param = settingTypeMap.get(name);
-		if (param != null && param.type == COLOR_PARAM) {
-			param.value = value;
+		if (param != null && param.getType() == Parameter.COLOR_PARAM) {
+			param.setColorValue(value);
 		}
 	}
 
 	public static Color getColorParam(String name) {
 		Parameter param = settingTypeMap.get(name);
-		if (param != null && param.type == COLOR_PARAM) {
-			return (Color) param.value;
-		} else {
-			return null;
-		}
+		return param != null ? param.getColorValue() : null;
 	}
 
-	@SuppressWarnings("unchecked")
 	public static List<String> getStringListParam(String name) {
 		Parameter param = settingTypeMap.get(name);
-		if (param != null && param.type == STRING_LIST_PARAM) {
-			return (List<String>) param.value;
-		} else {
-			return new ArrayList<>();
-		}
+		return param != null ? param.getStringListValue() : new ArrayList<>();
 	}
 
-	@SuppressWarnings("unchecked")
 	public static void setStringListParam(String name, String value) {
 		Parameter param = settingTypeMap.get(name);
-		if (param != null && param.type == STRING_LIST_PARAM) {
-			param.value = new ArrayList<String>();
-			if (value != null) {
-				for (String str : Arrays.asList(value.split("\\s*;\\s*"))) {
-					((List<String>)param.value).add(str);
-				}
-			}
-		}
-	}
-
-	@SuppressWarnings("unchecked")
-	public static String getStringListParamAsString(String name) {
-		Parameter param = settingTypeMap.get(name);
-		if (param != null && param.type == STRING_LIST_PARAM) {
-			StringBuilder buf = new StringBuilder();
-			for (String str : (List<String>) param.value) {
-				if (buf.length()>0) {
-					buf.append(";");
-				}
-				buf.append(str);
-			}
-			return buf.toString();
-		} else {
-			return "";
-		}
-	}
-
-	/** Class used to store one parameter.*/
-	static class Parameter {
-		String name;
-		int type;
-		Object value;
-		public Parameter(String name, int type, Object value) {
-			this.name = name;
-			this.type = type;
-			this.value = value;
-		}
-		public String getStringValue() {
-			if (type == STRING_PARAM) {
-				return (String) value;
-			} else {
-				return "";
-			}
-		}
-		public Integer getIntegerValue() {
-			if (type == INTEGER_PARAM) {
-				return (Integer) value;
-			} else {
-				return 0;
-			}
-		}
-		public Boolean getBooleanValue() {
-			if (type == INTEGER_PARAM) {
-				return (Boolean) value;
-			} else {
-				return Boolean.FALSE;
-			}
-		}
-		@SuppressWarnings("unchecked")
-		public List<String> getListValue() {
-			if (type == INDEXED_STRING_PARAM) {
-				return (List<String>) value;
-			} else {
-				return new ArrayList<>();
-			}
-		}
-		public void setValue(String value) {
-			this.value = value;
-		}
-		@Override
-		public String toString() {
-			StringBuilder buf = new StringBuilder();
-			buf.append("Parameter[");
-			buf.append(" .name=").append(name);
-			buf.append(" .type=").append(type);
-			buf.append(" .value=").append(value);
-			buf.append("]");
-			return buf.toString();
+		if (param != null) {
+			param.parseValue(value);
 		}
 	}
 
 	public static Font getCommodoreFont() throws CbmException {
 		if (commodoreFont == null) {
 			try {
-				commodoreFont = Font.createFont(Font.TRUETYPE_FONT, Settings.class.getResourceAsStream("resources/"+Settings.DIR_FONT_NAME));
+				commodoreFont = Font.createFont(Font.TRUETYPE_FONT, Settings.class.getResourceAsStream("resources/" + Settings.DIR_FONT_NAME));
 			} catch (FontFormatException | IOException e) {
 				throw new CbmException("Failed to create font.", e);
 			}
 		}
 		if (commodoreScaledFont == null || commodoreFontSize != getFontSize()) {
 			commodoreFontSize = getFontSize();
-			commodoreScaledFont = commodoreFont.deriveFont((float)commodoreFontSize);
+			commodoreScaledFont = commodoreFont.deriveFont((float) commodoreFontSize);
 		}
 		return commodoreScaledFont;
 	}

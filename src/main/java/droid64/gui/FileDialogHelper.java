@@ -15,7 +15,7 @@ public class FileDialogHelper {
 	private static JFileChooser imageFileChooser = null;
 
 	private FileDialogHelper() {
-		// not used
+		super();
 	}
 
 	/**

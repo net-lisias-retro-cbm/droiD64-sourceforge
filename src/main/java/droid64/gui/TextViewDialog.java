@@ -8,8 +8,7 @@ import java.awt.Font;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.Toolkit;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
+import java.awt.Window;
 import java.awt.print.PageFormat;
 import java.awt.print.Printable;
 import java.awt.print.PrinterException;
@@ -19,6 +18,7 @@ import java.io.UnsupportedEncodingException;
 import java.util.Arrays;
 
 import javax.swing.JButton;
+import javax.swing.JComponent;
 import javax.swing.JDialog;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
@@ -59,10 +59,7 @@ import droid64.d64.Utility;
 public class TextViewDialog extends JDialog {
 
 	private static final long serialVersionUID = 1L;
-	private JTextPane textPane;
 	private MainPanel mainPanel;
-	private Font normalFont;
-	private Font cbmFont;
 
 	public TextViewDialog(String windowTitle, String title, byte[] data, MainPanel mainPanel) {
 		setModal(false);
@@ -72,23 +69,16 @@ public class TextViewDialog extends JDialog {
 			if (data == null || data.length == 0) {
 				dispose();
 			} else {
-				setup(title, filter(data), null, mainPanel);
+				setup(title, filter(data), Utility.MIMETYPE_TEXT, mainPanel);
 			}
 		} catch (UnsupportedEncodingException e) {
 			mainPanel.appendConsole("Failed to encode text.\n" + e);
 		}
 	}
 
-	public TextViewDialog(JDialog parent, String windowTitle, String title, String message, boolean isModal, String mimetype, MainPanel mainPanel) {
+	public TextViewDialog(Window parent, String windowTitle, String title, String message, boolean isModal, String mimetype, MainPanel mainPanel) {
 		super(parent, windowTitle);
 		setModal(isModal);
-		setTitle(windowTitle);
-		setup(title, message, mimetype, mainPanel);
-	}
-
-	public TextViewDialog(JFrame parent, String windowTitle, String title, String message, String mimetype, MainPanel mainPanel) {
-		super(parent, windowTitle);
-		setModal(true);
 		setTitle(windowTitle);
 		setup(title, message, mimetype, mainPanel);
 	}
@@ -105,9 +95,20 @@ public class TextViewDialog extends JDialog {
 		return new String(Arrays.copyOfRange(filtered, 0, out), "ISO-8859-1");
 	}
 
+	private void setTextFont(JComponent component, boolean useCbmFont) {
+		Font font;
+		try {
+			font = useCbmFont ? Settings.getCommodoreFont() : new JPanel().getFont();
+		} catch (CbmException e) {
+			mainPanel.appendConsole("Failed to set Commodore font. Using default font.\n"+e);
+			font = new JPanel().getFont();
+		}
+		component.setFont(font);
+	}
+
 	private void setup(final String title, final String message, final String mimetype, final MainPanel mainPanel) {
 		this.mainPanel = mainPanel;
-		textPane = new JTextPane();
+		JTextPane textPane = new JTextPane();
 		if (mimetype != null) {
 			textPane.setContentType(mimetype);
 		} else {
@@ -117,46 +118,21 @@ public class TextViewDialog extends JDialog {
 		textPane.setEditable(false);
 		textPane.setCaretPosition(0);
 
-		try {
-			cbmFont = Settings.getCommodoreFont();
-		} catch (CbmException e) {
-			mainPanel.appendConsole("Failed to set Commodore font. Using default font.\n"+e);
-			cbmFont = normalFont;
-		}
+		final JToggleButton c64ModeButton = new JToggleButton("C64 mode");
+		c64ModeButton.addActionListener(ae -> setTextFont(textPane, c64ModeButton.isSelected()));
+		c64ModeButton.setMnemonic('c');
 
 		final JButton okButton = new JButton("OK");
-		final JToggleButton c64ModeButton = new JToggleButton("C64 mode");
-		final JButton saveButton = new JButton("Save");
-		final JButton printButton = new JButton("Print");
-
+		okButton.addActionListener(ae -> dispose());
 		okButton.setMnemonic('o');
-		c64ModeButton.setMnemonic('c');
+
+		final JButton saveButton = new JButton("Save");
+		saveButton.addActionListener(ae -> save(message));
 		saveButton.setMnemonic('s');
+
+		final JButton printButton = new JButton("Print");
+		printButton.addActionListener(ae -> print(message, title, c64ModeButton.isSelected()));
 		printButton.setMnemonic('p');
-
-		ActionListener listener = new ActionListener() {
-			@Override
-			public void actionPerformed(ActionEvent event) {
-				if ( event.getSource() == okButton ) {
-					dispose();
-				} else if ( event.getSource() == c64ModeButton ) {
-					if (c64ModeButton.isSelected()) {
-						textPane.setFont(cbmFont);
-					} else {
-						textPane.setFont(normalFont);
-					}
-				} else if ( event.getSource() == saveButton ) {
-					save(message);
-				} else if ( event.getSource() == printButton ) {
-					print(message, title, c64ModeButton.isSelected());
-				}
-			}
-		};
-
-		okButton.addActionListener(listener);
-		c64ModeButton.addActionListener(listener);
-		saveButton.addActionListener(listener);
-		printButton.addActionListener(listener);
 
 		JPanel buttonPanel = new JPanel();
 		if (!Utility.MIMETYPE_HTML.equals(mimetype)) {

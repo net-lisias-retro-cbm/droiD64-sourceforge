@@ -139,8 +139,7 @@ public class D67 extends DiskImage {
 		int sec = 0;
 		if (num >= CPM_BLOCK_COUNT) {
 			return null;
-		}
-		if (imageFormat == D64_CPM_C64_IMAGE_TYPE) {
+		} else if (imageFormat == D64_CPM_C64_IMAGE_TYPE) {
 			if (num >= 544) {
 				return null;
 			}
@@ -275,12 +274,8 @@ public class D67 extends DiskImage {
 							throw new CbmException("Failed to find track/sector for allocation unit " + au + ".\n");
 						}
 						int srcPos = getSectorOffset(ts.getTrack(), ts.getSector());
-						for (int c=0; c<BLOCK_SIZE; c++) {
-							if (dstPos < data.length) {
-								data[dstPos++] = cbmDisk[srcPos + c];
-							} else {
-								break;
-							}
+						for (int c=0; c<BLOCK_SIZE && dstPos < data.length; c++) {
+							data[dstPos++] = cbmDisk[srcPos + c];
 						}
 					}
 				}
@@ -383,86 +378,84 @@ public class D67 extends DiskImage {
 		boolean found;
 		if ((block.track == 0) || (block.track > TRACK_COUNT)) {
 			// If we somehow already ran off the disk then there are no more free sectors left.
-			found = false;
-		} else {
-			int tries = 3;			// Set the number of tries to three.
-			found = false;			// We found no free sector yet.
-			int curTrack = block.track;		// Remember the current track number.
-			while (!found && tries > 0) {
-				// Keep trying until we find a free sector or run out of tries.
-				if (isTrackFree(block.track)) {
-
-					// If there's, at least, one free sector on the track then get searching.
-					if (block.track == curTrack || !geosFormat) {
-						// If this is a non-GEOS disk or we're still on the same track of a GEOS-formatted disk then...
-						block.sector = block.sector + C1541_INTERLEAVE;	// Move away an "interleave" number of sectors.
-						if (geosFormat && block.track >= 25) {
-							// Empirical GEOS optimization, get one sector backwards if over track 25.
-							block.sector--;
-						}
-					} else {
-						// For a different track of a GEOS-formatted disk, use sector skew.
-						block.sector = (block.track - curTrack) << 1 + 4 + C1541_INTERLEAVE;
-					}
-					int maxSector = D67Constants.D67_TRACKS[block.track].getSectors();	// Determine how many sectors there are on track.
-					while (block.sector >= maxSector) {
-						// If we ran off the track then correct the result.
-						block.sector = block.sector - maxSector + 1;	// Subtract the number of sectors on the track.
-						if (block.sector > 0 && !geosFormat) {
-							// Empirical optimization, get one sector backwards if beyond sector zero.
-							block.sector--;
-						}
-					}
-					int curSector = block.sector;	// Remember the first sector to be checked.
-					do {
-						found = isSectorFree(block.track, block.sector);
-						if (!found) {
-							block.sector++;	// Try next sector
-						}
-						if (block.sector >= maxSector) {
-							block.sector = 0;	// Went off track, wrap around to sector 0.
-						}
-					} while (!found && block.sector != curSector);	// Continue until finding a free sector, or we are back on the curSector again.
-					if (!found) {
-						// According to the free sector counter in BAM, this track should have free sectors, but it didn't.
-						// Try a different track. Obviously, this disk needs to be validated.
-						feedbackMessage.append("Warning: Track ").append(block.track).append(" should have at least one free sector, but didn't.");
-						if (block.track > FIRST_TRACK && block.track <= DIR_TRACK) {
-							block.track = block.track - 1 ;
-						} else if (block.track < TRACK_COUNT && block.track > DIR_TRACK) {
-							block.track = block.track + 1 ;
-						} else {
-							tries--;
-						}
+			return null;
+		}
+		int tries = 3;			// Set the number of tries to three.
+		found = false;			// We found no free sector yet.
+		int curTrack = block.track;		// Remember the current track number.
+		while (!found && tries > 0) {
+			// Keep trying until we find a free sector or run out of tries.
+			if (isTrackFree(block.track)) {
+				// If there's, at least, one free sector on the track then get searching.
+				if (block.track == curTrack || !geosFormat) {
+					// If this is a non-GEOS disk or we're still on the same track of a GEOS-formatted disk then...
+					block.sector = block.sector + C1541_INTERLEAVE;	// Move away an "interleave" number of sectors.
+					if (geosFormat && block.track >= 25) {
+						// Empirical GEOS optimization, get one sector backwards if over track 25.
+						block.sector--;
 					}
 				} else {
-					if (block.track == DIR_TRACK) {
-						// If we already tried the directory track then there are no more tries.
-						tries = 0;
+					// For a different track of a GEOS-formatted disk, use sector skew.
+					block.sector = (block.track - curTrack) << 1 + 4 + C1541_INTERLEAVE;
+				}
+				int maxSector = D67Constants.D67_TRACKS[block.track].getSectors();	// Determine how many sectors there are on track.
+				while (block.sector >= maxSector) {
+					// If we ran off the track then correct the result.
+					block.sector = block.sector - maxSector + 1;	// Subtract the number of sectors on the track.
+					if (block.sector > 0 && !geosFormat) {
+						// Empirical optimization, get one sector backwards if beyond sector zero.
+						block.sector--;
+					}
+				}
+				int curSector = block.sector;	// Remember the first sector to be checked.
+				do {
+					found = isSectorFree(block.track, block.sector);
+					if (!found) {
+						block.sector++;	// Try next sector
+					}
+					if (block.sector >= maxSector) {
+						block.sector = 0;	// Went off track, wrap around to sector 0.
+					}
+				} while (!found && block.sector != curSector);	// Continue until finding a free sector, or we are back on the curSector again.
+				if (!found) {
+					// According to the free sector counter in BAM, this track should have free sectors, but it didn't.
+					// Try a different track. Obviously, this disk needs to be validated.
+					feedbackMessage.append("Warning: Track ").append(block.track).append(" should have at least one free sector, but didn't.");
+					if (block.track > FIRST_TRACK && block.track <= DIR_TRACK) {
+						block.track = block.track - 1 ;
+					} else if (block.track < TRACK_COUNT && block.track > DIR_TRACK) {
+						block.track = block.track + 1 ;
 					} else {
-						if (block.track < DIR_TRACK) {
-							block.track --;	//If we're below the directory track then move one track downwards.
-							if (block.track < FIRST_TRACK) {
-								block.track = DIR_TRACK + 1; //If we ran off the disk then step back to the track just above the directory track and zero the sector number.
-								block.sector = 0;
-								//If there are no tracks available above the directory track then there are no tries left; otherwise just decrease the number of tries.
-								if (block.track <= TRACK_COUNT) {
-									tries--;
-								} else {
-									tries = 0;
-								}
+						tries--;
+					}
+				}
+			} else {
+				if (block.track == DIR_TRACK) {
+					// If we already tried the directory track then there are no more tries.
+					tries = 0;
+				} else {
+					if (block.track < DIR_TRACK) {
+						block.track --;	//If we're below the directory track then move one track downwards.
+						if (block.track < FIRST_TRACK) {
+							block.track = DIR_TRACK + 1; //If we ran off the disk then step back to the track just above the directory track and zero the sector number.
+							block.sector = 0;
+							//If there are no tracks available above the directory track then there are no tries left; otherwise just decrease the number of tries.
+							if (block.track <= TRACK_COUNT) {
+								tries--;
+							} else {
+								tries = 0;
 							}
-						} else {	//if track >= DirTrack then.
-							block.track++;	//If we're above the directory track then move one track upwards.
-							if (block.track > TRACK_COUNT) {
-								block.track = DIR_TRACK - 1;	//If we ran off the disk then step back to the track just below the directory track and zero the sector number.
-								block.sector = 0;
-								//If there are no tracks available below the directory track then there are no tries left; otherwise just decrease the number of tries.
-								if (block.track >= FIRST_TRACK) {
-									tries--;
-								} else {
-									tries = 0;
-								}
+						}
+					} else {	//if track >= DirTrack then.
+						block.track++;	//If we're above the directory track then move one track upwards.
+						if (block.track > TRACK_COUNT) {
+							block.track = DIR_TRACK - 1;	//If we ran off the disk then step back to the track just below the directory track and zero the sector number.
+							block.sector = 0;
+							//If there are no tracks available below the directory track then there are no tries left; otherwise just decrease the number of tries.
+							if (block.track >= FIRST_TRACK) {
+								tries--;
+							} else {
+								tries = 0;
 							}
 						}
 					}
@@ -529,38 +522,37 @@ public class D67 extends DiskImage {
 		int dataRemain = saveData.length;
 		feedbackMessage.append("SaveFileData: ").append(dataRemain).append(" bytes of data.\n");
 		TrackSector firstBlock = findFirstCopyBlock();
-		if (firstBlock != null) {
-			TrackSector block = new TrackSector(firstBlock.track, firstBlock.sector);
-			int thisTrack;
-			int thisSector;
-			int dataPos = 0;
-			while (dataRemain >= 0 && block != null) {
-				thisTrack = block.track;
-				thisSector = block.sector;
-				markSectorUsed(thisTrack, thisSector);
-				if (dataRemain >= (BLOCK_SIZE - 2)) {
-					block = findNextCopyBlock(block);
-					if (block != null) {
-						fillSector(thisTrack, thisSector, dataPos, block.track, block.sector, saveData);
-						usedBlocks++;
-						dataRemain = dataRemain - (BLOCK_SIZE - 2);
-						dataPos = dataPos + (BLOCK_SIZE - 2);
-					} else {
-						feedbackMessage.append("\nsaveFileData: Error: Not enough free sectors on disk. Disk is full.\n");
-						firstBlock = null;
-					}
-				} else {
-					fillSector(thisTrack, thisSector, dataPos, 0, dataRemain + 1, saveData);
-					usedBlocks++;
-					dataRemain = -1;
-				}
-			}
-			if (dataRemain <= 0) {
-				feedbackMessage.append("All data written ("+usedBlocks+" blocks).\n");
-			}
-		} else {
+		if (firstBlock == null) {
 			feedbackMessage.append("\nsaveFileData: Error: No free sectors on disk. Disk is full.\n");
 			return null;
+		}
+		TrackSector block = new TrackSector(firstBlock.track, firstBlock.sector);
+		int thisTrack;
+		int thisSector;
+		int dataPos = 0;
+		while (dataRemain >= 0 && block != null) {
+			thisTrack = block.track;
+			thisSector = block.sector;
+			markSectorUsed(thisTrack, thisSector);
+			if (dataRemain >= (BLOCK_SIZE - 2)) {
+				block = findNextCopyBlock(block);
+				if (block != null) {
+					fillSector(thisTrack, thisSector, dataPos, block.track, block.sector, saveData);
+					usedBlocks++;
+					dataRemain = dataRemain - (BLOCK_SIZE - 2);
+					dataPos = dataPos + (BLOCK_SIZE - 2);
+				} else {
+					feedbackMessage.append("\nsaveFileData: Error: Not enough free sectors on disk. Disk is full.\n");
+					firstBlock = null;
+				}
+			} else {
+				fillSector(thisTrack, thisSector, dataPos, 0, dataRemain + 1, saveData);
+				usedBlocks++;
+				dataRemain = -1;
+			}
+		}
+		if (dataRemain <= 0) {
+			feedbackMessage.append("All data written ("+usedBlocks+" blocks).\n");
 		}
 		return firstBlock;
 	}
@@ -581,36 +573,35 @@ public class D67 extends DiskImage {
 			cbmFile.setDirTrack(0);
 			cbmFile.setDirSector(0);
 			return true;
-		} else {
-			//find the correct entry where to write new values for dirTrack and dirSector
-			int thisTrack = DIR_TRACK;
-			int thisSector = 1;
-			int entryPosCount = 8;
-			while (dirEntryNumber >= entryPosCount) {
-				int nextTrack = getCbmDiskValue(thisTrack, thisSector, 0x00);
-				int nextSector = getCbmDiskValue(thisTrack, thisSector, 0x01);
-				if (nextTrack == 0) {
-					nextTrack = thisTrack;
-					boolean found = false;
-					for (int i=0; !found && i<D67Constants.DIR_SECTORS.length; i++ ) {
-						nextSector = D67Constants.DIR_SECTORS[i];
-						found = isSectorFree(nextTrack, nextSector);
-					}
-					if (found) {
-						nextTrack = thisTrack;
-						allocSector(thisTrack, thisSector, nextTrack, nextSector);
-						feedbackMessage.append("Allocated additonal directory sector (").append(nextTrack).append("/").append(nextSector).append(") for dir entry ").append(dirEntryNumber).append(".\n");
-					} else {
-						feedbackMessage.append( "Error: no more directory sectors. Can't add file.\n");
-						return false;
-					}
-				}
-				thisTrack = nextTrack;
-				thisSector = nextSector;
-				entryPosCount += 8;
-			}
-			return true;
 		}
+		//find the correct entry where to write new values for dirTrack and dirSector
+		int thisTrack = DIR_TRACK;
+		int thisSector = 1;
+		int entryPosCount = 8;
+		while (dirEntryNumber >= entryPosCount) {
+			int nextTrack = getCbmDiskValue(thisTrack, thisSector, 0x00);
+			int nextSector = getCbmDiskValue(thisTrack, thisSector, 0x01);
+			if (nextTrack == 0) {
+				nextTrack = thisTrack;
+				boolean found = false;
+				for (int i=0; !found && i<D67Constants.DIR_SECTORS.length; i++ ) {
+					nextSector = D67Constants.DIR_SECTORS[i];
+					found = isSectorFree(nextTrack, nextSector);
+				}
+				if (found) {
+					nextTrack = thisTrack;
+					allocSector(thisTrack, thisSector, nextTrack, nextSector);
+					feedbackMessage.append("Allocated additonal directory sector (").append(nextTrack).append("/").append(nextSector).append(") for dir entry ").append(dirEntryNumber).append(".\n");
+				} else {
+					feedbackMessage.append( "Error: no more directory sectors. Can't add file.\n");
+					return false;
+				}
+			}
+			thisTrack = nextTrack;
+			thisSector = nextSector;
+			entryPosCount += 8;
+		}
+		return true;
 	}
 
 	private void allocSector(int thisTrack, int thisSector, int nextTrack, int nextSector) {
@@ -639,11 +630,7 @@ public class D67 extends DiskImage {
 			sector = getCbmDiskValue(entryPos + 0x01);
 			entryPosCount += 8;
 		}
-		if (track == 0) {
-			return -1;
-		} else {
-			return getSectorOffset(track, sector) + (dirEntryNumber & 0x07) * DIR_ENTRY_SIZE;
-		}
+		return track == 0 ? -1 : getSectorOffset(track, sector) + (dirEntryNumber & 0x07) * DIR_ENTRY_SIZE;
 	}
 
 	@Override
@@ -798,7 +785,7 @@ public class D67 extends DiskImage {
 		buf.append("D67[").append(" compressed=").append(compressed).append(" imageFormat=").append(imageFormat)
 		.append(" blocksFree=").append(getBlocksFree()).append(" cbmFile=[");
 		for (int i=0; cbmFile!=null && i<cbmFile.length && i<filesUsedCount; i++) {
-			if (i>0) {
+			if (i > 0) {
 				buf.append(", ");
 			}
 			buf.append(this.cbmFile[i]);

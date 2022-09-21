@@ -4,8 +4,6 @@ import java.awt.BorderLayout;
 import java.awt.Container;
 import java.awt.Dimension;
 import java.awt.Toolkit;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.util.ArrayList;
@@ -86,22 +84,14 @@ public class ValidationFrame extends JFrame {
 		final JButton okButton = new JButton("OK");
 		okButton.setMnemonic('o');
 		okButton.setToolTipText("Leave Validation errors.");
-		okButton.addActionListener(new ActionListener() {
-			@Override
-			public void actionPerformed(ActionEvent event) {
-				dispose();
-			}
-		});
+		okButton.addActionListener(ae -> dispose());
 
 		repairButton = new JButton("Repair");
 		repairButton.setToolTipText("Repair selected validation errors.");
 		repairButton.setEnabled(!errorMap.isEmpty());
-		repairButton.addActionListener(new ActionListener() {
-			@Override
-			public void actionPerformed(ActionEvent event) {
-				if (!errorMap.isEmpty()) {
-					repair(errorTable, diskPanel, textArea);
-				}
+		repairButton.addActionListener(ae -> {
+			if (!errorMap.isEmpty()) {
+				repair(errorTable, diskPanel, textArea);
 			}
 		});
 

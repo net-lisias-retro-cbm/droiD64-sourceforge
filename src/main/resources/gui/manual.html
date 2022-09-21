@@ -7,8 +7,8 @@
  dt {font-weight: bold;}
  dd {margin-bottom:10px;}
  table {margin-left:10px;border-spacing:0px;border-collapse:collapse;}
- th {text-align:left;font-weight:bold;padding-right:10px;}
- td {padding-right:10px;}
+ th {text-align:left;font-weight:bold;padding-right:10px;padding-bottom:0px;padding-top:0px;}
+ td {padding-right:10px;padding-bottom:0px;padding-top:0px;}
  a {text-decoration:none;}
  a:hover {text-decoration:underline;} 
 </style>
@@ -29,7 +29,7 @@
 <h2>1. Introduction</h2>
 <p>
 DroiD64 is an application used to work with disk images files from the Commodore 64, Commodore 128, Commodore VIC20, Commodore PET and various emulators of this family of computers.
-DroiD64 is written i Java to be portable to the various platforms supported by Java. Java 7 runtime or higher is require.</p>
+DroiD64 is written in Java to be portable to the various platforms supported by Java. Java 8 runtime or higher is required.</p>
 
 <p>This software works with disk images, and there might be technical deviations in the formats. 
 Sometimes on purpose by a developer of a certain software package and sometimes by rare Commodore hardware.
@@ -49,7 +49,7 @@ How to do this depends on your operating system and the way you start DroiD64.</
 </pre>
 <p>Example commandline for Microsoft Windows with a MySQL database driver:</p>
 <pre>
-  java -Xmx1024m -classpath C:\mysql-connector-java-5.1.44/mysql-connector-java-5.1.44-bin.jar;droid64-${project.version}.jar droid64.DroiD64
+  java -Xmx1024m -classpath C:\mysql-connector-java-5.1.44\mysql-connector-java-5.1.44-bin.jar;droid64-${project.version}.jar droid64.DroiD64
 </pre>
 
 <hr/>
@@ -71,7 +71,7 @@ How to do this depends on your operating system and the way you start DroiD64.</
 <h2>3. Plugins</h2>
 <p>Plugins in DroiD64 are used to call external programs on your computer.
 This can be any kind of program, e.g. OpenCBM utilities to read/write images to and from real Commodore disk drives or the VICE emulator.</p>
-A plugin definition consist of several configurable fields. 
+<p>A plugin definition consist of several configurable fields. 
 The <b>label</b> which is the text on the button. 
 The <b>command</b> which is the program which will be executed.
 The <b>arguments</b> which are command line arguments forwarded to your command.
@@ -91,7 +91,7 @@ The <b>fork new thread</b> checkbox, which when checked will make the plugin to 
 </ul>
 
 <p><b>Example:</b></p>
-  <table cellspacing="0" cellpadding="0" border="1">
+  <table border="1">
     <tr><th>Label:</th><td>VICE 64</td>
     <tr><th>Command:</th><td>x64</td>
     <tr><th>Arguments:</th><td>-drive8type {DriveType} {ImageFiles}</td>
@@ -114,7 +114,7 @@ The <b>fork new thread</b> checkbox, which when checked will make the plugin to 
  <dd>Open block allocation map. When double clicking a sector when in <i>view</i> mode, the hexdump of the sector will be show. When in <i>edit</i> mode you can toggle a sector between allocated and free. </dd>
  <dt>Validate Disk</dt>
  <dd>
-   <p>The validation feature of DroiD64 will scan the opened disk image for problems. Problems like:<br>
+   <p>The validation feature of DroiD64 will scan the opened disk image for problems. Problems like:</p>
    <ul>
      <li>Sectors which are allocated, but not used by any file.</li>
      <li>Sectors which are free, but used by a file.</li>
@@ -123,13 +123,15 @@ The <b>fork new thread</b> checkbox, which when checked will make the plugin to 
      <li>A sector being referred to by more than one file.</li>
      <li>The free sector counter in the BAM doesn't match the sectors used by files.</li>
    </ul>
-   DroiD64 is able to correct these problems, <b>but</b> on some disks these deviations are on purpose and required by the program(s) on the disk.
+   <p>DroiD64 is able to correct these problems, <b>but</b> on some disks these deviations are on purpose and required by the program(s) on the disk.
    Some games, megademos and other copy protected software depend on these errors to work. When in doubt, make backups or leave the validation errors.</p>
  </dd>
  <dt>Rename Disk</dt>
  <dd>Opens a rename dialog asking for a new name and disk ID for the mounted image.</dd>
  <dt>Print Directory</dt>
  <dd>Print the current file listing.</dd>
+ <dt>Open same as other</dt>
+ <dd>In the active file panel, open the same folder or image is in the inactive file panel.</dd>
 </dl>
 
 <h3>4.2. File operations</h3>
@@ -143,7 +145,7 @@ The <b>fork new thread</b> checkbox, which when checked will make the plugin to 
  <dt>Rename File</dt>
  <dd>Rename selected file(s).</dd>
  <dt>MD5 checksum</dt>
- <dd>Print the slected file(s) MD5 checksum on the console. Useful to compare files.</dd>
+ <dd>Print the selected file(s) MD5 checksum on the console. Useful to compare files.</dd>
 </dl>
 
 <h3>4.3. View operations</h3>
@@ -158,7 +160,6 @@ The <b>fork new thread</b> checkbox, which when checked will make the plugin to 
  <dd>View the selected file as a BASIC listing.</dd>
 </dl>
 
-
 <hr/>
 <h2>5. Database</h2>
 <p>
@@ -171,7 +172,7 @@ Different databases use different drivers, connection URLs and syntax. These are
   <dt><b>JDBC driver class</b></dt>
   <dd>This is the driver implementation java class which is provided by the database vendor. Without this, DroiD64 will not know which driver to use. This is normally provided by a jar file which must be in the java class path for DroiD64.</dd>
   <dt><b>Connection URL</b></dt>
-  <dd>The JDBC URL used to specify the location of your database. Typically it include one or more of hostname, port number, file name.</dd>
+  <dd>The JDBC URL used to specify the location of your database. Typically it includes one or more of hostname, port number, file name.</dd>
   <dt><b>User</b></dt>
   <dd>The user name used to authenticate to your database.</dd>
   <dt><b>Password</b></dt>
@@ -187,8 +188,8 @@ DroiD64 has been tested with MySQL, PostgreSQL, H2 and FirebirdSQL, but chances 
 If you manage to use DroiD64 with some other database, please mail me the details and this manual will be updated.
 </p>
 
-<h3>5.1. Searching</h2>
-<p>Once the database setup is done in DroiD64 will the <b>Search</b> top menu be available.
+<h3>5.1. Searching</h3>
+<p>Once the database setup is done in DroiD64 will the <b>Search</b> top menu be available.</p>
 <dl>
 <dt>Search</dt><dd>Opens a search dialog</dd>
 <dt>Scan for disk images</dt><dd>Opens a directory dialog asking for a folder, which to start search recursively for disk images files which are supported by DroiD64. It can take a while if there are many files and folders to scan.</dd>
@@ -196,7 +197,7 @@ If you manage to use DroiD64 with some other database, please mail me the detail
 </dl>
 
 <h3>5.2.  MySQL </h3>
-  <table cellspacing="0" cellpadding="0">
+  <table style="border-spacing:0px;padding=0px;border-collapse:separate;">
     <tr><th>JDBC driver class:</th><td>com.mysql.jdbc.Driver</td>
     <tr><th>Connection URL:</th><td>jdbc:mysql://localhost:3306/droid64</td>
     <tr><th>User:</th><td>droid64</td>
@@ -207,7 +208,7 @@ If you manage to use DroiD64 with some other database, please mail me the detail
   and add its jar file to the java class path.</p>
 
 <h3>5.3. PostgreSQL </h3>
-  <table cellspacing="0" cellpadding="0">
+  <table>
     <tr><th>JDBC driver class:</th><td>org.postgresql.Driver</td>
     <tr><th>Connection URL:</th><td>jdbc:postgresql://localhost:5432/droid64</td>
     <tr><th>User:</th><td>droid64</td>
@@ -216,7 +217,7 @@ If you manage to use DroiD64 with some other database, please mail me the detail
   </table>
 
 <h3>5.4. H2 </h3>
-  <table cellspacing="0" cellpadding="0">
+  <table>
     <tr><th>JDBC driver class:</th><td>org.h2.Driver</td>
     <tr><th>Connection URL:</th><td>jdbc:h2:file:~/.droid64.h2;INIT=RUNSCRIPT FROM '~/.droid64.sql'</td>
     <tr><th>User:</th><td>droid64</td>
@@ -226,17 +227,17 @@ If you manage to use DroiD64 with some other database, please mail me the detail
   <p>You need to open the DroiD64 database settings dialog.<br>
   Press the <i>Database SQL</i> button and save it on your computer. <br>
   Modify the connection URL in the file you just saved.<br>
-  The connection URL contains the path to the database file and the SQL script to initate the database.</p>
+  The connection URL contains the path to the database file and the SQL script to initiate the database.</p>
 
 <h3>5.5. Firebird SQL</h3>
-  <table cellspacing="0" cellpadding="0">
+  <table>
     <tr><th>JDBC driver class:</th><td>org.firebirdsql.jdbc.FBDriver</td>
     <tr><th>Connection URL:</th><td>jdbc:firebirdsql://localhost:3050//var/lib/firebird/data/droid64?encoding=ISO8859_1</td>
     <tr><th>User:</th><td>droid64</td>
     <tr><th>Password:</th><td>uridium</td>
     <tr><th>Limit type:</th><td>FIRST</td>
   </table>
-  <p>In Firebird SQL version 3, you probably need to edit your <tt>firebird.conf</tt> file and set "<i>WireCrypt = Enabled</i>".</p>
+  <p>In Firebird SQL version 3, you probably need to edit your <span style="font-family: monospace;">firebird.conf</span> file and set "<i>WireCrypt = Enabled</i>".</p>
 
 </body>
 </html>

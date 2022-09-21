@@ -6,7 +6,6 @@ import java.awt.Font;
 import java.awt.GridLayout;
 import java.awt.Insets;
 import java.awt.Toolkit;
-import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
@@ -128,9 +127,7 @@ public class MainPanel implements Serializable {
 	private static final String LBL_INSERTERROR = "insertError";
 
 	// BUTTONS
-	private JButton loadDiskButton;
 	private JButton unloadDiskButton ;
-	private JButton newDiskButton;
 	private JButton showBamButton;
 	private JButton validateDiskButton;
 	private JButton renameDiskButton;
@@ -141,15 +138,9 @@ public class MainPanel implements Serializable {
 	private JButton newFileButton;
 	private JButton delPRGButton;
 	private JButton renamePRGButton;
-	private JButton imageViewButton;
-	private JButton hexViewButton;
-	private JButton viewTextButton;
-	private JButton basicViewButton;
 	/** The plugin buttons. Used to be able to change the label from settings. */
 	private JButton[] pluginButtons = new JButton[Settings.MAX_PLUGINS];
 	private JToggleButton consoleHideButton;
-	private JButton settingsButton;
-	private JButton exitButton;
 	private JFrame parent;
 	/** The menu shown when database is used */
 	private JMenu searchMenu;
@@ -245,10 +236,8 @@ public class MainPanel implements Serializable {
 		createOtherButtons(parent);
 		// Put buttons in GUI
 		JPanel buttonPanel = new JPanel(new GridLayout(NUM_BUTTON_ROWS, NUM_BUTTON_COLUMNS));
-		for (Entry<Button, JComponent> entry : buttonMap.entrySet()) {
-			buttonPanel.add(entry.getValue());
+		buttonMap.entrySet().forEach(entry -> buttonPanel.add(entry.getValue()));
 
-		}
 		JPanel listButtonPanel = new JPanel(new BorderLayout());
 		listButtonPanel.add(dirListPanel, BorderLayout.CENTER);
 		listButtonPanel.add(buttonPanel, BorderLayout.SOUTH);
@@ -348,15 +337,7 @@ public class MainPanel implements Serializable {
 	private void unloadDiskImage() {
 		DiskPanel diskPanel = getActiveDiskPanel();
 		if  (diskPanel != null) {
-			if (diskPanel.isImageLoaded()) {
-				diskPanel.unloadDisk();
-			} else {
-				String dir = diskPanel.getCurrentImagePath();
-				File dirfile = dir != null ? new File(dir) : null;
-				if (dirfile != null && dirfile.getParent() != null) {
-					diskPanel.loadLocalDirectory(dirfile.getParent());
-				}
-			}
+			diskPanel.unloadDisk();
 			setButtonState();
 		}
 	}
@@ -395,16 +376,13 @@ public class MainPanel implements Serializable {
 
 	private void createOtherButtons(final JFrame parent) {
 		ExternalProgram[] externalPrograms = Settings.getExternalPrograms();
-		ActionListener pluginButtonListener = new ActionListener() {
-			@Override
-			public void actionPerformed(ActionEvent event) {
-				for (int cnt = 0; cnt < Settings.getExternalPrograms().length; cnt ++){
-					if ( event.getSource() == pluginButtons[cnt] ){
-						DiskPanel diskPanel = getActiveDiskPanel();
-						ExternalProgram prg = Settings.getExternalPrograms()[cnt];
-						if (diskPanel != null && prg != null) {
-							diskPanel.doExternalProgram(prg);
-						}
+		ActionListener pluginButtonListener = event -> {
+			for (int cnt = 0; cnt < Settings.getExternalPrograms().length; cnt ++){
+				if ( event.getSource() == pluginButtons[cnt] ){
+					DiskPanel diskPanel = getActiveDiskPanel();
+					ExternalProgram prg = Settings.getExternalPrograms()[cnt];
+					if (diskPanel != null && prg != null) {
+						diskPanel.doExternalProgram(prg);
 					}
 				}
 			}
@@ -414,135 +392,83 @@ public class MainPanel implements Serializable {
 			String tooltip = externalPrograms[i] != null ? externalPrograms[i].getDescription() : null;
 			pluginButtons[i] = createButton(label != null ? label : "", Integer.toString(i+1).charAt(0), PLUGIN_IDS[i], tooltip, pluginButtonListener);
 		}
-		consoleHideButton = createToggleButton(Resources.DROID64_BUTTON_HIDECONSOLE, 'e', Button.HIDE_CONSOLE_BUTTON, new ActionListener() {
-			@Override
-			public void actionPerformed(ActionEvent event) {
-				if (event.getSource() == consoleHideButton) {
-					boolean show = !consoleHideButton.isSelected();
-					splitPane.getBottomComponent().setVisible(show);
-					if (show) {
-						splitPane.setDividerLocation(dividerLoc);
-						splitPane.setDividerSize(dividerSize);
-					} else {
-						dividerLoc = splitPane.getDividerLocation();
-						dividerSize = splitPane.getDividerSize();
-						splitPane.setDividerSize(0);
-					}
-				}
+		consoleHideButton = createToggleButton(Resources.DROID64_BUTTON_HIDECONSOLE, 'e', Button.HIDE_CONSOLE_BUTTON, ae-> {
+			boolean show = !consoleHideButton.isSelected();
+			splitPane.getBottomComponent().setVisible(show);
+			if (show) {
+				splitPane.setDividerLocation(dividerLoc);
+				splitPane.setDividerSize(dividerSize);
+			} else {
+				dividerLoc = splitPane.getDividerLocation();
+				dividerSize = splitPane.getDividerSize();
+				splitPane.setDividerSize(0);
 			}
 		});
-		settingsButton = createButton(Resources.DROID64_BUTTON_SETTINGS, 'S', Button.SETTINGS_BUTTON, new ActionListener() {
-			@Override
-			public void actionPerformed(ActionEvent event){
-				if (event.getSource() == settingsButton ) {
-					showSettings(parent);
-				}
-			}
-		});
-		exitButton = createButton(Resources.DROID64_BUTTON_EXIT, 'x', Button.EXIT_BUTTON, new ActionListener() {
-			@Override
-			public void actionPerformed(ActionEvent event){
-				if (event.getSource() == exitButton ) {
-					exitThisProgram();
-				}
-			}
-		});
+		createButton(Resources.DROID64_BUTTON_SETTINGS, 'S', Button.SETTINGS_BUTTON, ae -> showSettings(parent));
+		createButton(Resources.DROID64_BUTTON_EXIT, 'x', Button.EXIT_BUTTON, ae -> exitThisProgram());
 	}
 
 	private void createDiskOperationButtons(final JFrame parent) {
-		newDiskButton = createButton(Resources.DROID64_BUTTON_NEWDISK, 'n', Button.NEW_DISK_BUTTON, new ActionListener() {
-			@Override
-			public void actionPerformed(ActionEvent event) {
-				if (event.getSource() == newDiskButton) {
-					DiskPanel diskPanel = getActiveDiskPanel();
-					if (diskPanel != null) {
-						diskPanel.newDiskImage();
-					}
-				}
+		createButton(Resources.DROID64_BUTTON_NEWDISK, 'n', Button.NEW_DISK_BUTTON, ae -> {
+			DiskPanel diskPanel = getActiveDiskPanel();
+			if (diskPanel != null) {
+				diskPanel.newDiskImage();
 			}
 		});
-		loadDiskButton = createButton(Resources.DROID64_BUTTON_LOADDISK, 'l', Button.LOAD_DISK_BUTTON, new ActionListener() {
-			@Override
-			public void actionPerformed(ActionEvent event) {
-				if (event.getSource() == loadDiskButton) {
-					DiskPanel diskPanel = getActiveDiskPanel();
-					if (diskPanel != null) {
-						String imgFile = FileDialogHelper.openImageFileDialog(diskPanel.getDirectory(), null, false);
-						diskPanel.openDiskImage(imgFile, true);
-					}
-				}
+		createButton(Resources.DROID64_BUTTON_LOADDISK, 'l', Button.LOAD_DISK_BUTTON, ae -> {
+			DiskPanel diskPanel = getActiveDiskPanel();
+			if (diskPanel != null) {
+				String imgFile = FileDialogHelper.openImageFileDialog(diskPanel.getDirectory(), null, false);
+				diskPanel.openDiskImage(imgFile, true);
 			}
 		});
-		unloadDiskButton = createButton(Resources.DROID64_BUTTON_UNLOADDISK, 'u', Button.UNLOAD_DISK_BUTTON, new ActionListener() {
-			@Override
-			public void actionPerformed(ActionEvent event) {
-				unloadDiskImage();
+		unloadDiskButton = createButton(Resources.DROID64_BUTTON_UNLOADDISK, 'u', Button.UNLOAD_DISK_BUTTON, ae -> unloadDiskImage());
+		showBamButton = createButton(Resources.DROID64_BUTTON_SHOWBAM, 'b', Button.BAM_BUTTON, ae ->  {
+			DiskPanel diskPanel = getActiveDiskPanel();
+			if (diskPanel != null && diskPanel.isImageLoaded()) {
+				diskPanel.showBAM();
+			} else {
+				showErrorMessage(parent, LBL_NODISK);
 			}
 		});
-		showBamButton = createButton(Resources.DROID64_BUTTON_SHOWBAM, 'b', Button.BAM_BUTTON, new ActionListener() {
-			@Override
-			public void actionPerformed(ActionEvent event) {
-				if (event.getSource() == showBamButton) {
-					DiskPanel diskPanel = getActiveDiskPanel();
-					if (diskPanel != null && diskPanel.isImageLoaded()) {
-						diskPanel.showBAM();
-					} else {
-						showErrorMessage(parent, LBL_NODISK);
-					}
-				}
+		renameDiskButton = createButton(Resources.DROID64_BUTTON_RENAMEDISK, 'r', Button.RENAME_DISK_BUTTON, ae -> {
+			DiskPanel diskPanel = getActiveDiskPanel();
+			if (diskPanel != null && diskPanel.isImageLoaded()) {
+				diskPanel.renameDisk();
+			} else {
+				showErrorMessage(parent, LBL_NODISK);
+				return;
 			}
 		});
-		renameDiskButton = createButton(Resources.DROID64_BUTTON_RENAMEDISK, 'r', Button.RENAME_DISK_BUTTON, new ActionListener() {
-			@Override
-			public void actionPerformed(ActionEvent event) {
-				if (event.getSource() == renameDiskButton) {
-					DiskPanel diskPanel = getActiveDiskPanel();
-					if (diskPanel != null && diskPanel.isImageLoaded()) {
-						diskPanel.renameDisk();
-					} else {
-						showErrorMessage(parent, LBL_NODISK);
-						return;
-					}
-				}
-			}
-		});
-		validateDiskButton = createButton(Resources.DROID64_BUTTON_VALIDATE, 'v', Button.VALIDATE_DISK_BUTTON, new ActionListener() {
-			@Override
-			public void actionPerformed(ActionEvent event) {
-				if (event.getSource() == validateDiskButton) {
-					DiskPanel diskPanel = getActiveDiskPanel();
-					if (diskPanel != null && diskPanel.isImageLoaded()) {
-						diskPanel.validateDisk();
-					} else {
-						showErrorMessage(parent, LBL_NODISK);
-						return;
-					}
-				}
+		validateDiskButton = createButton(Resources.DROID64_BUTTON_VALIDATE, 'v', Button.VALIDATE_DISK_BUTTON, ae -> {
+			DiskPanel diskPanel = getActiveDiskPanel();
+			if (diskPanel != null && diskPanel.isImageLoaded()) {
+				diskPanel.validateDisk();
+			} else {
+				showErrorMessage(parent, LBL_NODISK);
+				return;
 			}
 		});
 	}
 
 	private void createViewFileButtons() {
-		viewTextButton = createButton(Resources.DROID64_BUTTON_VIEWTEXT, 't', Button.VIEW_TEXT_BUTTON, null);
-		hexViewButton = createButton(Resources.DROID64_BUTTON_VIEWHEX, 'h', Button.VIEW_HEX_BUTTON, null);
-		basicViewButton = createButton(Resources.DROID64_BUTTON_VIEWBASIC, 's', Button.VIEW_BASIC_BUTTON, null);
-		imageViewButton = createButton(Resources.DROID64_BUTTON_VIEWIMAGE, 'm', Button.VIEW_IMAGE_BUTTON, null);
-		ActionListener viewListener = new ActionListener() {
-			@Override
-			public void actionPerformed(ActionEvent event) {
-				DiskPanel diskPanel = getActiveDiskPanel();
-				String cmd = event.getActionCommand();
-				if (diskPanel == null || cmd == null) {
-					return;
-				} else if (viewTextButton.getActionCommand().equals(cmd)) {
-					diskPanel.showFile();
-				} else if (hexViewButton.getActionCommand().equals(cmd)) {
-					diskPanel.hexViewFile();
-				} else if (basicViewButton.getActionCommand().equals(cmd)) {
-					diskPanel.basicViewFile();
-				} else if (imageViewButton.getActionCommand().equals(cmd)) {
-					diskPanel.imageViewFile();
-				}
+		JButton viewTextButton = createButton(Resources.DROID64_BUTTON_VIEWTEXT, 't', Button.VIEW_TEXT_BUTTON, null);
+		JButton hexViewButton = createButton(Resources.DROID64_BUTTON_VIEWHEX, 'h', Button.VIEW_HEX_BUTTON, null);
+		JButton basicViewButton = createButton(Resources.DROID64_BUTTON_VIEWBASIC, 's', Button.VIEW_BASIC_BUTTON, null);
+		JButton imageViewButton = createButton(Resources.DROID64_BUTTON_VIEWIMAGE, 'm', Button.VIEW_IMAGE_BUTTON, null);
+		ActionListener viewListener = event -> {
+			DiskPanel diskPanel = getActiveDiskPanel();
+			String cmd = event.getActionCommand();
+			if (diskPanel == null || cmd == null) {
+				return;
+			} else if (viewTextButton.getActionCommand().equals(cmd)) {
+				diskPanel.showFile();
+			} else if (hexViewButton.getActionCommand().equals(cmd)) {
+				diskPanel.hexViewFile();
+			} else if (basicViewButton.getActionCommand().equals(cmd)) {
+				diskPanel.basicViewFile();
+			} else if (imageViewButton.getActionCommand().equals(cmd)) {
+				diskPanel.imageViewFile();
 			}
 		};
 		viewTextButton.addActionListener(viewListener);
@@ -552,87 +478,66 @@ public class MainPanel implements Serializable {
 	}
 
 	private void createFileOperationButtons(final JFrame parent) {
-		upButton = createButton(Resources.DROID64_BUTTON_UP, 'U', Button.UP_BUTTON, new ActionListener() {
-			@Override
-			public void actionPerformed(ActionEvent event) {
+		upButton = createButton(Resources.DROID64_BUTTON_UP, 'U', Button.UP_BUTTON, event -> {
+			DiskPanel diskPanel = getActiveDiskPanel();
+			if (upButton.getActionCommand().equals(event.getActionCommand())) {
+				if (diskPanel != null && diskPanel.isImageLoaded()) {
+					diskPanel.moveFile(true);
+				} else {
+					appendConsole(Settings.getMessage(Resources.DROID64_ERROR_NOIMAGEMOUNTED));
+				}
+			}
+		});
+		downButton = createButton(Resources.DROID64_BUTTON_DOWN, 'D', Button.DOWN_BUTTON, event -> {
+			DiskPanel diskPanel = getActiveDiskPanel();
+			if (downButton.getActionCommand().equals(event.getActionCommand())) {
+				if (diskPanel != null && diskPanel.isImageLoaded()) {
+					diskPanel.moveFile(false);
+				} else {
+					appendConsole(Settings.getMessage(Resources.DROID64_ERROR_NOIMAGEMOUNTED));
+				}
+			}
+		});
+		sortButton = createButton(Resources.DROID64_BUTTON_SORT, 'S', Button.SORT_FILES_BUTTON, event -> {
+			if (sortButton.getActionCommand().equals(event.getActionCommand())) {
 				DiskPanel diskPanel = getActiveDiskPanel();
-				if (upButton.getActionCommand().equals(event.getActionCommand())) {
-					if (diskPanel != null && diskPanel.isImageLoaded()) {
-						diskPanel.moveFile(true);
-					} else {
-						appendConsole(Settings.getMessage(Resources.DROID64_ERROR_NOIMAGEMOUNTED));
-					}
+				if (diskPanel != null) {
+					diskPanel.sortFiles();
 				}
 			}
 		});
-		downButton = createButton(Resources.DROID64_BUTTON_DOWN, 'D', Button.DOWN_BUTTON, new ActionListener() {
-			@Override
-			public void actionPerformed(ActionEvent event) {
+		copyButton = createButton(Resources.DROID64_BUTTON_COPY, 'c', Button.COPY_FILE_BUTTON, event -> {
+			if (copyButton.getActionCommand().equals(event.getActionCommand())) {
+				DiskPanel disk1 = getActiveDiskPanel();
+				DiskPanel disk2 = getInactiveDiskPanel();
+				if (disk1 != null && disk2 != null) {
+					disk1.copyFile();
+				}
+			}
+		});
+		renamePRGButton = createButton(Resources.DROID64_BUTTON_RENAME, 'r', Button.RENAME_FILE_BUTTON, event -> {
+			if (renamePRGButton.getActionCommand().equals(event.getActionCommand())) {
 				DiskPanel diskPanel = getActiveDiskPanel();
-				if (downButton.getActionCommand().equals(event.getActionCommand())) {
-					if (diskPanel != null && diskPanel.isImageLoaded()) {
-						diskPanel.moveFile(false);
-					} else {
-						appendConsole(Settings.getMessage(Resources.DROID64_ERROR_NOIMAGEMOUNTED));
-					}
+				if (diskPanel != null) {
+					diskPanel.renameFile();
 				}
 			}
 		});
-		sortButton = createButton(Resources.DROID64_BUTTON_SORT, 'S', Button.SORT_FILES_BUTTON, new ActionListener() {
-			@Override
-			public void actionPerformed(ActionEvent event) {
-				if (sortButton.getActionCommand().equals(event.getActionCommand())) {
-					DiskPanel diskPanel = getActiveDiskPanel();
-					if (diskPanel != null) {
-						diskPanel.sortFiles();
-					}
+		delPRGButton = createButton(Resources.DROID64_BUTTON_DELETE, 'd', Button.DELETE_FILE_BUTTON, event -> {
+			if (delPRGButton.getActionCommand().equals(event.getActionCommand())) {
+				DiskPanel diskPanel = getActiveDiskPanel();
+				if (diskPanel != null) {
+					diskPanel.deleteFile();
 				}
 			}
 		});
-		copyButton = createButton(Resources.DROID64_BUTTON_COPY, 'c', Button.COPY_FILE_BUTTON, new ActionListener() {
-			@Override
-			public void actionPerformed(ActionEvent event) {
-				if (copyButton.getActionCommand().equals(event.getActionCommand())) {
-					DiskPanel disk1 = getActiveDiskPanel();
-					DiskPanel disk2 = getInactiveDiskPanel();
-					if (disk1 != null && disk2 != null) {
-						disk1.copyFile();
-					}
-				}
-			}
-		});
-		renamePRGButton = createButton(Resources.DROID64_BUTTON_RENAME, 'r', Button.RENAME_FILE_BUTTON, new ActionListener() {
-			@Override
-			public void actionPerformed(ActionEvent event) {
-				if (renamePRGButton.getActionCommand().equals(event.getActionCommand())) {
-					DiskPanel diskPanel = getActiveDiskPanel();
-					if (diskPanel != null) {
-						diskPanel.renameFile();
-					}
-				}
-			}
-		});
-		delPRGButton = createButton(Resources.DROID64_BUTTON_DELETE, 'd', Button.DELETE_FILE_BUTTON, new ActionListener() {
-			@Override
-			public void actionPerformed(ActionEvent event) {
-				if (delPRGButton.getActionCommand().equals(event.getActionCommand())) {
-					DiskPanel diskPanel = getActiveDiskPanel();
-					if (diskPanel != null) {
-						diskPanel.deleteFile();
-					}
-				}
-			}
-		});
-		newFileButton = createButton(Resources.DROID64_BUTTON_NEWFILE, 'w', Button.NEW_FILE_BUTTON, new ActionListener() {
-			@Override
-			public void actionPerformed(ActionEvent event) {
-				if (newFileButton.getActionCommand().equals(event.getActionCommand())) {
-					DiskPanel diskPanel = getActiveDiskPanel();
-					if (diskPanel != null && diskPanel.isImageLoaded()) {
-						diskPanel.newFile();
-					} else {
-						showErrorMessage(parent, LBL_NODISK);
-					}
+		newFileButton = createButton(Resources.DROID64_BUTTON_NEWFILE, 'w', Button.NEW_FILE_BUTTON, event -> {
+			if (newFileButton.getActionCommand().equals(event.getActionCommand())) {
+				DiskPanel diskPanel = getActiveDiskPanel();
+				if (diskPanel != null && diskPanel.isImageLoaded()) {
+					diskPanel.newFile();
+				} else {
+					showErrorMessage(parent, LBL_NODISK);
 				}
 			}
 		});
@@ -696,30 +601,28 @@ public class MainPanel implements Serializable {
 		final MainPanel mainPanel = this;
 		JMenu menu = new JMenu(Settings.getMessage(Resources.DROID64_MENU_HELP));
 		menu.setMnemonic('h');
-		ActionListener listener = new ActionListener() {
-			@Override
-			public void actionPerformed(ActionEvent event) {
-				String cmd = event.getActionCommand();
-				if (Resources.DROID64_MENU_HELP_ABOUT.equals(cmd)) {
-					showHelp();
-				} else if (Resources.DROID64_MENU_HELP_TODO.equals(cmd)) {
-					new BugsFrame(DroiD64.PROGNAME+ " - Bugs and ToDo");
-				} else if (Resources.DROID64_MENU_HELP_RELEASENOTES.equals(cmd)) {
-					new TextViewDialog(mainFrame, DroiD64.PROGNAME, Settings.getMessage(Resources.DROID64_MENU_HELP_RELEASENOTES), getReleaseNotes(), Utility.MIMETYPE_HTML, mainPanel);
-				} else if (Resources.DROID64_MENU_HELP_MANUAL.equals(cmd)) {
-					new TextViewDialog(mainFrame, DroiD64.PROGNAME, Settings.getMessage(Resources.DROID64_MENU_HELP_MANUAL), getManual(), Utility.MIMETYPE_HTML, mainPanel);
-				} else if (Resources.DROID64_MENU_HELP_CONTACT.equals(cmd)) {
-					JTextArea info = new JTextArea(Settings.getMessage(Resources.DROID64_MENU_HELP_CONTACT_MSG));
-					info.setEditable(false);
-					JOptionPane.showMessageDialog(null, info, Settings.getMessage(Resources.DROID64_MENU_HELP_CONTACT), JOptionPane.INFORMATION_MESSAGE);
-				}
-			}};
-			menu.add(addMenuItem(menu, Resources.DROID64_MENU_HELP_ABOUT, 'a', listener));
-			menu.add(addMenuItem(menu, Resources.DROID64_MENU_HELP_TODO, 'b', listener));
-			menu.add(addMenuItem(menu, Resources.DROID64_MENU_HELP_RELEASENOTES, 'r', listener));
-			menu.add(addMenuItem(menu, Resources.DROID64_MENU_HELP_MANUAL, 'm', listener));
-			menu.add(addMenuItem(menu, Resources.DROID64_MENU_HELP_CONTACT, 'c', listener));
-			return menu;
+		ActionListener listener = event -> {
+			String cmd = event.getActionCommand();
+			if (Resources.DROID64_MENU_HELP_ABOUT.equals(cmd)) {
+				showHelp();
+			} else if (Resources.DROID64_MENU_HELP_TODO.equals(cmd)) {
+				new BugsFrame(DroiD64.PROGNAME+ " - Bugs and ToDo");
+			} else if (Resources.DROID64_MENU_HELP_RELEASENOTES.equals(cmd)) {
+				new TextViewDialog(mainFrame, DroiD64.PROGNAME, Settings.getMessage(Resources.DROID64_MENU_HELP_RELEASENOTES), getReleaseNotes(), true, Utility.MIMETYPE_HTML, mainPanel);
+			} else if (Resources.DROID64_MENU_HELP_MANUAL.equals(cmd)) {
+				new TextViewDialog(mainFrame, DroiD64.PROGNAME, Settings.getMessage(Resources.DROID64_MENU_HELP_MANUAL), getManual(), true, Utility.MIMETYPE_HTML, mainPanel);
+			} else if (Resources.DROID64_MENU_HELP_CONTACT.equals(cmd)) {
+				JTextArea info = new JTextArea(Settings.getMessage(Resources.DROID64_MENU_HELP_CONTACT_MSG));
+				info.setEditable(false);
+				JOptionPane.showMessageDialog(null, info, Settings.getMessage(Resources.DROID64_MENU_HELP_CONTACT), JOptionPane.INFORMATION_MESSAGE);
+			}
+		};
+		menu.add(addMenuItem(menu, Resources.DROID64_MENU_HELP_ABOUT, 'a', listener));
+		menu.add(addMenuItem(menu, Resources.DROID64_MENU_HELP_TODO, 'b', listener));
+		menu.add(addMenuItem(menu, Resources.DROID64_MENU_HELP_RELEASENOTES, 'r', listener));
+		menu.add(addMenuItem(menu, Resources.DROID64_MENU_HELP_MANUAL, 'm', listener));
+		menu.add(addMenuItem(menu, Resources.DROID64_MENU_HELP_CONTACT, 'c', listener));
+		return menu;
 	}
 
 	/**
@@ -730,27 +633,12 @@ public class MainPanel implements Serializable {
 	private JMenu createProgramMenu(final JFrame parent) {
 		JMenu menu = new JMenu(Settings.getMessage(Resources.DROID64_MENU_PROGRAM));
 		menu.setMnemonic('P');
-		ActionListener listener = new ActionListener() {
-			@Override
-			public void actionPerformed(ActionEvent event) {
-				String cmd = event.getActionCommand();
-				if (Resources.DROID64_MENU_PROGRAM_SETTINGS.equals(cmd)) {
-					showSettings(parent);
-				} else if (Resources.DROID64_MENU_PROGRAM_CLEARCONSOLE.equals(cmd)) {
-					consoleTextArea.setText("");
-				} else if (Resources.DROID64_MENU_PROGRAM_SAVECONSOLE.equals(cmd)) {
-					saveConsole();
-				} else if (Resources.DROID64_MENU_PROGRAM_EXIT.equals(cmd)) {
-					exitThisProgram();
-				}
-			}
-		};
-		addMenuItem(menu, Resources.DROID64_MENU_PROGRAM_SETTINGS, 's', listener);
+		addMenuItem(menu, Resources.DROID64_MENU_PROGRAM_SETTINGS, 's', event -> showSettings(parent));
 		menu.addSeparator();
-		addMenuItem(menu, Resources.DROID64_MENU_PROGRAM_CLEARCONSOLE, 'c', listener);
-		addMenuItem(menu, Resources.DROID64_MENU_PROGRAM_SAVECONSOLE, 'a', listener);
+		addMenuItem(menu, Resources.DROID64_MENU_PROGRAM_CLEARCONSOLE, 'c', event -> consoleTextArea.setText(""));
+		addMenuItem(menu, Resources.DROID64_MENU_PROGRAM_SAVECONSOLE, 'a', event -> saveConsole());
 		menu.addSeparator();
-		addMenuItem(menu, Resources.DROID64_MENU_PROGRAM_EXIT, 'x', listener);
+		addMenuItem(menu, Resources.DROID64_MENU_PROGRAM_EXIT, 'x', event -> exitThisProgram());
 		return menu;
 	}
 
@@ -776,29 +664,15 @@ public class MainPanel implements Serializable {
 		searchMenu = new JMenu(Settings.getMessage(Resources.DROID64_MENU_SEARCH));
 		searchMenu.setMnemonic('S');
 
-
-
 		final JMenuItem searchMenuItem = new JMenuItem("Search...", 's');
 		searchMenu.add (searchMenuItem);
 		final JMenuItem scanMenuItem = new JMenuItem("Scan for disk images...", 'i');
 		searchMenu.add (scanMenuItem);
 		final JMenuItem syncMenuItem = new JMenuItem("Sync database and files", 'y');
 		searchMenu.add (syncMenuItem);
-		ActionListener listener = new ActionListener(){
-			@Override
-			public void actionPerformed(ActionEvent event){
-				if (event.getSource() == searchMenuItem){
-					new SearchDialog(DroiD64.PROGNAME+" - Search", mainPanel);
-				} else if (event.getSource() == scanMenuItem){
-					showScanForImages(parent);
-				} else if (event.getSource() == syncMenuItem){
-					syncDatabase();
-				}
-			}
-		};
-		searchMenuItem.addActionListener(listener);
-		scanMenuItem.addActionListener(listener);
-		syncMenuItem.addActionListener(listener);
+		searchMenuItem.addActionListener(ae -> new SearchDialog(DroiD64.PROGNAME+" - Search", mainPanel));
+		scanMenuItem.addActionListener(ae -> showScanForImages(parent));
+		syncMenuItem.addActionListener(ae -> syncDatabase());
 		searchMenu.setEnabled(Settings.getUseDb());
 		searchMenu.setToolTipText(Settings.getUseDb() ? null : "You must configure and enable database to use search.");
 		searchMenu.setVisible(Settings.getUseDb());
@@ -860,24 +734,26 @@ public class MainPanel implements Serializable {
 	}
 
 	/**
-	 * Get a list of all stored disks from database, and check verify that files still exists in file system.
+	 * Get a list of all stored disks from database, and verify that files still exists in file system.
 	 */
 	private void syncDatabase() {
 		try {
+			String myHostName = Utility.getHostName();
 			List<Disk> diskList = DaoFactory.getDaoFactory().getDiskDao().getAllDisks();
-			appendConsole("Got "+diskList.size()+" disks.");
+			appendConsole("Got "+diskList.size()+" disks. ");
 			int deletedFileCount = 0;
 			for (Disk disk : diskList) {
-				if (disk.getHostName() != null && !disk.getHostName().equals(Utility.getHostName())) {
+				if (disk.getHostName() != null && !disk.getHostName().equals(myHostName)) {
 					// saved for a different host.
 					continue;
 				}
-				File f = new File(disk.getFilePath() + File.separator + disk.getFileName());
+				String fn = disk.getFilePath() + File.separator + disk.getFileName();
+				File f = new File(fn);
 				if (!f.exists() || !f.isFile()) {
 					deletedFileCount++;
 					disk.setDelete();
 					DaoFactory.getDaoFactory().getDiskDao().delete(disk);
-					appendConsole("Removing infor for "+f.getPath());
+					appendConsole("Removing info for "+f.getPath());
 				}
 			}
 			appendConsole("Sync done. Removed "+deletedFileCount+" disk from database.");
@@ -1122,9 +998,7 @@ public class MainPanel implements Serializable {
 
 	private static String getResource(String resourceFile) {
 		try (InputStream in = Settings.class.getResourceAsStream(resourceFile); Scanner scanner = new Scanner(in, "utf-8")) {
-			String text = scanner.useDelimiter("\\Z").next();
-			scanner.close();
-			return text;
+			return scanner.useDelimiter("\\Z").next();
 		} catch (Exception e) {	//NOSONAR
 			return "Failed to read " + resourceFile + " resource: \n"+e.getMessage();
 		}

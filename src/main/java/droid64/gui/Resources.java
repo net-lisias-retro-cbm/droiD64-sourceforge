@@ -3,6 +3,7 @@ package droid64.gui;
 public class Resources {
 
 	private Resources() {
+		super();
 	}
 
 	// Buttons
@@ -38,6 +39,7 @@ public class Resources {
 	public static final String DROID64_MENU_DISK_LOAD = "droid64.menu.disk.load";
 	public static final String DROID64_MENU_DISK_MD5 = "droid64.menu.disk.md5";
 	public static final String DROID64_MENU_DISK_NEW = "droid64.menu.disk.new";
+	public static final String DROID64_MENU_DISK_MIRROR = "droid64.menu.disk.mirror";
 	public static final String DROID64_MENU_DISK_PRINTDIR = "droid64.menu.disk.printdir";
 	public static final String DROID64_MENU_DISK_RENAMEDISK = "droid64.menu.disk.renamedisk";
 	public static final String DROID64_MENU_DISK_RENAMEFILE = "droid64.menu.disk.renamefile";

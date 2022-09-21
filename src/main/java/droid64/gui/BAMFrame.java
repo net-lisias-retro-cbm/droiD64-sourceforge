@@ -6,8 +6,6 @@ import java.awt.Dimension;
 import java.awt.Insets;
 import java.awt.Point;
 import java.awt.Toolkit;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 
@@ -80,14 +78,11 @@ public class BAMFrame extends JFrame {
 		saveButton = new JButton(Settings.getMessage(Resources.DROID64_BAM_SAVE));
 		saveButton.setToolTipText(Settings.getMessage(Resources.DROID64_BAM_SAVE_TOOLTIP));
 		saveButton.setEnabled(false);
-		saveButton.addActionListener(new ActionListener() {
-			@Override
-			public void actionPerformed(ActionEvent event) {
-				if (diskImage.writeImage(diskFileName)) {
-					saveButton.setEnabled(false);
-				}
-				diskImage.readBAM();
+		saveButton.addActionListener(ae -> {
+			if (diskImage.writeImage(diskFileName)) {
+				saveButton.setEnabled(false);
 			}
+			diskImage.readBAM();
 		});
 
 		final JRadioButton viewModeButton = createRadioButton(Resources.DROID64_BAM_VIEW, Resources.DROID64_BAM_VIEW_TOOLTIP, writable);
@@ -99,12 +94,7 @@ public class BAMFrame extends JFrame {
 
 		final JButton okButton = new JButton(Settings.getMessage(Resources.DROID64_BAM_CLOSE));
 		okButton.setMnemonic('o');
-		okButton.addActionListener(new ActionListener() {
-			@Override
-			public void actionPerformed(ActionEvent event) {
-				dispose();
-			}
-		});
+		okButton.addActionListener(ae->dispose());
 
 		//Table Column-Width
 		DefaultTableColumnModel columnModel = new DefaultTableColumnModel();

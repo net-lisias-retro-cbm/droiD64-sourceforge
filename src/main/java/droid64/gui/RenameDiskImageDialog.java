@@ -1,12 +1,9 @@
 package droid64.gui;
 import java.awt.BorderLayout;
-import java.awt.Container;
 import java.awt.Dimension;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.Toolkit;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
 
 import javax.swing.BorderFactory;
 import javax.swing.JButton;
@@ -73,27 +70,17 @@ public class RenameDiskImageDialog extends JDialog {
 		final JButton exitButton = new JButton("Cancel");
 		exitButton.setMnemonic('c');
 		exitButton.setToolTipText("Cancel and return.");
-		exitButton.addActionListener(new ActionListener(){
-			@Override
-			public void actionPerformed(ActionEvent event){
-				if ( event.getSource() == exitButton ) {
-					result.setSuccess(false);
-					dispose();
-				}
-			}
+		exitButton.addActionListener(ae -> {
+			result.setSuccess(false);
+			dispose();
 		});
 
 		final JButton okButton = new JButton("OK");
 		okButton.setMnemonic('o');
 		okButton.setToolTipText("Proceed.");
-		okButton.addActionListener(new ActionListener(){
-			@Override
-			public void actionPerformed(ActionEvent event){
-				if ( event.getSource() == okButton ) {
-					done(create, result);
-					dispose();
-				}
-			}
+		okButton.addActionListener(ae -> {
+			done(create, result);
+			dispose();
 		});
 
 		JPanel buttonPanel = new JPanel();
@@ -102,10 +89,9 @@ public class RenameDiskImageDialog extends JDialog {
 
 		JPanel panel = setupMainPanel(oldDiskName, oldDiskID, create, mainPanel);
 		setModal(true);
-		Container cp = getContentPane();
-		cp.setLayout(new BorderLayout());
-		cp.add(panel, BorderLayout.CENTER);
-		cp.add(buttonPanel, BorderLayout.SOUTH);
+		setLayout(new BorderLayout());
+		add(panel, BorderLayout.CENTER);
+		add(buttonPanel, BorderLayout.SOUTH);
 
 		Dimension dim = Toolkit.getDefaultToolkit().getScreenSize();
 		setLocation(

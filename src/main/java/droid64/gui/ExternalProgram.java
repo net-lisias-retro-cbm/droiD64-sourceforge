@@ -63,11 +63,11 @@ public class ExternalProgram {
 	 * @param target folder
 	 * @param directory current folder
 	 * @param imageType type of disk image
-	 * @return array of strings, with command first. Return null if command is null or empty string.
+	 * @return array of strings, with command first. Return empty array if command is null or empty string.
 	 */
 	public String[] getExecute(String sourceImage, List<String> sourceFiles, String target, String directory, int imageType) {
 		if (command == null || command.isEmpty()) {
-			return null;
+			return new String[0];
 		}
 		List<String> files = new ArrayList<>();
 		List<String> imagefiles = new ArrayList<>();
@@ -112,7 +112,7 @@ public class ExternalProgram {
 			case "{NewFile}":
 				String name = FileDialogHelper.openImageFileDialog(directory, null, true);
 				if (name == null) {
-					return null;
+					return new String[0];
 				}
 				args.add(name);
 				break;

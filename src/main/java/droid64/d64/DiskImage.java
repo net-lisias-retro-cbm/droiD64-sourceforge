@@ -446,7 +446,7 @@ public abstract class DiskImage implements Serializable {
 	public boolean renameImage(String filename, String newDiskName, String newDiskID){
 		feedbackMessage = new StringBuilder("renameImage(): ").append(newDiskName).append(", ").append(newDiskID);
 		if (isCpmImage()) {
-			feedbackMessage.append("Not yet implemented for CP/M format.\n");
+			feedbackMessage.append(NOT_IMPLEMENTED_FOR_CPM);
 			return false;
 		}
 		setDiskName(newDiskName, newDiskID);
@@ -515,32 +515,34 @@ public abstract class DiskImage implements Serializable {
 			newFile.setSizeInBlocks(rc);
 			newFile.setSizeInBytes(rc * CPM_RECORD_SIZE);
 			tempFile = newFile;
-		} else if (previousFile != null) {
+		} else {
 			previousFile.setSizeInBlocks(previousFile.getSizeInBlocks() + rc);
 			previousFile.setSizeInBytes(previousFile.getSizeInBlocks() * CPM_RECORD_SIZE);
 			tempFile = previousFile;
 		}
-		if (tempFile != null) {
-			tempFile.setLastExtNum(extNum);
-			tempFile.setLastRecordByteCount(s1);
-			tempFile.setRecordCount(extNum*128 + rc);
-			if (use16bitau) {
-				for (int al=0; al<8; al++) {
-					int au = ((cbmDisk[pos + 0x10 + al*2+1] & 0xff)<< 8) | (cbmDisk[pos + 0x10 + al*2+0] & 0xff);
-					if (au != 0) {
-						tempFile.addAllocUnit(au);
-					}
+		tempFile.setLastExtNum(extNum);
+		tempFile.setLastRecordByteCount(s1);
+		tempFile.setRecordCount(extNum * 128 + rc);
+		readCpmAllocUnits(use16bitau, pos, tempFile);
+		return newFile;
+	}
+
+	private void readCpmAllocUnits(boolean use16bitau, int pos, CpmFile cpmFile ) {
+		if (use16bitau) {
+			for (int al=0; al < 8; al++) {
+				int au = ((cbmDisk[pos + 0x10 + al * 2 + 1] & 0xff) << 8) | (cbmDisk[pos + 0x10 + al * 2 + 0] & 0xff);
+				if (au != 0) {
+					cpmFile.addAllocUnit(au);
 				}
-			} else {
-				for (int al=0; al<16; al++) {
-					int au = cbmDisk[pos + 16 + al] & 0xff;
-					if (au != 0) {
-						tempFile.addAllocUnit(au);
-					}
+			}
+		} else {
+			for (int al=0; al < 16; al++) {
+				int au = cbmDisk[pos + 0x10 + al] & 0xff;
+				if (au != 0) {
+					cpmFile.addAllocUnit(au);
 				}
 			}
 		}
-		return newFile;
 	}
 
 	/**
@@ -618,29 +620,30 @@ public abstract class DiskImage implements Serializable {
 
 	private boolean checkCpmImageFormat() {
 		String diskName = bam.getDiskName()!=null ? bam.getDiskName().replaceAll("\\u00a0", "").trim() : null;
+		if (!CPM_DISKNAME_1.equals(diskName) && !CPM_DISKNAME_2.equals(diskName)) {
+			return false;
+		}
 		String diskId = bam.getDiskId() != null ? bam.getDiskId().replaceAll("\\u00a0", " ").trim() : null;
-		if (diskName!= null && (CPM_DISKNAME_1.equals(diskName) || CPM_DISKNAME_2.equals(diskName))) {
-			if (CPM_DISKID_GCR.equals(diskId)) {
-				if ("CBM".equals(getStringFromBlock(1, 0, 0, 3))) {
-					if (this instanceof D71 && (getCbmDiskValue(BLOCK_SIZE - 1) & 0xff) == 0xff) {
-						feedbackMessage.append("CP/M C128 double sided disk detected.\n");
-						imageFormat = D71_CPM_IMAGE_TYPE;
-						return true;
-					} else if (this instanceof D64) {
-						feedbackMessage.append("CP/M C128 single sided disk detected.\n");
-						imageFormat = D64_CPM_C128_IMAGE_TYPE;
-						return true;
-					}
-				} else if (this instanceof D64 ) {
-					feedbackMessage.append("CP/M C64 single sided disk detected.\n");
-					imageFormat = D64_CPM_C64_IMAGE_TYPE;
+		if (CPM_DISKID_GCR.equals(diskId)) {
+			if ("CBM".equals(getStringFromBlock(1, 0, 0, 3))) {
+				if (this instanceof D71 && (getCbmDiskValue(BLOCK_SIZE - 1) & 0xff) == 0xff) {
+					feedbackMessage.append("CP/M C128 double sided disk detected.\n");
+					imageFormat = D71_CPM_IMAGE_TYPE;
+					return true;
+				} else if (this instanceof D64) {
+					feedbackMessage.append("CP/M C128 single sided disk detected.\n");
+					imageFormat = D64_CPM_C128_IMAGE_TYPE;
 					return true;
 				}
-			} else if (this instanceof D81 && CPM_DISKID_1581.equals(diskId)) {
-				feedbackMessage.append("CP/M 3.5\" disk detected.\n");
-				imageFormat = D81_CPM_IMAGE_TYPE;
+			} else if (this instanceof D64 ) {
+				feedbackMessage.append("CP/M C64 single sided disk detected.\n");
+				imageFormat = D64_CPM_C64_IMAGE_TYPE;
 				return true;
 			}
+		} else if (this instanceof D81 && CPM_DISKID_1581.equals(diskId)) {
+			feedbackMessage.append("CP/M 3.5\" disk detected.\n");
+			imageFormat = D81_CPM_IMAGE_TYPE;
+			return true;
 		}
 		return false;
 	}
@@ -936,7 +939,7 @@ public abstract class DiskImage implements Serializable {
 	public byte[] getBlock(int track, int sector) throws CbmException {
 		if (track < 1 || track > getTrackCount()) {
 			throw new CbmException("Track "+track+" is not valid.");
-		} else if (sector < 0 || sector > getMaxSectors(track)) {
+		} else if (sector < 0 || sector >= getMaxSectors(track)) {
 			throw new CbmException("Sector "+sector+" is not valid.");
 		} else {
 			int pos = getSectorOffset(track, sector);

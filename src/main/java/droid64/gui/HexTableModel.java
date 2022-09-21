@@ -63,13 +63,13 @@ public class HexTableModel extends AbstractTableModel {
 			return "";
 		} else {
 			if (columnIndex == 0) {
-				return Utility.getIntHexString(rowIndex * bytesPerRow);
+				return Utility.getIntHexString(rowIndex * bytesPerRow).toUpperCase();
 			} else if (columnIndex == bytesPerRow + 1) {
 				return getDumpRowString(rowIndex);
 			} else {
 				int addr = (rowIndex * bytesPerRow) + columnIndex -1;
 				if (addr < data.length && addr < length) {
-					return Utility.getByteString(data[addr]);
+					return Utility.getByteStringUpperCase(data[addr]);
 				} else {
 					return "";
 				}

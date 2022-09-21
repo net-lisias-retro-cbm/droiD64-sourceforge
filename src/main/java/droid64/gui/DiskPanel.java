@@ -11,7 +11,6 @@ import java.awt.datatransfer.UnsupportedFlavorException;
 import java.awt.dnd.DnDConstants;
 import java.awt.dnd.DropTarget;
 import java.awt.dnd.DropTargetDropEvent;
-import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
@@ -27,6 +26,8 @@ import java.util.Comparator;
 import java.util.List;
 
 import javax.swing.BorderFactory;
+import javax.swing.JButton;
+import javax.swing.JComboBox;
 import javax.swing.JComponent;
 import javax.swing.JDialog;
 import javax.swing.JLabel;
@@ -36,7 +37,6 @@ import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTable;
 import javax.swing.JTextArea;
-import javax.swing.JTextField;
 import javax.swing.TransferHandler;
 import javax.swing.event.TableModelEvent;
 import javax.swing.event.TableModelListener;
@@ -94,6 +94,9 @@ public class DiskPanel extends JPanel implements TableModelListener {
 
 	private static final long serialVersionUID = 1L;
 
+	private static final String PARENT_DIR = "..";
+	private static final String ZIP_EXT = ".zip";
+
 	private DiskPanel otherDiskPanel;
 	private DiskImage diskImage = null;
 	private EntryTableModel tableModel;
@@ -102,7 +105,8 @@ public class DiskPanel extends JPanel implements TableModelListener {
 	/** Disk label from loaded disk image */
 	private JLabel diskLabel;
 	/** Name (path) of current directory or loaded image */
-	private JTextField diskName;
+	private JComboBox<String> diskName;
+
 	private JTable table;
 	private JPanel diskLabelPane;
 
@@ -120,6 +124,8 @@ public class DiskPanel extends JPanel implements TableModelListener {
 	private boolean active = false;
 	/** This is the row of the last opened file in the file list */
 	private Integer openedRow = null;
+
+	private List<String> diskNameHistory = new ArrayList<>();
 
 	public DiskPanel(final MainPanel mainPanel) {
 		this.mainPanel = mainPanel;
@@ -230,8 +236,6 @@ public class DiskPanel extends JPanel implements TableModelListener {
 	}
 
 	private JPanel drawDirPanel() {
-		JPanel dirPanel = new JPanel(new BorderLayout());
-
 		final TableColumnModel columnModel = tableModel.getTableColumnModel();
 		tableModel.addTableModelListener(this);
 
@@ -242,7 +246,6 @@ public class DiskPanel extends JPanel implements TableModelListener {
 		table.setRowHeight(rowHeight);
 		table.setBackground(Settings.getDirColorBg());
 		table.setForeground(Settings.getDirColorFg());
-
 		table.addKeyListener(new KeyListener() {
 			@Override
 			public void keyTyped(KeyEvent ev) { /* Not used */ }
@@ -255,7 +258,6 @@ public class DiskPanel extends JPanel implements TableModelListener {
 				processFileTableKeyEvent(ev.getKeyCode());
 			}
 		});
-
 		table.addMouseListener(new MouseAdapter() {
 			@Override
 			public void mousePressed(MouseEvent me) {
@@ -270,7 +272,7 @@ public class DiskPanel extends JPanel implements TableModelListener {
 
 		MouseAdapter mousePressedToActivate = new MouseAdapter() {
 			@Override
-			public void mousePressed(MouseEvent me) {
+			public void mouseClicked(MouseEvent me) {
 				setActive(true);
 			}
 		};
@@ -286,17 +288,45 @@ public class DiskPanel extends JPanel implements TableModelListener {
 		diskLabelPane.add(diskLabel);
 		diskLabelPane.addMouseListener(mousePressedToActivate);
 
-		diskName = new JTextField(Settings.getMessage(Resources.DROID64_NOFILE));
+		diskName = new JComboBox<>(diskNameHistory.toArray(new String[0]));
 		diskName.setFont(new Font("Verdana", Font.PLAIN, Settings.getFontSize()));
+		diskName.setEditable(true);
 		diskName.addMouseListener(mousePressedToActivate);
 		diskName.addKeyListener(createDiskNameKeyListener());
+		diskName.addActionListener(ev -> {
+			String selected = (String) diskName.getSelectedItem();
+			File dir = new File(selected);
+			if (dir.isDirectory()) {
+				setDiskName(selected);
+				loadLocalDirectory(selected);
+			}
+			if (!active) {
+				setActive(true);
+			}
+		});
+		diskName.addItemListener(ae -> {
+			if (!active) {
+				setActive(true);
+			}
+		});
+
+		final JButton backButton = new JButton("<");
+		backButton.addActionListener(ae -> {
+			unloadDisk();
+			setActive(true);
+		});
+
+		JPanel diskNamePanel = new JPanel(new BorderLayout());
+		diskNamePanel.add(diskName, BorderLayout.CENTER);
+		diskNamePanel.add(backButton, BorderLayout.EAST);
 
 		JScrollPane scrollPane = new JScrollPane(table);
 		scrollPane.addMouseListener(mousePressedToActivate);
 
+		JPanel dirPanel = new JPanel(new BorderLayout());
 		dirPanel.add(diskLabelPane, BorderLayout.NORTH);
 		dirPanel.add(scrollPane, BorderLayout.CENTER);
-		dirPanel.add(diskName, BorderLayout.SOUTH);
+		dirPanel.add(diskNamePanel, BorderLayout.SOUTH);
 		dirPanel.setPreferredSize(new Dimension(50, 300));
 		return dirPanel;
 	}
@@ -308,7 +338,7 @@ public class DiskPanel extends JPanel implements TableModelListener {
 		} else if (keyCode == KeyEvent.VK_LEFT) {
 			if (imageLoaded) {
 				unloadDisk();
-			} else if ("..".equals(table.getValueAt(0, 1))) {
+			} else if (PARENT_DIR.equals(table.getValueAt(0, 1))) {
 				doubleClickedLocalfile(new File(currentImagePath).getParentFile(), 0);
 			}
 		} else if (keyCode == KeyEvent.VK_DELETE || keyCode == KeyEvent.VK_BACK_SPACE) {
@@ -318,7 +348,7 @@ public class DiskPanel extends JPanel implements TableModelListener {
 		} else if (row >= 0) {
 			if (keyCode == KeyEvent.VK_ENTER) {
 				doubleClickedRow(row - 1);
-			} else if (keyCode == KeyEvent.VK_RIGHT && (row > 0 || !"..".equals(table.getValueAt(0, 1)))) {
+			} else if (keyCode == KeyEvent.VK_RIGHT && (row > 0 || !PARENT_DIR.equals(table.getValueAt(0, 1)))) {
 				doubleClickedRow(row);
 			}
 		}
@@ -329,17 +359,58 @@ public class DiskPanel extends JPanel implements TableModelListener {
 			@Override
 			public void keyTyped(KeyEvent ev) { /* Not used */ }
 			@Override
-			public void keyPressed(KeyEvent ev) { /* Not used */ }
+			public void keyPressed(KeyEvent ev) {
+				/* Not used */
+				if (!active) {
+					setActive(true);
+				}
+			}
 			@Override
 			public void keyReleased(KeyEvent ev) {
 				if (ev.getKeyCode() == KeyEvent.VK_ENTER) {
-					File dir = new File(diskName.getText());
+					String selected = (String) diskName.getSelectedItem();
+					File dir = new File(selected);
 					if (dir.isDirectory()) {
-						loadLocalDirectory(diskName.getText());
+						setDiskName(selected);
+						loadLocalDirectory(selected);
 					}
 				}
 			}
 		};
+	}
+
+	private void setDiskName(String name) {
+		if (name == null) {
+			return;
+		}
+		ActionListener[] listeners = diskName.getActionListeners();
+		for (final ActionListener listener : listeners) {
+			diskName.removeActionListener(listener);
+		}
+
+		if (!new File(name).isDirectory()) {
+			if (diskName.getItemCount() > 0) {
+				diskName.setSelectedIndex(0);
+				diskName.setSelectedItem(name);
+			}
+			for (final ActionListener listener : listeners) {
+				diskName.addActionListener(listener);
+			}
+			return;
+		}
+		if (!diskNameHistory.contains(name)) {
+			diskNameHistory.add(name);
+			diskName.addItem(name);
+		}
+		for (int i=0; i<diskName.getItemCount(); i++) {
+			if (name.equals(diskName.getItemAt(i))) {
+				diskName.setSelectedIndex(i);
+				break;
+			}
+		}
+		for (final ActionListener listener : listeners) {
+			diskName.addActionListener(listener);
+		}
 	}
 
 	private String getLocalFilename(int row) {
@@ -360,7 +431,7 @@ public class DiskPanel extends JPanel implements TableModelListener {
 				doubleClickedZipFile(entryName, row);
 			} else {
 				File file;
-				if ("..".equals(table.getValueAt(row, 1))) {
+				if (PARENT_DIR.equals(table.getValueAt(row, 1))) {
 					file = new File(currentImagePath).getParentFile();
 				} else {
 					file = new File(getLocalFilename(row));
@@ -370,7 +441,7 @@ public class DiskPanel extends JPanel implements TableModelListener {
 		} catch (CbmException e) {	//NOSONAR
 			mainPanel.appendConsole("\n"+e.getMessage());
 		}
-		this.mainPanel.setButtonState();
+		mainPanel.setButtonState();
 	}
 
 	private void doubleClickedImageFileEntry(CbmFile file, int row) throws CbmException {
@@ -389,15 +460,14 @@ public class DiskPanel extends JPanel implements TableModelListener {
 		if (DiskImage.isImageFileName(zipName)) {
 			mainPanel.appendConsole("doubleClickedZipFile: is image");
 			diskImage = DiskImage.getDiskImage(zipName, getFileData(row));
-			diskName.setText(currentImagePath + File.separator + zipName);
-			diskName.setEditable(false);
+			setDiskName(currentImagePath + File.separator + zipName);
 			diskImageFileName = zipName;
 			clearDirTable();
 			imageLoaded = true;
 			zipFileLoaded = true;
 			updateImageFile();
 			showDirectory();
-		} else if ("..".equals(zipName)) {
+		} else if (PARENT_DIR.equals(zipName)) {
 			File file = new File(currentImagePath).getParentFile();
 			if (file.exists() && file.isDirectory()) {
 				loadLocalDirectory(file.getPath());
@@ -416,7 +486,7 @@ public class DiskPanel extends JPanel implements TableModelListener {
 			} else if (file.isDirectory()) {
 				loadLocalDirectory(file.getPath());
 			} else if (file.isFile()) {
-				if (file.getName().toLowerCase().endsWith(".zip")) {
+				if (file.getName().toLowerCase().endsWith(ZIP_EXT)) {
 					loadZipFile(file);
 				} else if (row >= 0) {
 					hexViewFile(row);
@@ -449,7 +519,6 @@ public class DiskPanel extends JPanel implements TableModelListener {
 				diskImageFileName = fileName;
 				imageLoaded = true;
 				reloadDiskImage(updateList);
-				diskName.setEditable(false);
 			} else {
 				mainPanel.appendConsole("Error: fail to open file "+fileName);
 			}
@@ -550,7 +619,7 @@ public class DiskPanel extends JPanel implements TableModelListener {
 			File parentFile = dir.getParentFile();
 			if (parentFile != null) {
 				DirEntry parent = new DirEntry(parentFile, ++fileNum);
-				parent.setName("..");
+				parent.setName(PARENT_DIR);
 				tableModel.updateDirEntry(parent);
 			}
 			this.currentImagePath = path;
@@ -562,13 +631,12 @@ public class DiskPanel extends JPanel implements TableModelListener {
 						tableModel.updateDirEntry(new DirEntry(file, ++fileNum));
 					}
 				}
-				diskName.setText(path);
-				diskName.setEditable(true);
+				setDiskName(path);
 				diskLabel.setText("FILE SYSTEM");
 			} else {
 				diskLabel.setText("ERROR");
 			}
-		} else if (dir.getName().toLowerCase().endsWith(".zip")) {
+		} else if (dir.getName().toLowerCase().endsWith(ZIP_EXT)) {
 			loadZipFile(dir);
 			return;
 		} else {
@@ -596,18 +664,15 @@ public class DiskPanel extends JPanel implements TableModelListener {
 			List<DirEntry> list = Utility.getZipFileEntries(file, 2);
 			clearDirTable();
 			DirEntry parent = new DirEntry(file.getParentFile(), 1);
-			parent.setName("..");
+			parent.setName(PARENT_DIR);
 			tableModel.updateDirEntry(parent);
-			for (DirEntry entry : list) {
-				tableModel.updateDirEntry(entry);
-			}
+			list.forEach(entry -> tableModel.updateDirEntry(entry));
 			tableModel.setMode(EntryTableModel.MODE_LOCAL);
 			TableColumnModel tcm = table.getTableHeader().getColumnModel();
 			for (int i=0; i< tcm.getColumnCount(); i++) {
 				tcm.getColumn(i).setHeaderValue(tableModel.getColumnName(i));
 			}
-			diskName.setText(file.getAbsolutePath());
-			diskName.setEditable(true);
+			setDiskName(file.getAbsolutePath());
 			diskLabel.setText("ZIP FILE");
 			zipFileLoaded = true;
 			currentImagePath = file.getAbsolutePath();
@@ -814,7 +879,6 @@ public class DiskPanel extends JPanel implements TableModelListener {
 		}
 	}
 
-
 	/** Get data from file.
 	 * @param file number in listing
 	 * @return data
@@ -861,6 +925,10 @@ public class DiskPanel extends JPanel implements TableModelListener {
 
 	private void hexViewFile(int fileNum) {
 		byte[] data = getFileData(fileNum);
+		if (data == null || data.length == 0) {
+			mainPanel.appendConsole("No data");
+			return;
+		}
 		String name = imageLoaded ? diskImage.getCbmFile(fileNum).getName() : getLocalFilename(fileNum);
 		new HexViewDialog(DroiD64.PROGNAME+" - Hex view", name, data, data.length, mainPanel, true);
 	}
@@ -1001,20 +1069,27 @@ public class DiskPanel extends JPanel implements TableModelListener {
 
 	public void unloadDisk() {
 		mainPanel.appendConsole("Unload disk.");
-		diskImage = null;
-		diskName.setText("");
-		diskImageFileName = "";
-		imageLoaded = false;
-		diskName.setText(Settings.getMessage("droid64.nofile"));
-		diskLabel.setText(Settings.getMessage("droid64.nodisk"));
-		clearDirTable();
-		loadLocalDirectory(currentImagePath);
-		table.revalidate();
-		if (openedRow != null && openedRow < table.getRowCount() && openedRow >= 0) {
-			// Select and scroll to last opened file
-			table.getSelectionModel().setSelectionInterval(openedRow, openedRow);
-			table.scrollRectToVisible(new Rectangle(table.getCellRect(openedRow, 0, true)));
-			openedRow = null;
+		if (isImageLoaded()) {
+			diskImage = null;
+			setDiskName(null);
+			diskImageFileName = "";
+			imageLoaded = false;
+			diskLabel.setText(Settings.getMessage("droid64.nodisk"));
+			clearDirTable();
+			loadLocalDirectory(currentImagePath);
+			table.revalidate();
+			if (openedRow != null && openedRow < table.getRowCount() && openedRow >= 0) {
+				// Select and scroll to last opened file
+				table.getSelectionModel().setSelectionInterval(openedRow, openedRow);
+				table.scrollRectToVisible(new Rectangle(table.getCellRect(openedRow, 0, true)));
+				openedRow = null;
+			}
+		} else {
+			String dir = getCurrentImagePath();
+			File dirfile = dir != null ? new File(dir) : null;
+			if (dirfile != null && dirfile.getParent() != null) {
+				loadLocalDirectory(dirfile.getParent());
+			}
 		}
 	}
 
@@ -1150,7 +1225,7 @@ public class DiskPanel extends JPanel implements TableModelListener {
 		if (imageLoaded ){
 			try {
 				diskImage = DiskImage.getDiskImage(diskImageFileName);
-				diskName.setText(diskImageFileName);
+				setDiskName(diskImageFileName);
 				clearDirTable();
 				updateImageFile();
 				if (updateList) {
@@ -1158,7 +1233,7 @@ public class DiskPanel extends JPanel implements TableModelListener {
 				}
 			} catch (CbmException e) {	//NOSONAR
 				mainPanel.appendConsole("\nError: "+e.getMessage());
-				diskName.setText(Settings.getMessage(Resources.DROID64_NOFILE));
+				setDiskName(null);
 				diskLabel.setText(Settings.getMessage(Resources.DROID64_NODISK));
 				imageLoaded = false;
 				repaint();
@@ -1213,41 +1288,49 @@ public class DiskPanel extends JPanel implements TableModelListener {
 	}
 
 	private ActionListener createDiskImageMenuActionListener() {
-		return new ActionListener(){
-			@Override
-			public void actionPerformed(ActionEvent event){
-				String cmd = event.getActionCommand();
-				if (Resources.DROID64_MENU_DISK_NEW.equals(cmd)) {
-					newDiskImage();
-				} else if (Resources.DROID64_MENU_DISK_LOAD.equals(cmd)) {
-					openedRow = null;
-					openDiskImage(FileDialogHelper.openImageFileDialog(currentImagePath, null, false), true);
-				} else if (Resources.DROID64_MENU_DISK_SHOWBAM.equals(cmd)) {
-					showBAM();
-				} else if (Resources.DROID64_MENU_DISK_UNLOAD.equals(cmd)) {
-					unloadDisk();
-				} else if (Resources.DROID64_MENU_DISK_COPYFILE.equals(cmd)) {
-					copyFile();
-				} else if (Resources.DROID64_MENU_DISK_RENAMEDISK.equals(cmd)) {
-					renameDisk();
-				} else if (Resources.DROID64_MENU_DISK_RENAMEFILE.equals(cmd)) {
-					renameFile();
-				} else if (Resources.DROID64_MENU_DISK_DELETEFILE.equals(cmd)) {
-					deleteFile();
-				} else if (Resources.DROID64_MENU_DISK_VIEWTEXT.equals(cmd)) {
-					showFile();
-				} else if (Resources.DROID64_MENU_DISK_VIEWHEX.equals(cmd)) {
-					hexViewFile();
-				} else if (Resources.DROID64_MENU_DISK_VIEWBASIC.equals(cmd)) {
-					basicViewFile();
-				} else if (Resources.DROID64_MENU_DISK_VIEWIMAGE.equals(cmd)) {
-					imageViewFile();
-				} else if (Resources.DROID64_MENU_DISK_PRINTDIR.equals(cmd)) {
-					printDir();
-				} else if (Resources.DROID64_MENU_DISK_MD5.equals(cmd)) {
-					calcMd5Checksum();
-				}
-			}};
+		return event -> {
+			String cmd = event.getActionCommand();
+			if (Resources.DROID64_MENU_DISK_NEW.equals(cmd)) {
+				newDiskImage();
+			} else if (Resources.DROID64_MENU_DISK_LOAD.equals(cmd)) {
+				openedRow = null;
+				openDiskImage(FileDialogHelper.openImageFileDialog(currentImagePath, null, false), true);
+			} else if (Resources.DROID64_MENU_DISK_SHOWBAM.equals(cmd)) {
+				showBAM();
+			} else if (Resources.DROID64_MENU_DISK_UNLOAD.equals(cmd)) {
+				unloadDisk();
+			} else if (Resources.DROID64_MENU_DISK_COPYFILE.equals(cmd)) {
+				copyFile();
+			} else if (Resources.DROID64_MENU_DISK_RENAMEDISK.equals(cmd)) {
+				renameDisk();
+			} else if (Resources.DROID64_MENU_DISK_RENAMEFILE.equals(cmd)) {
+				renameFile();
+			} else if (Resources.DROID64_MENU_DISK_DELETEFILE.equals(cmd)) {
+				deleteFile();
+			} else if (Resources.DROID64_MENU_DISK_VIEWTEXT.equals(cmd)) {
+				showFile();
+			} else if (Resources.DROID64_MENU_DISK_VIEWHEX.equals(cmd)) {
+				hexViewFile();
+			} else if (Resources.DROID64_MENU_DISK_VIEWBASIC.equals(cmd)) {
+				basicViewFile();
+			} else if (Resources.DROID64_MENU_DISK_VIEWIMAGE.equals(cmd)) {
+				imageViewFile();
+			} else if (Resources.DROID64_MENU_DISK_PRINTDIR.equals(cmd)) {
+				printDir();
+			} else if (Resources.DROID64_MENU_DISK_MD5.equals(cmd)) {
+				calcMd5Checksum();
+			} else if (Resources.DROID64_MENU_DISK_MIRROR.equals(cmd)) {
+				openOtherPanel();
+			}
+		};
+	}
+
+	private void openOtherPanel() {
+		if (otherDiskPanel.isImageLoaded() || otherDiskPanel.isZipFileLoaded()) {
+			openDiskImage(otherDiskPanel.getDiskImageFileName(), true);
+		} else  {
+			loadLocalDirectory(otherDiskPanel.getCurrentImagePath());
+		}
 	}
 
 	/**
@@ -1277,6 +1360,7 @@ public class DiskPanel extends JPanel implements TableModelListener {
 		menu.addSeparator();
 		MainPanel.addMenuItem(menu, Resources.DROID64_MENU_DISK_PRINTDIR, 'p', listener);
 		MainPanel.addMenuItem(menu, Resources.DROID64_MENU_DISK_MD5, '5', listener);
+		MainPanel.addMenuItem(menu, Resources.DROID64_MENU_DISK_MIRROR, 'm', listener);
 		return menu;
 	}
 
@@ -1303,7 +1387,7 @@ public class DiskPanel extends JPanel implements TableModelListener {
 			DirEntry entry;
 			do {
 				entry = tableModel.getDirEntry(i++);
-				if (entry != null && !"..".equals(entry.getName())) {
+				if (entry != null && !PARENT_DIR.equals(entry.getName())) {
 					String row = String.format("%8d %-20s\t %s", entry.getBlocks(), entry.getName(), entry.getFlags());
 					lines.add(row);
 				}
@@ -1354,6 +1438,10 @@ public class DiskPanel extends JPanel implements TableModelListener {
 
 	public boolean isImageLoaded() {
 		return imageLoaded;
+	}
+
+	public String getDiskImageFileName() {
+		return diskImageFileName;
 	}
 
 	public boolean isWritableImageLoaded() {

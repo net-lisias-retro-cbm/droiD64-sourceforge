@@ -137,7 +137,7 @@ public class DiskDaoImpl implements DiskDao {
 		List<Disk> result = new ArrayList<>();
 		String columns = "d.diskid, d.filepath, d.filename, d.label, df.fileid, df.name, df.filetype, df.size, df.fileNum, df.flags, d.updated, d.imagetype, d.errors, d.warnings, d.hostname";
 		StringBuilder sqlBuf = new StringBuilder();
-		sqlBuf.append("SELECT ");
+		sqlBuf.append(SELECT);
 		if (DaoFactory.getLimitType() == DaoFactory.LimitType.FIRST) {
 			sqlBuf.append("FIRST ? ");
 		}
@@ -440,10 +440,10 @@ public class DiskDaoImpl implements DiskDao {
 				throw new DatabaseException("Failed to insert disk, no diskId obtained.");
 			}
 			disk.setClean();
-			for (DiskFile file : disk.getFileList()) {
+			disk.getFileList().forEach(file -> {
 				file.setDiskId(disk.getDiskId());
 				file.setInsert();
-			}
+			});
 		} catch (SQLException e1) {
 			rollback("Insert failed. "+ e1.getMessage(), e1, conn);
 		} finally {

@@ -442,6 +442,10 @@ public class Utility {
 		return HEX[num & 0xff];
 	}
 
+	public static String getByteStringUpperCase(int num) {
+		return HEX[num & 0xff].toUpperCase();
+	}
+
 	/**
 	 * Trim string from whitespace, check if it is null.
 	 * @param string the string
@@ -697,9 +701,7 @@ public class Utility {
 	 */
 	public static String getResource(String resourceFile) {
 		try (InputStream in = Settings.class.getResourceAsStream(resourceFile); Scanner scanner = new Scanner(in, "utf-8")) {
-			String text = scanner.useDelimiter("\\Z").next();
-			scanner.close();
-			return text;
+			return scanner.useDelimiter("\\Z").next();
 		} catch (Exception e) {	//NOSONAR
 			return "Failed to read " + resourceFile + " resource: \n"+e.getMessage();
 		}

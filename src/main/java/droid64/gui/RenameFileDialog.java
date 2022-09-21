@@ -3,7 +3,6 @@ import java.awt.BorderLayout;
 import java.awt.Container;
 import java.awt.Dimension;
 import java.awt.Toolkit;
-import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 
 import javax.swing.BorderFactory;
@@ -69,8 +68,7 @@ public class RenameFileDialog extends JDialog {
 		result.setFileType(oldFileType);
 		setModal(true);
 
-		Container cp = getContentPane();
-		cp.setLayout( new BorderLayout());
+		setLayout( new BorderLayout());
 
 		JPanel namePanel = new JPanel();
 		JPanel namePanel2 = new JPanel();
@@ -113,24 +111,21 @@ public class RenameFileDialog extends JDialog {
 		okButton.setMnemonic('o');
 		okButton.setToolTipText("Proceed.");
 
-		ActionListener listener = new ActionListener() {
-			@Override
-			public void actionPerformed(ActionEvent event) {
-				if (event.getSource() == okButton ) {
-					result.setSuccess(true);
-					String name = nameTextField.getText();
-					if (name.isEmpty()) {
-						return;
-					}
-					result.setFileName(name.length() <= 16 ? name : name.substring(0, 16));
-					if (fileTypeBox.getSelectedIndex() != -1) {
-						result.setFileType(fileTypeBox.getSelectedIndex());
-					}
-					dispose();
-				} else if ( event.getSource() == exitButton ) {
-					result.setSuccess(false);
-					dispose();
+		ActionListener listener = event -> {
+			if (event.getSource() == okButton ) {
+				result.setSuccess(true);
+				String name = nameTextField.getText();
+				if (name.isEmpty()) {
+					return;
 				}
+				result.setFileName(name.length() <= 16 ? name : name.substring(0, 16));
+				if (fileTypeBox.getSelectedIndex() != -1) {
+					result.setFileType(fileTypeBox.getSelectedIndex());
+				}
+				dispose();
+			} else if ( event.getSource() == exitButton ) {
+				result.setSuccess(false);
+				dispose();
 			}
 		};
 		exitButton.addActionListener(listener);
@@ -149,9 +144,9 @@ public class RenameFileDialog extends JDialog {
 		topPanel.add(namePanel, BorderLayout.NORTH);
 		topPanel.add(namePanel2, BorderLayout.SOUTH);
 
-		cp.add(topPanel, BorderLayout.NORTH);
-		cp.add(idPanel, BorderLayout.CENTER);
-		cp.add(buttonPanel, BorderLayout.SOUTH);
+		add(topPanel, BorderLayout.NORTH);
+		add(idPanel, BorderLayout.CENTER);
+		add(buttonPanel, BorderLayout.SOUTH);
 
 		Dimension dim = Toolkit.getDefaultToolkit().getScreenSize();
 		setLocation(
@@ -183,30 +178,23 @@ public class RenameFileDialog extends JDialog {
 		final JButton okButton = new JButton("OK");
 		okButton.setMnemonic('o');
 		okButton.setToolTipText("Proceed.");
+		okButton.addActionListener(ae -> {
+			result.setSuccess(false);
+			dispose();
+		});
 
 		final JButton exitButton = new JButton("Cancel");
 		exitButton.setMnemonic('c');
 		exitButton.setToolTipText("Cancel and return.");
-
-		ActionListener listener = new ActionListener() {
-			@Override
-			public void actionPerformed(ActionEvent event) {
-				if (event.getSource() == exitButton ) {
-					result.setSuccess(false);
-					dispose();
-				} else if ( event.getSource() == okButton ) {
-					result.setSuccess(true);
-					String diskName = nameTextField.getText();
-					if (diskName.isEmpty()) {
-						return;
-					}
-					result.setFileName(diskName);
-					dispose();
-				}
+		exitButton.addActionListener(ae -> {
+			result.setSuccess(true);
+			String diskName = nameTextField.getText();
+			if (diskName.isEmpty()) {
+				return;
 			}
-		};
-		okButton.addActionListener(listener);
-		exitButton.addActionListener(listener);
+			result.setFileName(diskName);
+			dispose();
+		});
 
 		final JTextField oldNameTextField = new JTextField(oldFileName);
 		oldNameTextField.setEditable(false);
@@ -265,6 +253,5 @@ public class RenameFileDialog extends JDialog {
 			field.setText(text);
 		} catch (BadLocationException ex) {}	//NOSONAR
 	}
-
 
 }

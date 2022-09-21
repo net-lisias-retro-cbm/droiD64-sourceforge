@@ -1,11 +1,9 @@
 package droid64.gui;
 import java.awt.BorderLayout;
 import java.awt.Color;
-import java.awt.Container;
 import java.awt.Dimension;
 import java.awt.Toolkit;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
+import java.text.MessageFormat;
 
 import javax.swing.ImageIcon;
 import javax.swing.JButton;
@@ -59,8 +57,7 @@ public class ShowHelpFrame extends JFrame {
 	protected ShowHelpFrame (String topText, boolean visible) {
 		setTitle(topText);
 
-		Container cp = getContentPane();
-		cp.setLayout( new BorderLayout());
+		setLayout( new BorderLayout());
 
 		JPanel imagePanel = new JPanel();
 		ImageIcon imageIcon = new ImageIcon(getClass().getResource("resources/wolf.jpg"));
@@ -77,20 +74,13 @@ public class ShowHelpFrame extends JFrame {
 
 		final JButton okButton = new JButton("OK");
 		okButton.setMnemonic('o');
-		okButton.addActionListener(new ActionListener(){
-			@Override
-			public void actionPerformed(ActionEvent event){
-				if ( event.getSource()==okButton ) {
-					dispose();
-				}
-			}
-		});
+		okButton.addActionListener(ae -> dispose());
 		JPanel buttonPanel = new JPanel();
 		buttonPanel.add(okButton);
 
-		cp.add(imagePanel, BorderLayout.NORTH);
-		cp.add(new JScrollPane(messageTextArea), BorderLayout.CENTER);
-		cp.add(buttonPanel, BorderLayout.SOUTH);
+		add(imagePanel, BorderLayout.NORTH);
+		add(new JScrollPane(messageTextArea), BorderLayout.CENTER);
+		add(buttonPanel, BorderLayout.SOUTH);
 
 		pack();
 		Dimension dim = Toolkit.getDefaultToolkit().getScreenSize();
@@ -105,7 +95,15 @@ public class ShowHelpFrame extends JFrame {
 
 	private static String getAbout() {
 		if (about == null) {
-			about = Utility.getResource("resources/about.html");
+			String str = Utility.getResource("resources/about.html");
+			Object[] args = {
+					System.getProperty("java.vendor"),
+					System.getProperty("java.version"),
+					System.getProperty("os.name"),
+					System.getProperty("os.version"),
+					System.getProperty("os.arch"),
+			};
+			about = MessageFormat.format(str, args);
 		}
 		return about;
 	}

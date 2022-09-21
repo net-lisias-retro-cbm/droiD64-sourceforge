@@ -81,13 +81,7 @@ public class PrintPageable implements Pageable {
 		this.useCbmFont = useCbmFont;
 		this.useMonoFont = useMonoFont;
 		mode = Mode.MODE_TEXT;
-		if (useCbmFont && cbmFont == null) {
-			try {
-				cbmFont = Settings.getCommodoreFont().deriveFont(10);
-			} catch (CbmException e) {	//NOSONAR
-				mainPanel.appendConsole(e.getMessage());
-			}
-		}
+		setCbmFont(10);
 	}
 
 	/**
@@ -107,14 +101,17 @@ public class PrintPageable implements Pageable {
 	 * Constructor for printing hex dumps
 	 *
 	 * @param data the data to be printed in hexdump
+	 * @param useCbmFont if true use the C64 font
 	 * @param title the title to print in bold before text
 	 * @param mainPanel mainPanel
 	 */
-	public PrintPageable(byte[] data, String title, MainPanel mainPanel) {
+	public PrintPageable(byte[] data, boolean useCbmFont, String title, MainPanel mainPanel) {
 		this.title = title;
 		this.data = data;
 		this.mainPanel = mainPanel;
+		this.useCbmFont = useCbmFont;
 		mode = Mode.MODE_BYTES;
+		setCbmFont(7);
 	}
 
 	/**
@@ -129,6 +126,16 @@ public class PrintPageable implements Pageable {
 		this.image = image;
 		this.mainPanel = mainPanel;
 		this.mode = Mode.MODE_IMAGE;
+	}
+
+	private void setCbmFont(float size) {
+		if (useCbmFont && cbmFont == null) {
+			try {
+				cbmFont = Settings.getCommodoreFont().deriveFont(size);
+			} catch (CbmException e) {	//NOSONAR
+				mainPanel.appendConsole(e.getMessage());
+			}
+		}
 	}
 
 	@Override
@@ -230,7 +237,7 @@ public class PrintPageable implements Pageable {
 				for (int j = 0; j < BYTES_PER_LINE; j++) {
 					if (dataPos + j < data.length) {
 						int c = data[dataPos + j] & 0xff;
-						hex.append(' ').append(Utility.getByteString(c));
+						hex.append(' ').append(Utility.getByteStringUpperCase(c));
 						ascii.append((c < 0x20 || c > 0x7e) ? '.' : (char) c);
 					}
 				}
