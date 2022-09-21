@@ -7,7 +7,6 @@ import java.awt.Dimension;
 import java.awt.Font;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
-import java.awt.Toolkit;
 import java.awt.Window;
 import java.awt.print.PageFormat;
 import java.awt.print.Printable;
@@ -148,12 +147,9 @@ public class TextViewDialog extends JDialog {
 		cp.add(new JScrollPane(textPane), BorderLayout.CENTER);
 		cp.add(buttonPanel, BorderLayout.SOUTH);
 
-		Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
-		setLocation(
-				(int)((screenSize.width - getSize().getWidth()) / 3),
-				(int)((screenSize.height - getSize().getHeight()) / 3));
+		GuiHelper.setLocation(this, 3, 3);
 		pack();
-		setSize(screenSize.width/6, screenSize.height/2);
+		GuiHelper.setSize(this, 6, 2);
 		setVisible(mainPanel != null);
 		this.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
 	}
@@ -162,7 +158,7 @@ public class TextViewDialog extends JDialog {
 		if (text.isEmpty()) {
 			return;
 		}
-		String saveFileName = FileDialogHelper.openTextFileDialog("Save text file", null, "", true, new String[] {".txt", ".asm"});
+		String saveFileName = FileDialogHelper.openTextFileDialog("Save text file", null, Utility.EMPTY, true, new String[] {".txt", ".asm"});
 		if (saveFileName != null) {
 			try {
 				Utility.writeFile(new File(saveFileName), text);

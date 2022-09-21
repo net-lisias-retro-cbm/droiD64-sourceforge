@@ -5,6 +5,7 @@ import java.util.List;
 
 import javax.swing.table.AbstractTableModel;
 
+import droid64.d64.Utility;
 import droid64.db.SearchResultRow;
 
 /**
@@ -38,7 +39,7 @@ public class SearchResultTableModel extends AbstractTableModel {
 	public Object getValueAt(int rowIndex, int columnIndex) {
 		try {
 			if (rowIndex >= data.size()) {
-				return "";
+				return Utility.EMPTY;
 			}
 			SearchResultRow row = data.get(rowIndex);
 			switch (columnIndex) {
@@ -49,10 +50,10 @@ public class SearchResultTableModel extends AbstractTableModel {
 			case 4: return row.getType();
 			case 5: return row.getSize();
 			case 6: return row.getHostName();
-			default: return "";
+			default: return Utility.EMPTY;
 			}
 		} catch (ArrayIndexOutOfBoundsException  e) {	//NOSONAR
-			return "";
+			return Utility.EMPTY;
 		}
 	}
 

@@ -2,12 +2,10 @@ package droid64.gui;
 
 import java.awt.BorderLayout;
 import java.awt.Container;
-import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.Font;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
-import java.awt.Toolkit;
 import java.io.File;
 import java.text.NumberFormat;
 import java.util.List;
@@ -49,11 +47,11 @@ public class SearchDialog extends JDialog {
 	private MainPanel mainPanel;
 	private SearchResultTableModel tableModel = new SearchResultTableModel();
 
-	private JTextField fileNameText = new JTextField("", 20);
-	private JTextField diskLabelText = new JTextField("", 20);
-	private JTextField diskPathText = new JTextField("", 20);
-	private JTextField diskFileNameText = new JTextField("", 20);
-	private JTextField hostNameText = new JTextField("", 20);
+	private JTextField fileNameText = new JTextField(Utility.EMPTY, 20);
+	private JTextField diskLabelText = new JTextField(Utility.EMPTY, 20);
+	private JTextField diskPathText = new JTextField(Utility.EMPTY, 20);
+	private JTextField diskFileNameText = new JTextField(Utility.EMPTY, 20);
+	private JTextField hostNameText = new JTextField(Utility.EMPTY, 20);
 	private JFormattedTextField fileSizeMinField = getNumericField(10, 8);
 	private JFormattedTextField fileSizeMaxField = getNumericField(250, 8);
 
@@ -69,9 +67,9 @@ public class SearchDialog extends JDialog {
 		Container cp = getContentPane();
 		cp.setLayout(new BorderLayout());
 		cp.add(drawSearchPanel(), BorderLayout.CENTER);
-		Dimension dim = Toolkit.getDefaultToolkit().getScreenSize();
-		setLocation( (int)((dim.width - getSize().getWidth()) / 3),	(int)((dim.height - getSize().getHeight()) / 3)	);
+		GuiHelper.setLocation(this, 0.25f, 0.10f);
 		pack();
+		GuiHelper.setSize(this, 0.40f, 0.75f);
 		setVisible(mainPanel != null);
 		setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
 	}
@@ -213,15 +211,15 @@ public class SearchDialog extends JDialog {
 		addComponent(7, Resources.DROID64_SEARCH_IMAGEFILE, panel, diskFileNameText, gbc);
 		addComponent(8, Resources.DROID64_SEARCH_HOSTNAME, panel, hostNameText, gbc);
 		gbc.weighty = 1.0;
-		addComponent(9, "", panel, tableScrollPane, gbc);
+		addComponent(9, Utility.EMPTY, panel, tableScrollPane, gbc);
 		gbc.weighty = 0.0;
-		addComponent(10, "", panel, buttonPanel, gbc);
+		addComponent(10, Utility.EMPTY, panel, buttonPanel, gbc);
 		return panel;
 	}
 
 	private void addComponent(int row, String propKey, JPanel parent, JComponent component, GridBagConstraints gbc) {
-		addToGridBag(0, row, 0.0, gbc, parent, new JLabel(Settings.getMessage(propKey)));
-		addToGridBag(1, row, 0.5, gbc, parent, component);
+		GuiHelper.addToGridBag(0, row, 0.0, gbc, parent, new JLabel(Settings.getMessage(propKey)));
+		GuiHelper.addToGridBag(1, row, 0.5, gbc, parent, component);
 	}
 
 	protected void search(int selectedFileType, int imageType ) {
@@ -256,23 +254,6 @@ public class SearchDialog extends JDialog {
 		}
 		criteria.setImageType(imageType > 0 && imageType < DiskImage.getImageTypeNames().length ? Integer.valueOf(imageType) : null);
 		runSearch(criteria);
-	}
-
-	/**
-	 * Wrapper to add a JComponent to a GridBagConstraints.
-	 * @param x column
-	 * @param y row
-	 * @param weightx column weight
-	 * @param gbc GridBagConstaints
-	 * @param parent Parent JComponent to which to add a component
-	 * @param component the new component to add
-	 */
-	private void addToGridBag(int x, int y, double weightx, GridBagConstraints gbc, JComponent parent, JComponent component) {
-		gbc.weightx = weightx;
-		gbc.gridx = x;
-		gbc.gridy = y;
-		gbc.gridwidth = 1;
-		parent.add(component, gbc);
 	}
 
 	/**

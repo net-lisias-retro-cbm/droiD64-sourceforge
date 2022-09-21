@@ -39,7 +39,7 @@ public class HexTableModel extends AbstractTableModel {
 		} else if (column == bytesPerRow + 1) {
 			return "ASCII";
 		} else {
-			return "";
+			return Utility.EMPTY;
 		}
 	}
 
@@ -60,7 +60,7 @@ public class HexTableModel extends AbstractTableModel {
 	@Override
 	public String getValueAt(int rowIndex, int columnIndex) {
 		if (data == null) {
-			return "";
+			return Utility.EMPTY;
 		} else {
 			if (columnIndex == 0) {
 				return Utility.getIntHexString(rowIndex * bytesPerRow).toUpperCase();
@@ -71,7 +71,7 @@ public class HexTableModel extends AbstractTableModel {
 				if (addr < data.length && addr < length) {
 					return Utility.getByteStringUpperCase(data[addr]);
 				} else {
-					return "";
+					return Utility.EMPTY;
 				}
 			}
 		}

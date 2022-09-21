@@ -41,28 +41,8 @@ public class LNX extends DiskImage {
 	}
 
 	@Override
-	public int getMaxSectors(int trackNumber) {
-		return 0;
-	}
-
-	@Override
-	public int getTrackCount() {
-		return 0;
-	}
-
-	@Override
-	public int getMaxSectorCount() {
-		return 0;
-	}
-
-	@Override
 	public byte[] getBlock(int track, int sector) throws CbmException {
 		return new byte[0];
-	}
-
-	@Override
-	public int getBlocksFree() {
-		return 0;
 	}
 
 	@Override
@@ -100,7 +80,7 @@ public class LNX extends DiskImage {
 				String str = new String(Arrays.copyOfRange(cbmDisk, pos, end));
 				String[] dirItems = str.trim().split(" +", 2);
 				int numDirBlocks = Integer.parseInt(dirItems[0]);
-				String diskName = dirItems.length > 1 ? dirItems[1] : "";
+				String diskName = dirItems.length > 1 ? dirItems[1] : Utility.EMPTY;
 				int dataStart = numDirBlocks * LNX_BLOCK_SIZE;
 				setDiskName(diskName, Integer.toString(numDirBlocks));
 				// fileCount

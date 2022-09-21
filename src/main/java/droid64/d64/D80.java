@@ -110,8 +110,8 @@ public class D80 extends DiskImage {
 		int bamOffset1 = getSectorOffset(BAM_TRACK, BAM_SECT_1);
 		int bamOffset2 = getSectorOffset(BAM_TRACK, BAM_SECT_2);
 		int headerOffset = getSectorOffset(HEADER_TRACK, HEADER_SECT);
-		bam.setDiskName("");
-		bam.setDiskId("");
+		bam.setDiskName(Utility.EMPTY);
+		bam.setDiskId(Utility.EMPTY);
 		bam.setDiskDosType(getCbmDiskValue(headerOffset + 2 ));
 		for (int track = 1; track <= D80Constants.D80_TRACKS.length; track++) {
 			int pos;
@@ -197,7 +197,7 @@ public class D80 extends DiskImage {
 			int blockPos = D80Constants.D80_TRACKS[thisTrack].getOffset() + (BLOCK_SIZE * thisSector);
 			int nextTrack = getCbmDiskValue(thisTrack, thisSector, 0x00);
 			int nextSector = getCbmDiskValue(thisTrack, thisSector, 0x01);
-			feedbackMessage.append(thisTrack).append("/").append(thisSector).append(" ");
+			feedbackMessage.append(thisTrack).append("/").append(thisSector).append(Utility.SPACE);
 			if (nextTrack > 0) {
 				out.write(cbmDisk, blockPos + 2, BLOCK_SIZE - 2);
 			} else {
@@ -304,7 +304,7 @@ public class D80 extends DiskImage {
 
 	@Override
 	public boolean addDirectoryEntry(CbmFile cbmFile, int fileTrack, int fileSector, boolean isCopyFile, int lengthInBytes) {
-		feedbackMessage.append("addDirectoryEntry: \"").append(cbmFile.getName()).append("\", ").append(CbmFile.FILE_TYPES[cbmFile.getFileType()]).append(", ").append(fileTrack).append("/").append(fileSector).append("\n");
+		feedbackMessage.append(String.format("addDirectoryEntry: \"%s\", %s, %d/%d%n", cbmFile.getName(), CbmFile.FILE_TYPES[cbmFile.getFileType()], fileTrack, fileSector));
 		if (isCpmImage()) {
 			feedbackMessage.append("Not yet implemented for CP/M format.\n");
 			return false;

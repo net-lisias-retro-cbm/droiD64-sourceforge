@@ -23,6 +23,7 @@
   <li>Plugins</li>
   <li>Operations</li>
   <li>Database</li>
+  <li>DroiD64 settings</li>
 </ol>
 
 <hr/>
@@ -45,11 +46,11 @@ However, I use it myself and I have managed pretty well so far. Don't hesitate c
 How to do this depends on your operating system and the way you start DroiD64.</p>
 <p>Example commandline for Linux, UNIX and similar operating systems with a MySQL database driver:</p>
 <pre>
-  java -Xmx1024m -classpath /opt/lib/mysql-connector-java-5.1.44/mysql-connector-java-5.1.44-bin.jar:droid64-${project.version}.jar droid64.DroiD64
+  java -Xmx1024m -classpath /opt/lib/mysql-connector-java-5.1.47/mysql-connector-java-5.1.47-bin.jar:droid64-${project.version}.jar droid64.DroiD64
 </pre>
 <p>Example commandline for Microsoft Windows with a MySQL database driver:</p>
 <pre>
-  java -Xmx1024m -classpath C:\mysql-connector-java-5.1.44\mysql-connector-java-5.1.44-bin.jar;droid64-${project.version}.jar droid64.DroiD64
+  java -Xmx1024m -classpath C:\mysql-connector-java-5.1.47\mysql-connector-java-5.1.47-bin.jar;droid64-${project.version}.jar droid64.DroiD64
 </pre>
 
 <hr/>
@@ -238,6 +239,38 @@ If you manage to use DroiD64 with some other database, please mail me the detail
     <tr><th>Limit type:</th><td>FIRST</td>
   </table>
   <p>In Firebird SQL version 3, you probably need to edit your <span style="font-family: monospace;">firebird.conf</span> file and set "<i>WireCrypt = Enabled</i>".</p>
+
+<h2>6. DroiD64 settings</h2>
+The configuration file (<font style="font-family:monospace">.droiD64.cfg</font>) is usually stored in the user's home directory, which differs depending on operating system.
+If it is missing, it will be recreated using defaults.
+<h3>6.1.  GUI </h3>
+<dl>
+	<dt>Confirm Exit</dt><dd> If checked, DroiD64 will ask for confirmation before closing the application.</dd>
+	<dt>Look &amp; feel</dt><dd> Choose between different Java look &amp; feels.</dd>
+	<dt>Disk Image Grid distance</dt><dd> Size of the rows in the file browser when an image is opened.</dd>
+	<dt>Local Files Grid distance</dt><dd> Size of the rows in the file browser when browsing the file system.</dd>
+	<dt>Disk Image Font size</dt><dd> Height of font used in file browser when an image is opened.</dd>
+	<dt>Local Files Font size</dt><dd> Height of the font used when browsing the file system.</dd>
+	<dt>Window size and location</dt><dd> The default position and size of the DroiD64 main window.</dd>
+	<dt>System font</dt><dd>Choose a TrueType font to use is file listing when browsing the file system. Check the check box to reset to the default font.</dd>
+	<dt>Commodore font</dt><dd>Choose a TrueType font to use when listing disk images. Check the check box to use the default bundled DroiD64 font</dd>
+</dl>
+
+<h3>6.2.  Files </h3>
+<dl>
+	<dt>Left default image dir</dt><dd> The path which will be opened in the left file browser when DroiD64 is started.</dd>
+	<dt>Right default image dir</dt><dd> The path which will be opened in the right file browser when DroiD64 is started.</dd>
+	<dt><i>&lt;ImageType&gt;</i> file extensions</dt><dd> Semicolon separated lists of file extensions used to identify disk image files.</dd>
+</dl>
+
+<h3>6.3.  Colors </h3>
+This setting page is used to configure the colors and color theme used in DroiD64.
+
+<h3>6.4.  Database </h3>
+The settings for database connectivity. See section 5 in this document for more details.
+
+<h3>6.5.  Plugin <i>&lt;number<&gt;</i></h3>
+Configure the plugin buttons. See section 3 in this document for more details.
 
 </body>
 </html>

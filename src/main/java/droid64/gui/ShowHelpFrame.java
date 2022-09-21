@@ -1,8 +1,6 @@
 package droid64.gui;
 import java.awt.BorderLayout;
 import java.awt.Color;
-import java.awt.Dimension;
-import java.awt.Toolkit;
 import java.text.MessageFormat;
 
 import javax.swing.ImageIcon;
@@ -57,7 +55,7 @@ public class ShowHelpFrame extends JFrame {
 	protected ShowHelpFrame (String topText, boolean visible) {
 		setTitle(topText);
 
-		setLayout( new BorderLayout());
+		setLayout(new BorderLayout());
 
 		JPanel imagePanel = new JPanel();
 		ImageIcon imageIcon = new ImageIcon(getClass().getResource("resources/wolf.jpg"));
@@ -82,13 +80,9 @@ public class ShowHelpFrame extends JFrame {
 		add(new JScrollPane(messageTextArea), BorderLayout.CENTER);
 		add(buttonPanel, BorderLayout.SOUTH);
 
+		GuiHelper.setLocation(this, 3, 3);
 		pack();
-		Dimension dim = Toolkit.getDefaultToolkit().getScreenSize();
-		setSize(dim.width/4, dim.height/2);
-		setLocation(
-				(int)((dim.width - getSize().getWidth()) / 3),
-				(int)((dim.height - getSize().getHeight()) / 3));
-
+		GuiHelper.setSize(this, 4, 2);
 		setVisible(visible);
 		setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
 	}

@@ -11,6 +11,8 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
+import droid64.d64.Utility;
+
 /**
  * MySQL implementation of DiskDao.
  * @author Henrik
@@ -175,7 +177,7 @@ public class DiskDaoImpl implements DiskDao {
 		if (!criteria.hasCriteria()) {
 			return;
 		}
-		String and = "";
+		String and = Utility.EMPTY;
 		sqlBuf.append("WHERE ");
 		if (!isStringNullOrEmpty(criteria.getFileName())) {
 			sqlBuf.append("UPPER(df.name) LIKE ? ");
@@ -291,7 +293,7 @@ public class DiskDaoImpl implements DiskDao {
 			int idx = 1;
 			stmt.setString(idx++, disk.getFilePath());
 			stmt.setString(idx++, disk.getFileName());
-			stmt.setString(idx, disk.getHostName() != null ? disk.getHostName().toUpperCase() : "");
+			stmt.setString(idx, disk.getHostName() != null ? disk.getHostName().toUpperCase() : Utility.EMPTY);
 			rs = stmt.executeQuery();
 			Disk oldDisk = null;
 			while (rs.next()) {

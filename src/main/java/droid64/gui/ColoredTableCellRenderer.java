@@ -35,6 +35,7 @@ import javax.swing.SwingConstants;
 import javax.swing.table.DefaultTableCellRenderer;
 
 import droid64.d64.CbmBam;
+import droid64.d64.Utility;
 
 public class ColoredTableCellRenderer extends DefaultTableCellRenderer {
 
@@ -47,7 +48,7 @@ public class ColoredTableCellRenderer extends DefaultTableCellRenderer {
 	@Override
 	public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
 		setHorizontalAlignment(SwingConstants.CENTER);
-		JLabel label = new JLabel(column > 0 ? "" : value.toString());
+		JLabel label = new JLabel(column > 0 ? Utility.EMPTY : value.toString());
 		label.setOpaque(true);
 		label.setBorder(BorderFactory.createEmptyBorder(1, 1, 1, 1));
 		label.setFont(table.getFont());

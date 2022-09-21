@@ -53,6 +53,8 @@ import droid64.gui.Settings;
  */
 public class Utility {
 
+	public static final String EMPTY = "";
+	public static final String SPACE = " ";
 	/** PETSCII padding white space character */
 	public static final byte BLANK = (byte) 0xa0;
 	public static final String MIMETYPE_HTML = "text/html";
@@ -472,7 +474,7 @@ public class Utility {
 		if (str == null || str.isEmpty()) {
 			return str;
 		}
-		return str.replaceAll("\\s+$", "");
+		return str.replaceAll("\\s+$", Utility.EMPTY);
 	}
 
 	/**
@@ -721,7 +723,7 @@ public class Utility {
 				buf.append(getIntHexString(i)).append(": ");
 			}
 			int c = data[i]&0xff;
-			buf.append(" ").append(HEX[c]);
+			buf.append(' ').append(HEX[c]);
 			if (c >= 0x20 && c < 0x7f) {
 				asc[i % 16] = (char) c;
 			} else {
@@ -732,6 +734,24 @@ public class Utility {
 			buf.append("  ").append(asc);
 		}
 		return buf.toString();
+	}
+
+
+	/**
+	 * Sort array of files
+	 * @param files the array of files
+	 * @return returns the modified array of files
+	 */
+	public static File[] sortFiles(File[] files) {
+		Arrays.sort(files, (a, b) -> {
+			if (a.isDirectory() && !b.isDirectory()) {
+				return -1;
+			} else if (!a.isDirectory() && b.isDirectory()) {
+				return 1;
+			}
+			return a.getName().compareTo(b.getName());
+		});
+		return files;
 	}
 
 }

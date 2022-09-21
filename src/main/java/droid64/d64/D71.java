@@ -112,8 +112,8 @@ public class D71 extends DiskImage {
 	public void readBAM() {
 		int bamOffset1 = getSectorOffset(BAM_TRACK_1, BAM_SECT);
 		int bamOffset2 = getSectorOffset(BAM_TRACK_2, BAM_SECT);
-		bam.setDiskName("");
-		bam.setDiskId("");
+		bam.setDiskName(Utility.EMPTY);
+		bam.setDiskId(Utility.EMPTY);
 		bam.setDiskDosType(getCbmDiskValue(bamOffset1 + 2 ));
 		for (byte track = 1; track <= D71Constants.D71_TRACKS.length; track++) {
 			if (track <= 35) {
@@ -245,7 +245,7 @@ public class D71 extends DiskImage {
 			int blockPos = getSectorOffset(thisTrack, thisSector);
 			int nextTrack  = getCbmDiskValue(blockPos + 0);
 			int nextSector = getCbmDiskValue(blockPos + 1);
-			feedbackMessage.append(thisTrack).append("/").append(thisSector).append(" ");
+			feedbackMessage.append(thisTrack).append("/").append(thisSector).append(Utility.SPACE);
 			if (nextTrack > 0) {
 				out.write(cbmDisk, blockPos + 2, BLOCK_SIZE - 2);
 			} else {
@@ -573,7 +573,7 @@ public class D71 extends DiskImage {
 
 	@Override
 	public boolean addDirectoryEntry(CbmFile cbmFile, int fileTrack, int fileSector, boolean isCopyFile, int lengthInBytes){
-		feedbackMessage.append("addDirectoryEntry: \"").append(cbmFile.getName()).append("\", ").append(CbmFile.FILE_TYPES[cbmFile.getFileType()]).append(", ").append(fileTrack).append("/").append(fileSector).append("\n");
+		feedbackMessage.append(String.format("addDirectoryEntry: \"%s\", %s, %d/%d%n", cbmFile.getName(), CbmFile.FILE_TYPES[cbmFile.getFileType()], fileTrack, fileSector));
 		if (isCpmImage()) {
 			feedbackMessage.append("Not yet implemented for CP/M format.\n");
 			return false;

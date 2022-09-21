@@ -105,8 +105,8 @@ public class D81 extends DiskImage {
 		int headerOffset = getSectorOffset(HEADER_TRACK, HEADER_SECT);
 		int bamOffset1 = getSectorOffset(BAM_TRACK, BAM_SECT_1) + 0x10;
 		int bamOffset2 = getSectorOffset(BAM_TRACK, BAM_SECT_2) + 0x10;
-		bam.setDiskName("");
-		bam.setDiskId("");
+		bam.setDiskName(Utility.EMPTY);
+		bam.setDiskId(Utility.EMPTY);
 		bam.setDiskDosType(getCbmDiskValue(headerOffset + 2 ));
 		for (int track = 1; track <= TRACK_COUNT; track ++) {
 			int bamOffset = ((track-1) < 40 ? bamOffset1 : bamOffset2 ) + ((track-1) % 40) * BYTES_PER_BAM_TRACK;
@@ -249,7 +249,7 @@ public class D81 extends DiskImage {
 			int blockPos = getSectorOffset(track, sector);
 			int nextTrack  = getCbmDiskValue(blockPos + 0x00);
 			int nextSector = getCbmDiskValue(blockPos + 0x01);
-			feedbackMessage.append(track).append("/").append(sector).append(" ");
+			feedbackMessage.append(track).append("/").append(sector).append(Utility.SPACE);
 			if (nextTrack > 0) {
 				out.write(cbmDisk, blockPos + 2, BLOCK_SIZE - 2);
 			} else {
@@ -330,7 +330,7 @@ public class D81 extends DiskImage {
 	 * @return number of validation errors
 	 */
 	private Integer validate(final int dirTrack, final int dirSector, boolean isPartition, int partitionSectorCount) {
-		feedbackMessage.append("validate: D81 dirSector ").append(dirTrack).append("/").append(dirSector).append(isPartition ? " partition " : " ");
+		feedbackMessage.append("validate: D81 dirSector ").append(dirTrack).append("/").append(dirSector).append(isPartition ? " partition " : Utility.SPACE);
 		// init to null
 		Boolean[][] bamEntry = new Boolean[getTrackCount() + 1][getMaxSectorCount()];
 		for (int trk = 0; trk < bamEntry.length; trk++) {
@@ -764,7 +764,7 @@ public class D81 extends DiskImage {
 
 	@Override
 	public boolean addDirectoryEntry(CbmFile cbmFile, int fileTrack, int fileSector, boolean isCopyFile, int lengthInBytes) {
-		feedbackMessage.append("addDirectoryEntry: \"").append(cbmFile.getName()).append("\", ").append(CbmFile.FILE_TYPES[cbmFile.getFileType()]).append(", ").append(fileTrack).append("/").append(fileSector).append("\n");
+		feedbackMessage.append(String.format("addDirectoryEntry: \"%s\", %s, %d/%d%nn", cbmFile.getName(), CbmFile.FILE_TYPES[cbmFile.getFileType()], fileTrack, fileSector));
 		if (isCpmImage()) {
 			feedbackMessage.append("Not yet implemented for CP/M format.\n");
 			return false;

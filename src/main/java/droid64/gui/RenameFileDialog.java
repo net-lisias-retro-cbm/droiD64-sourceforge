@@ -19,6 +19,7 @@ import javax.swing.text.BadLocationException;
 import javax.swing.text.Document;
 
 import droid64.d64.CbmException;
+import droid64.d64.Utility;
 
 /*
  * Created on 26.06.2004
@@ -76,11 +77,11 @@ public class RenameFileDialog extends JDialog {
 		JPanel buttonPanel = new JPanel();
 
 		JLabel fileNameLabel = new JLabel("Filename:");
-		final JTextField nameTextField = new JTextField("", 16);
+		final JTextField nameTextField = new JTextField(Utility.EMPTY, 16);
 		nameTextField.setToolTipText("Enter the new filename here.");
 		nameTextField.setDocument(new LimitLengthDocument(16, oldFileName));
 
-		final JTextField nameTextField2 = new JTextField("", 16);
+		final JTextField nameTextField2 = new JTextField(Utility.EMPTY, 16);
 		try {
 			nameTextField2.setFont(Settings.getCommodoreFont());
 			nameTextField2.setBackground(Settings.getDirColorBg());
@@ -91,7 +92,7 @@ public class RenameFileDialog extends JDialog {
 
 			nameTextField.getDocument().addDocumentListener(createFieldUpdateListener(nameTextField2));
 
-			namePanel2.add(new JLabel(""));
+			namePanel2.add(new JLabel(Utility.EMPTY));
 			namePanel2.add(nameTextField2);
 		} catch (CbmException e) {	//NOSONAR
 			mainPanel.appendConsole("Failed to setup name field.\n"+e.getMessage());
@@ -148,10 +149,7 @@ public class RenameFileDialog extends JDialog {
 		add(idPanel, BorderLayout.CENTER);
 		add(buttonPanel, BorderLayout.SOUTH);
 
-		Dimension dim = Toolkit.getDefaultToolkit().getScreenSize();
-		setLocation(
-				(int)((dim.width - getSize().getWidth()) / 3),
-				(int)((dim.height - getSize().getHeight()) / 3)	);
+		GuiHelper.setLocation(this, 3, 3);
 		pack();
 		setVisible(mainPanel != null);
 

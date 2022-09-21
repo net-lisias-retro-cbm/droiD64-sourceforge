@@ -114,6 +114,8 @@ public class Resources {
 	public static final String DROID64_SETTINGS_FONTSIZE_TOOLTIP = "droid64.settings.fontsize.tooltip";
 	public static final String DROID64_SETTINGS_WINDOWSIZE = "droid64.settings.windowsize";
 	public static final String DROID64_SETTINGS_WINDOWSIZE_FETCH = "droid64.settings.windowsize.fetch";
+	public static final String DROID64_SETTINGS_CBMFONT = "droid64.settings.cbmfont";
+	public static final String DROID64_SETTINGS_SYSFONT = "droid64.settings.sysfont";
 	public static final String DROID64_SETTINGS_EXE_CHOOSE = "droid64.settings.exe.choose";
 	public static final String DROID64_SETTINGS_EXE_CHOOSE_TOOLTIP = "droid64.settings.exe.choose.tooltip";
 	public static final String DROID64_SETTINGS_EXE_LABEL = "droid64.settings.exe.label";

@@ -6,12 +6,9 @@ import java.awt.Color;
 import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.Font;
-import java.awt.Toolkit;
 import java.awt.print.PrinterException;
 import java.awt.print.PrinterJob;
 import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.PrintWriter;
 import java.util.Date;
 
 import javax.swing.JButton;
@@ -72,9 +69,11 @@ public class HexViewDialog extends JDialog {
 	private static final String HEX_MODE = Settings.getMessage(Resources.DROID64_HEXVIEW_HEXMODE);
 	private MainPanel mainPanel;
 	private JButton modeButton;
-	private JTextArea asmTextPane;
+	private JTextArea asmTextArea;
 	private JPanel cards;
 	private JTable table;
+	private JToggleButton c64ModeButton;
+	private boolean[] c64Modes = {false, false};
 
 	/**
 	 * Constructor
@@ -90,62 +89,49 @@ public class HexViewDialog extends JDialog {
 		setModal(true);
 		this.mainPanel = mainPanel;
 		setLayout(new BorderLayout());
-
 		// Setup title
 		add(new JLabel(fileName), BorderLayout.NORTH);
-
 		// Setup hex panel
 		JTable hexTable = drawHexPanel(data, length);
 		// Setup assembler panel
-		JPanel disasmPanel = new JPanel(new BorderLayout());
-		asmTextPane = new JTextArea();
-		asmTextPane.setText("");
-		asmTextPane.setEditable(false);
-		asmTextPane.setFont(getTableFont(false));
-
-		disasmPanel.add(asmTextPane, BorderLayout.CENTER);
-		JScrollPane asmScrollPane = new JScrollPane(disasmPanel);
-
+		asmTextArea = new JTextArea();
+		asmTextArea.setText(Utility.EMPTY);
+		asmTextArea.setEditable(false);
+		asmTextArea.setFont(getTableFont(false));
 		// Setup cards
 		cards = new JPanel(new CardLayout());
 		cards.add(new JScrollPane(hexTable), HEX_MODE);
-		cards.add(asmScrollPane, ASM_MODE);
-
+		cards.add(new JScrollPane(asmTextArea), ASM_MODE);
 		add(cards, BorderLayout.CENTER);
+
 		add(drawButtons(data, length, readLoadAddr, fileName), BorderLayout.SOUTH);
 		setSize(hexTable.getWidth(), hexTable.getHeight());
-
-		Dimension dim = Toolkit.getDefaultToolkit().getScreenSize();
-		setLocation( (int)((dim.width - getSize().getWidth()) / 3),	(int)((dim.height - getSize().getHeight()) / 3)	);
-
+		GuiHelper.setLocation(this, 3, 3);
 		pack();
 		setVisible(mainPanel != null);
 		setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
 	}
 
 	private JPanel drawButtons(final byte[] data, final int length, final boolean readLoadAddr, final String fileName) {
-		// Setup buttons
-		modeButton = new JButton(ASM_MODE);
+		modeButton = new JButton(HEX_MODE);
+		modeButton.setMnemonic('m');
 		modeButton.addActionListener(ae -> switchHexAsmMode(data, length, readLoadAddr));
+		c64ModeButton = new JToggleButton("C64 mode");
+		c64ModeButton.setMnemonic('c');
+		c64ModeButton.addActionListener(ae -> switchFont(c64ModeButton.isSelected()));
 
 		final JButton okButton = new JButton(Settings.getMessage(Resources.DROID64_HEXVIEW_CLOSE));
 		okButton.setMnemonic('o');
 		okButton.setToolTipText(Settings.getMessage(Resources.DROID64_HEXVIEW_CLOSE_TOOLTIP));
 		okButton.addActionListener(ae -> dispose());
 
-		final JToggleButton c64ModeButton = new JToggleButton("C64 mode");
-		c64ModeButton.addActionListener(ae -> {
-			table.setFont(getTableFont(c64ModeButton.isSelected()));
-			asmTextPane.setFont(getTableFont(c64ModeButton.isSelected()));
-		});
-
 		final JButton printButton = new JButton(Settings.getMessage(Resources.DROID64_HEXVIEW_PRINT));
 		printButton.setMnemonic('p');
-		printButton.addActionListener(ae -> print(data, c64ModeButton.isSelected(), fileName, ASM_MODE.equals(modeButton.getText()), asmTextPane.getText()));
+		printButton.addActionListener(ae -> print(data, c64Modes[isHexMode() ? 0 : 1], fileName, isHexMode()));
 
 		final JButton saveButton = new JButton(Settings.getMessage(Resources.DROID64_HEXVIEW_SAVETEXT));
 		saveButton.setMnemonic('s');
-		saveButton.addActionListener(ae-> saveText(data, fileName, ASM_MODE.equals(modeButton.getText()), asmTextPane.getText()));
+		saveButton.addActionListener(ae-> saveText(data, fileName, isHexMode()));
 
 		JPanel buttonPanel = new JPanel();
 		buttonPanel.add(modeButton);
@@ -154,42 +140,6 @@ public class HexViewDialog extends JDialog {
 		buttonPanel.add(saveButton);
 		buttonPanel.add(okButton);
 		return buttonPanel;
-	}
-
-	private void switchHexAsmMode(byte[] data, int length, boolean readLoadAddr) {
-		String mode = modeButton.getText();
-		if (ASM_MODE.equals(mode)) {
-			modeButton.setText(HEX_MODE);
-			if ("".equals(asmTextPane.getText())) {
-				String code = ProgramParser.parse(data, length, readLoadAddr);
-				asmTextPane.setText(code);
-				asmTextPane.setCaretPosition(0);
-			}
-		} else {
-			modeButton.setText(ASM_MODE);
-		}
-		CardLayout cl = (CardLayout) cards.getLayout();
-		cl.show(cards, mode);
-	}
-
-	private void saveText(byte[] data, String fileName, boolean hexMode, String asm) {
-		String[] ext = hexMode ? new String[] {".txt", ".asm"} : new String[] {".asm", ".txt"};
-		String title = hexMode ? Settings.getMessage(Resources.DROID64_HEXVIEW_SAVEHEX) : Settings.getMessage(Resources.DROID64_HEXVIEW_SAVEASM);
-		String fname = FileDialogHelper.openTextFileDialog(title, null, fileName, true, ext);
-		if (fname != null) {
-			String outString = hexMode ? Utility.hexDump(data) : asm;
-			if (!outString.isEmpty()) {
-				writeToFile(new File(fname), outString);
-			}
-		}
-	}
-
-	private void writeToFile(File saveFile, String outString) {
-		try (PrintWriter out = new PrintWriter(saveFile)) {
-			out.println( outString );
-		} catch (FileNotFoundException e) {	//NOSONAR
-			mainPanel.appendConsole("Error: failed to write to file "+saveFile.getName());
-		}
 	}
 
 	/**
@@ -213,10 +163,52 @@ public class HexViewDialog extends JDialog {
 		table.setShowGrid(true);
 		table.setFont(getTableFont(false));
 
-		int chrWdt = Math.max(table.getFontMetrics(getTableFont(true)).stringWidth("w"), table.getFontMetrics(getTableFont(false)).stringWidth("w"));
+		resizeTable(false);
+		return table;
+	}
+
+	private void switchFont(boolean useCbmFont) {
+		c64ModeButton.setSelected(useCbmFont);
+		if (isHexMode()) {
+			c64Modes[0] = useCbmFont;
+			table.setFont(getTableFont(useCbmFont));
+			resizeTable(useCbmFont);
+		} else {
+			c64Modes[1] = useCbmFont;
+			asmTextArea.setFont(getTableFont(useCbmFont));
+		}
+	}
+
+	private boolean isHexMode() {
+		return HEX_MODE.equals(modeButton.getText());
+	}
+
+	private void switchHexAsmMode(byte[] data, int length, boolean readLoadAddr) {
+		if (isHexMode()) {
+			// from hex mode to asm mode
+			modeButton.setText(ASM_MODE);
+			if (Utility.EMPTY.equals(asmTextArea.getText())) {
+				String code = ProgramParser.parse(data, length, readLoadAddr);
+				asmTextArea.setText(code);
+				asmTextArea.setCaretPosition(0);
+			}
+			switchFont(c64Modes[1]);
+		} else {
+			modeButton.setText(HEX_MODE);
+			switchFont(c64Modes[0]);
+			resizeTable(c64ModeButton.isSelected());
+		}
+
+		asmTextArea.setSize(table.getSize());
+		CardLayout cl = (CardLayout) cards.getLayout();
+		cl.show(cards, modeButton.getText());
+	}
+
+	private void resizeTable(boolean useCbmFont) {
+		int chrWdt = table.getFontMetrics(getTableFont(useCbmFont)).stringWidth("w");
 		int colWdt = chrWdt * 3;
 		int addrWdt = chrWdt * 10;
-		int ascWdt = chrWdt * (model.getColumnCount() - 2 +2);
+		int ascWdt = chrWdt * model.getColumnCount();
 		for (int i=0; i<table.getColumnCount(); i++) {
 			TableColumn column = table.getColumnModel().getColumn(i);
 			if (i == 0) {
@@ -236,7 +228,7 @@ public class HexViewDialog extends JDialog {
 		ToolTipManager.sharedInstance().unregisterComponent(table.getTableHeader());
 		table.setPreferredScrollableViewportSize(new Dimension(wdt, hgt));
 		table.setSize(wdt, hgt);
-		return table;
+		table.invalidate();
 	}
 
 	private Font getTableFont(boolean useCbmFont) {
@@ -248,18 +240,38 @@ public class HexViewDialog extends JDialog {
 		}
 	}
 
-	private void print(final byte[] data, boolean useCbmfont, final String title, boolean hexmode, String asmText) {
+	private void saveText(byte[] data, String fileName, boolean hexMode) {
+		String[] ext = hexMode ? new String[] {".txt", ".asm"} : new String[] {".asm", ".txt"};
+		String title = hexMode ? Settings.getMessage(Resources.DROID64_HEXVIEW_SAVEHEX) : Settings.getMessage(Resources.DROID64_HEXVIEW_SAVEASM);
+		String fname = FileDialogHelper.openTextFileDialog(title, null, fileName, true, ext);
+		if (fname != null) {
+			String outString = hexMode ? Utility.hexDump(data) : asmTextArea.getText();
+			if (!outString.isEmpty()) {
+				writeToFile(new File(fname), outString);
+			}
+		}
+	}
+
+	private void writeToFile(File saveFile, String outString) {
+		try {
+			Utility.writeFile(saveFile, outString);
+		} catch (CbmException e) {
+			mainPanel.appendConsole("Error: failed to write to file "+saveFile.getName()+"\n"+e.getMessage());
+		}
+	}
+
+	private void print(final byte[] data, boolean useCbmfont, final String title, boolean hexmode) {
 		PrinterJob job = PrinterJob.getPrinterJob();
 		if (hexmode) {
 			job.setPageable(new PrintPageable(data, useCbmfont, title, mainPanel));
 		} else {
-			String header = "; Created by " + DroiD64.PROGNAME + " version " + DroiD64.VERSION + "\n" + "; "
-					+ new Date() + "\n \n";
+			String header = String.format("; Created by %s version %s%n; %s%n%n", DroiD64.PROGNAME, DroiD64.VERSION, new Date().toString());
 			if (useCbmfont) {
 				header = header.toUpperCase();
 			}
-			job.setPageable(new PrintPageable(header + asmText, "; " + title, useCbmfont, true, mainPanel));
+			job.setPageable(new PrintPageable(header + asmTextArea.getText(), "; " + title, useCbmfont, true, mainPanel));
 		}
+		mainPanel.appendConsole("Print " + (hexmode ? "hex" : "asm") + " mode using " + (useCbmfont ? "C64" : "system") + " font");
 		if (job.printDialog()) {
 			try {
 				job.print();

@@ -33,8 +33,8 @@ public class LimitLengthDocument extends PlainDocument {
 	}
 
 	public void setText(String text) {
-		AttributeSet attrs = new SimpleAttributeSet();
 		try {
+			AttributeSet attrs = new SimpleAttributeSet();
 			super.replace(0, getLength(), text, attrs);
 			insertString(0, text, attrs);
 		} catch (BadLocationException e) {}	//NOSONAR

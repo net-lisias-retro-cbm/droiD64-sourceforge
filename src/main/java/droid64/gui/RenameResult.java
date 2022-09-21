@@ -1,12 +1,14 @@
 package droid64.gui;
 
+import droid64.d64.Utility;
+
 public class RenameResult {
 
-	private String fileName = "";
+	private String fileName = Utility.EMPTY;
 	private boolean success = false;
 	private int fileType = 0;
-	private String diskName = "";
-	private String diskID = "";
+	private String diskName = Utility.EMPTY;
+	private String diskID = Utility.EMPTY;
 	private int diskType = 0;
 	private boolean compressedDisk = false;
 	private boolean cpmDisk = false;

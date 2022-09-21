@@ -138,22 +138,31 @@ public abstract class DiskImage implements Serializable {
 	 * @param trackNumber track number
 	 * @return number of sectors on specified track.
 	 */
-	public abstract int getMaxSectors(int trackNumber);
+	public int getMaxSectors(int trackNumber) {
+		return 0;
+	}
 	/**
 	 * Get numbers of tracks on image.
 	 * @return number of tracks.
 	 */
-	public abstract int getTrackCount();
+	public int getTrackCount() {
+		return 0;
+	}
 	/**
 	 * Get maximum number of sectors on any track.
 	 * @return maximum number of sectors
 	 */
-	public abstract int getMaxSectorCount();
+	public int getMaxSectorCount() {
+		return 0;
+	}
 	/**
 	 * Get number of free blocks.
 	 * @return blocks free
 	 */
-	public abstract int getBlocksFree();
+	public int getBlocksFree() {
+		return 0;
+	}
+
 	/**
 	 * Reads image file.
 	 * @param filename	the filename
@@ -619,11 +628,11 @@ public abstract class DiskImage implements Serializable {
 	}
 
 	private boolean checkCpmImageFormat() {
-		String diskName = bam.getDiskName()!=null ? bam.getDiskName().replaceAll("\\u00a0", "").trim() : null;
+		String diskName = bam.getDiskName()!=null ? bam.getDiskName().replaceAll("\\u00a0", Utility.EMPTY).trim() : null;
 		if (!CPM_DISKNAME_1.equals(diskName) && !CPM_DISKNAME_2.equals(diskName)) {
 			return false;
 		}
-		String diskId = bam.getDiskId() != null ? bam.getDiskId().replaceAll("\\u00a0", " ").trim() : null;
+		String diskId = bam.getDiskId() != null ? bam.getDiskId().replaceAll("\\u00a0", Utility.SPACE).trim() : null;
 		if (CPM_DISKID_GCR.equals(diskId)) {
 			if ("CBM".equals(getStringFromBlock(1, 0, 0, 3))) {
 				if (this instanceof D71 && (getCbmDiskValue(BLOCK_SIZE - 1) & 0xff) == 0xff) {
@@ -699,7 +708,7 @@ public abstract class DiskImage implements Serializable {
 			feedbackMessage.append("No disk data. Nothing to write.\n");
 			return false;
 		}
-		feedbackMessage.append("writeImage: Trying to save ").append(compressed ? " compressed " : "").append(filename).append("... \n");
+		feedbackMessage.append("writeImage: Trying to save ").append(compressed ? " compressed " : Utility.EMPTY).append(filename).append("... \n");
 		try {
 			if (compressed) {
 				Utility.writeGZippedFile(filename, cbmDisk);
@@ -887,27 +896,6 @@ public abstract class DiskImage implements Serializable {
 			}
 		}
 		return false;
-	}
-
-	/**
-	 * Checks if fileName ends with .del, .seq, .prg, .usr or .rel and returns the corresponding file type.<br>
-	 * If there is no matching file extension, TYPE_PRG is return
-	 * @param fileName fileName
-	 * @return file type
-	 */
-	public static int getFileTypeFromFileExtension(String fileName) {
-		String name = fileName != null ? fileName.toLowerCase() : "";
-		if (name.endsWith(".del")) {
-			return CbmFile.TYPE_DEL;
-		} else if (name.endsWith(".seq")) {
-			return CbmFile.TYPE_SEQ;
-		} else if (name.endsWith(".usr")) {
-			return CbmFile.TYPE_USR;
-		} else if (name.endsWith(".rel")) {
-			return CbmFile.TYPE_REL;
-		} else {
-			return CbmFile.TYPE_PRG;
-		}
 	}
 
 	/**

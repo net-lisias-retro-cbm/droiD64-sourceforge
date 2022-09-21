@@ -20,10 +20,12 @@ import java.util.ResourceBundle;
 import java.util.TreeSet;
 
 import javax.swing.JPanel;
+import javax.swing.JTextField;
 
 import droid64.DroiD64;
 import droid64.d64.CbmException;
 import droid64.d64.DiskImage;
+import droid64.d64.Utility;
 
 public class Settings {
 
@@ -33,7 +35,6 @@ public class Settings {
 	private static final JPanel DEFAULT_PANEL = new JPanel();
 	public static final int MAX_PLUGINS = 4;
 
-	private static final String EMPTY = "";
 	private static final String DELIM = ";";
 	private static final String LF = "\n";
 	private static final String EQ = "=";
@@ -84,6 +85,9 @@ public class Settings {
 	private static final String SETTING_LOOK_AND_FEEL       = "look_and_feel";
 	private static final String SETTING_WINDOW              = "window";
 
+	private static final String SETTING_SYS_FONT            = "sys_font";
+	private static final String SETTING_CBM_FONT            = "cbm_font";
+
 	private static final String SETTING_FILE_EXT_D64        = "file_ext_d64";
 	private static final String SETTING_FILE_EXT_D67        = "file_ext_d67";
 	private static final String SETTING_FILE_EXT_D71        = "file_ext_d71";
@@ -118,24 +122,24 @@ public class Settings {
 	private static Map<String,Parameter> initMap() {
 		Map<String,Parameter> map = new HashMap<>();
 		map.put(SETTING_ASK_QUIT,			new Parameter(SETTING_ASK_QUIT,				Parameter.BOOLEAN_PARAM,	Boolean.TRUE));
-		map.put(SETTING_BORDER_ACTIVE,		new Parameter(SETTING_BORDER_ACTIVE,		Parameter.COLOR_PARAM,	ACTIVE_BORDER_COLOR));
-		map.put(SETTING_BORDER_INACTIVE,	new Parameter(SETTING_BORDER_INACTIVE,		Parameter.COLOR_PARAM,	INACTIVE_BORDER_COLOR));
+		map.put(SETTING_BORDER_ACTIVE,		new Parameter(SETTING_BORDER_ACTIVE,		Parameter.COLOR_PARAM,		ACTIVE_BORDER_COLOR));
+		map.put(SETTING_BORDER_INACTIVE,	new Parameter(SETTING_BORDER_INACTIVE,		Parameter.COLOR_PARAM,		INACTIVE_BORDER_COLOR));
 		map.put(SETTING_COLOUR,				new Parameter(SETTING_COLOUR,				Parameter.INTEGER_PARAM,	Integer.valueOf(1)));
-		map.put(SETTING_DEFAULT_IMAGE_DIR,	new Parameter(SETTING_DEFAULT_IMAGE_DIR,	Parameter.STRING_PARAM,	USER_HOME));
-		map.put(SETTING_DEFAULT_IMAGE_DIR2,	new Parameter(SETTING_DEFAULT_IMAGE_DIR2,	Parameter.STRING_PARAM,	USER_HOME));
-		map.put(SETTING_DIR_BG,				new Parameter(SETTING_DIR_BG,				Parameter.COLOR_PARAM,	DIR_BG_COLOR_C64));
-		map.put(SETTING_DIR_FG,				new Parameter(SETTING_DIR_FG,				Parameter.COLOR_PARAM,	DIR_FG_COLOR_C64));
-		map.put(SETTING_DIR_CPM_BG,			new Parameter(SETTING_DIR_CPM_BG,			Parameter.COLOR_PARAM,	DIR_BG_COLOR_CPM));
-		map.put(SETTING_DIR_CPM_FG,			new Parameter(SETTING_DIR_CPM_FG,			Parameter.COLOR_PARAM,	DIR_FG_COLOR_CPM));
-		map.put(SETTING_DIR_LOCAL_BG,		new Parameter(SETTING_DIR_LOCAL_BG,			Parameter.COLOR_PARAM,	DIR_BG_COLOR_LOCAL));
-		map.put(SETTING_DIR_LOCAL_FG,		new Parameter(SETTING_DIR_LOCAL_FG,			Parameter.COLOR_PARAM,	DIR_FG_COLOR_LOCAL));
+		map.put(SETTING_DEFAULT_IMAGE_DIR,	new Parameter(SETTING_DEFAULT_IMAGE_DIR,	Parameter.STRING_PARAM,		USER_HOME));
+		map.put(SETTING_DEFAULT_IMAGE_DIR2,	new Parameter(SETTING_DEFAULT_IMAGE_DIR2,	Parameter.STRING_PARAM,		USER_HOME));
+		map.put(SETTING_DIR_BG,				new Parameter(SETTING_DIR_BG,				Parameter.COLOR_PARAM,		DIR_BG_COLOR_C64));
+		map.put(SETTING_DIR_FG,				new Parameter(SETTING_DIR_FG,				Parameter.COLOR_PARAM,		DIR_FG_COLOR_C64));
+		map.put(SETTING_DIR_CPM_BG,			new Parameter(SETTING_DIR_CPM_BG,			Parameter.COLOR_PARAM,		DIR_BG_COLOR_CPM));
+		map.put(SETTING_DIR_CPM_FG,			new Parameter(SETTING_DIR_CPM_FG,			Parameter.COLOR_PARAM,		DIR_FG_COLOR_CPM));
+		map.put(SETTING_DIR_LOCAL_BG,		new Parameter(SETTING_DIR_LOCAL_BG,			Parameter.COLOR_PARAM,		DIR_BG_COLOR_LOCAL));
+		map.put(SETTING_DIR_LOCAL_FG,		new Parameter(SETTING_DIR_LOCAL_FG,			Parameter.COLOR_PARAM,		DIR_FG_COLOR_LOCAL));
 		map.put(SETTING_FONT_SIZE,			new Parameter(SETTING_FONT_SIZE,			Parameter.INTEGER_PARAM,	Integer.valueOf(10)));
 		map.put(SETTING_LOCAL_FONT_SIZE,	new Parameter(SETTING_LOCAL_FONT_SIZE,		Parameter.INTEGER_PARAM,	Integer.valueOf(10)));
-		map.put(SETTING_WINDOW,				new Parameter(SETTING_WINDOW,				Parameter.STRING_PARAM,	EMPTY));
-		map.put(SETTING_JDBC_DRIVER,		new Parameter(SETTING_JDBC_DRIVER,			Parameter.STRING_PARAM,	"com.mysql.jdbc.Driver"));
-		map.put(SETTING_JDBC_URL,			new Parameter(SETTING_JDBC_URL,				Parameter.STRING_PARAM,	"jdbc:mysql://localhost:3306/droid64"));
-		map.put(SETTING_JDBC_USER,			new Parameter(SETTING_JDBC_USER,			Parameter.STRING_PARAM,	DROID64));
-		map.put(SETTING_JDBC_PASS,			new Parameter(SETTING_JDBC_PASS,			Parameter.STRING_PARAM,	"uridium"));
+		map.put(SETTING_WINDOW,				new Parameter(SETTING_WINDOW,				Parameter.STRING_PARAM,		Utility.EMPTY));
+		map.put(SETTING_JDBC_DRIVER,		new Parameter(SETTING_JDBC_DRIVER,			Parameter.STRING_PARAM,		"com.mysql.jdbc.Driver"));
+		map.put(SETTING_JDBC_URL,			new Parameter(SETTING_JDBC_URL,				Parameter.STRING_PARAM,		"jdbc:mysql://localhost:3306/droid64"));
+		map.put(SETTING_JDBC_USER,			new Parameter(SETTING_JDBC_USER,			Parameter.STRING_PARAM,		DROID64));
+		map.put(SETTING_JDBC_PASS,			new Parameter(SETTING_JDBC_PASS,			Parameter.STRING_PARAM,		"uridium"));
 		map.put(SETTING_JDBC_LIMIT_TYPE,	new Parameter(SETTING_JDBC_LIMIT_TYPE,		Parameter.INTEGER_PARAM,	Integer.valueOf(0)));
 		map.put(SETTING_MAX_ROWS,			new Parameter(SETTING_MAX_ROWS,				Parameter.INTEGER_PARAM,	Integer.valueOf(25)));
 		map.put(SETTING_ROW_HEIGHT,			new Parameter(SETTING_ROW_HEIGHT,			Parameter.INTEGER_PARAM,	Integer.valueOf(10)));
@@ -170,7 +174,24 @@ public class Settings {
 		map.put(SETTING_FILE_EXT_D80_GZ,	new Parameter(SETTING_FILE_EXT_D80_GZ,		Parameter.STRING_LIST_PARAM,	Arrays.asList("d80.gz".split(DELIM)) ));
 		map.put(SETTING_FILE_EXT_D82_GZ,	new Parameter(SETTING_FILE_EXT_D82_GZ,		Parameter.STRING_LIST_PARAM,	Arrays.asList("d82.gz".split(DELIM)) ));
 		map.put(SETTING_FILE_EXT_LNX_GZ,	new Parameter(SETTING_FILE_EXT_LNX_GZ,		Parameter.STRING_LIST_PARAM,	Arrays.asList("lnx.gz".split(DELIM)) ));
+		map.put(SETTING_SYS_FONT,			new Parameter(SETTING_SYS_FONT,				Parameter.FONT_PARAM,			null));
+		map.put(SETTING_CBM_FONT,			new Parameter(SETTING_CBM_FONT,				Parameter.FONT_PARAM,			null));
+
 		return map;
+	}
+
+	public static void setSysFont(Font font) {
+		setFontParameter(SETTING_SYS_FONT, font);
+	}
+	public static Font getSysFont() {
+		return getFontParameter(SETTING_SYS_FONT);
+	}
+	public static void setCbmFont(Font font) {
+		commodoreFont = null;
+		setFontParameter(SETTING_CBM_FONT, font);
+	}
+	public static Font getCbmFont() {
+		return getFontParameter(SETTING_CBM_FONT);
 	}
 
 	public static void setActiveBorderColor(Color color) {
@@ -223,12 +244,12 @@ public class Settings {
 		List <String> labelList = getIndexStringList(SETTING_PLUGIN_LABEL);
 		List <String> forkList = getIndexStringList(SETTING_PLUGIN_FORK);
 		for (int i=0; i < Settings.MAX_PLUGINS; i++) {
-			String cmd = i <cmdList.size() ? cmdList.get(i) : EMPTY;
-			String args = i <argList.size() ? argList.get(i) : EMPTY;
-			String descr = i <descrList.size() ? descrList.get(i) : EMPTY;
-			String label = i <labelList.size() ? labelList.get(i) : EMPTY;
+			String cmd = i <cmdList.size() ? cmdList.get(i) : Utility.EMPTY;
+			String args = i <argList.size() ? argList.get(i) : Utility.EMPTY;
+			String descr = i <descrList.size() ? descrList.get(i) : Utility.EMPTY;
+			String label = i <labelList.size() ? labelList.get(i) : Utility.EMPTY;
 			boolean forkThread = i <forkList.size() ? Boolean.valueOf(forkList.get(i)) : true;
-			if (EMPTY.equals(cmd) && EMPTY.equals(descr) && EMPTY.equals(label)) {
+			if (Utility.EMPTY.equals(cmd) && Utility.EMPTY.equals(descr) && Utility.EMPTY.equals(label)) {
 				list.add(null);
 			} else {
 				list.add(new ExternalProgram(cmd, args, descr, label, forkThread));
@@ -261,7 +282,7 @@ public class Settings {
 		Parameter param = settingTypeMap.get(key);
 		List<String> list = param.getIndexedStringValue();
 		for (int i=list.size(); i <= num; i++) {
-			list.add(EMPTY);
+			list.add(Utility.EMPTY);
 		}
 		list.set(num, value);
 	}
@@ -273,7 +294,7 @@ public class Settings {
 			String value = String.format("%d:%d,%d:%d", sizeLocation[0], sizeLocation[1], sizeLocation[2], sizeLocation[3]);
 			setStringParameter(SETTING_WINDOW, value);
 		} else {
-			setStringParameter(SETTING_WINDOW, EMPTY);
+			setStringParameter(SETTING_WINDOW, Utility.EMPTY);
 		}
 	}
 
@@ -772,7 +793,10 @@ public class Settings {
 	public static Font getCommodoreFont() throws CbmException {
 		if (commodoreFont == null) {
 			try {
-				commodoreFont = Font.createFont(Font.TRUETYPE_FONT, Settings.class.getResourceAsStream("resources/" + Settings.DIR_FONT_NAME));
+				commodoreFont = getCbmFont();
+				if (commodoreFont == null) {
+					commodoreFont = Font.createFont(Font.TRUETYPE_FONT, Settings.class.getResourceAsStream("resources/" + Settings.DIR_FONT_NAME));
+				}
 			} catch (FontFormatException | IOException e) {
 				throw new CbmException("Failed to create font.", e);
 			}
@@ -782,6 +806,14 @@ public class Settings {
 			commodoreScaledFont = commodoreFont.deriveFont((float) commodoreFontSize);
 		}
 		return commodoreScaledFont;
+	}
+
+	public static Font getSystemFont() {
+		if (getSysFont() == null) {
+			return new JTextField().getFont();
+		} else {
+			return getSysFont();
+		}
 	}
 
 	/**

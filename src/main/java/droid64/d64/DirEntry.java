@@ -60,7 +60,7 @@ public class DirEntry implements Serializable {
 			blocks = cbm.getSizeInBlocks();
 			type = CbmFile.getFileType(cbm.getFileType());
 			name= " \"" + cbm.getName() + "\"";
-			flags = (cbm.isFileLocked() ? "<" : "") + (cbm.isFileClosed() ? "" : "*");
+			flags = (cbm.isFileLocked() ? "<" : Utility.EMPTY) + (cbm.isFileClosed() ? Utility.EMPTY : "*");
 			track = cbm.getTrack();
 			sector = cbm.getSector();
 		}
@@ -82,7 +82,7 @@ public class DirEntry implements Serializable {
 		blocks = (int) zipEntry.getSize();
 		isFile = !zipEntry.isDirectory();
 		isImageFile = isFile && DiskImage.isImageFileName(name);
-		flags = zipEntry.getComment() != null ? zipEntry.getComment() : "";
+		flags = zipEntry.getComment() != null ? zipEntry.getComment() : Utility.EMPTY;
 		this.zipFile = zipFile;
 	}
 
@@ -96,7 +96,7 @@ public class DirEntry implements Serializable {
 
 	@Override
 	public String toString() {
-		return String.format("%3d %3d \"%16s\" %3s%3s %2d %2d", number, blocks, name!=null ? name : "", type!=null?type:"", flags!=null?flags:"", track, sector);
+		return String.format("%3d %3d \"%16s\" %3s%3s %2d %2d", number, blocks, name!=null ? name : Utility.EMPTY, type!=null?type:Utility.EMPTY, flags!=null?flags:Utility.EMPTY, track, sector);
 	}
 
 	/**

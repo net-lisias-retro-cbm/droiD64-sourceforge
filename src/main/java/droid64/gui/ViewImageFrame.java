@@ -3,11 +3,9 @@ package droid64.gui;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Container;
-import java.awt.Dimension;
 import java.awt.GridBagConstraints;
-import java.awt.Toolkit;
+import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
-import java.awt.event.MouseListener;
 import java.awt.image.BufferedImage;
 import java.awt.print.PrinterException;
 import java.awt.print.PrinterJob;
@@ -18,7 +16,6 @@ import java.util.List;
 import javax.imageio.ImageIO;
 import javax.swing.BorderFactory;
 import javax.swing.JButton;
-import javax.swing.JComponent;
 import javax.swing.JFrame;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
@@ -98,8 +95,7 @@ public class ViewImageFrame extends JFrame {
 		buttonPanel.add(okButton);
 		cp.add(buttonPanel, BorderLayout.SOUTH);
 
-		Dimension dim = Toolkit.getDefaultToolkit().getScreenSize();
-		setLocation( (int)((dim.width - getSize().getWidth()) / 3),	(int)((dim.height - getSize().getHeight()) / 3)	);
+		GuiHelper.setLocation(this, 3, 3);
 		pack();
 		setVisible(mainPanel != null);
 		setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
@@ -112,22 +108,14 @@ public class ViewImageFrame extends JFrame {
 			gbc.fill = GridBagConstraints.VERTICAL;
 			imgPanel.setBorder(BorderFactory.createLineBorder(Color.BLACK));
 			if (dataList.size() > 1) {
-				imgPanel.addMouseListener(new MouseListener() {
+				imgPanel.addMouseListener(new MouseAdapter() {
 					@Override
 					public void mouseClicked(MouseEvent e) {
 						clickedImage(imgPanel);
 					}
-					@Override
-					public void mousePressed(MouseEvent e) { /* Not used */}
-					@Override
-					public void mouseReleased(MouseEvent e) { /* Not used */}
-					@Override
-					public void mouseEntered(MouseEvent e) { /* Not used */}
-					@Override
-					public void mouseExited(MouseEvent e) { /* Not used */}
 				});
 			}
-			addToGridBag(0, 0, 0.0, 0.0, gbc, parentPanel, imgPanel);
+			GuiHelper.addToGridBag(0, 0, 0.0, 0.0, gbc, parentPanel, imgPanel);
 		}
 		return imgPanel;
 	}
@@ -158,14 +146,6 @@ public class ViewImageFrame extends JFrame {
 		CbmPicture cbm = new CbmPicture(data, name);
 		currentIndex++;
 		return cbm;
-	}
-
-	private void addToGridBag(int x, int y, double weightx, double weighty, GridBagConstraints gbc, JComponent parent, JComponent component) {
-		gbc.gridx = x;
-		gbc.gridy = y;
-		gbc.weightx = weightx;
-		gbc.weighty = weighty;
-		parent.add(component, gbc);
 	}
 
 	private void print(BufferedImage image, String title) {

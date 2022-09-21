@@ -3,7 +3,7 @@
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>droid64</groupId>
 	<artifactId>droid64</artifactId>
-	<version>0.14b</version>
+	<version>0.15b</version>
 
 	<build>
 		<plugins>
@@ -236,7 +236,7 @@
 		<dependency>
 			<groupId>mysql</groupId>
 			<artifactId>mysql-connector-java</artifactId>
-			<version>5.1.44</version>
+			<version>5.1.47</version>
 			<scope>runtime</scope>
 		</dependency>
 		<!-- https://mvnrepository.com/artifact/com.h2database/h2 -->

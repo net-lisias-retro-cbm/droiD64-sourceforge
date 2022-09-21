@@ -2,10 +2,8 @@ package droid64.gui;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Container;
-import java.awt.Dimension;
 import java.awt.Insets;
 import java.awt.Point;
-import java.awt.Toolkit;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 
@@ -28,6 +26,7 @@ import droid64.DroiD64;
 import droid64.d64.CbmBam;
 import droid64.d64.CbmException;
 import droid64.d64.DiskImage;
+import droid64.d64.Utility;
 
 /**<pre style='font-family:sans-serif;'>
  * Created on 25.06.2004
@@ -77,6 +76,7 @@ public class BAMFrame extends JFrame {
 		this.bamEntry = bamEntry;
 		saveButton = new JButton(Settings.getMessage(Resources.DROID64_BAM_SAVE));
 		saveButton.setToolTipText(Settings.getMessage(Resources.DROID64_BAM_SAVE_TOOLTIP));
+		saveButton.setMnemonic('s');
 		saveButton.setEnabled(false);
 		saveButton.addActionListener(ae -> {
 			if (diskImage.writeImage(diskFileName)) {
@@ -86,14 +86,16 @@ public class BAMFrame extends JFrame {
 		});
 
 		final JRadioButton viewModeButton = createRadioButton(Resources.DROID64_BAM_VIEW, Resources.DROID64_BAM_VIEW_TOOLTIP, writable);
+		viewModeButton.setMnemonic('v');
 		final JRadioButton editModeButton = createRadioButton(Resources.DROID64_BAM_EDIT, Resources.DROID64_BAM_EDIT_TOOLTIP, writable);
+		editModeButton.setMnemonic('e');
 		ButtonGroup modeGroup = new ButtonGroup();
 		modeGroup.add(viewModeButton);
 		modeGroup.add(editModeButton);
 		viewModeButton.setSelected(true);
 
 		final JButton okButton = new JButton(Settings.getMessage(Resources.DROID64_BAM_CLOSE));
-		okButton.setMnemonic('o');
+		okButton.setMnemonic('c');
 		okButton.addActionListener(ae->dispose());
 
 		//Table Column-Width
@@ -120,7 +122,7 @@ public class BAMFrame extends JFrame {
 				if (row < bamEntry.length && column < bamEntry[0].length) {
 					return bamEntry[row][column];
 				} else {
-					return "";
+					return Utility.EMPTY;
 				}
 			}
 		};
@@ -152,12 +154,9 @@ public class BAMFrame extends JFrame {
 		cp.add(new JScrollPane(bamTable), BorderLayout.CENTER);
 		cp.add(buttonPanel, BorderLayout.SOUTH);
 
-		Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
-		setLocation(
-				(int)((screenSize.width - getSize().getWidth()) / 3),
-				(int)((screenSize.height - getSize().getHeight()) / 3));
+		GuiHelper.setLocation(this, 3, 3);
 		pack();
-		setSize(screenSize.width/4,screenSize.height/2);
+		GuiHelper.setSize(this, 4, 2);
 		setVisible(mainPanel != null);
 		this.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
 	}
@@ -199,16 +198,15 @@ public class BAMFrame extends JFrame {
 
 	private void viewBlock(int row, int col, MainPanel mainPanel) {
 		try {
-			byte[] data = diskImage.getBlock(row+1, col-1);
+			byte[] data = diskImage.getBlock(row + 1, col - 1);
 			if (data != null && data.length > 0) {
-				String info =
-						Settings.getMessage(Resources.DROID64_BAM_TRACK) + " " + (row + 1) + " " +
-								Settings.getMessage(Resources.DROID64_BAM_SECTOR) + " " + (col - 1) +
-								" (0x" + Integer.toHexString(diskImage.getSectorOffset(row + 1, col - 1))+")";
-				new HexViewDialog(DroiD64.PROGNAME+" - Block view", info, data, data.length, mainPanel, false);
+				String info = String.format("%s %d %s %d (0x%X)", Settings.getMessage(Resources.DROID64_BAM_TRACK),
+						row + 1, Settings.getMessage(Resources.DROID64_BAM_SECTOR), col - 1,
+						diskImage.getSectorOffset(row + 1, col - 1));
+				new HexViewDialog(DroiD64.PROGNAME + " - Block view", info, data, data.length, mainPanel, false);
 			}
-		} catch (CbmException e) {	//NOSONAR
-			mainPanel.appendConsole("Failed to get data.\n"+e.getMessage());
+		} catch (CbmException e) { // NOSONAR
+			mainPanel.appendConsole("Failed to get data.\n" + e.getMessage());
 		}
 	}
 

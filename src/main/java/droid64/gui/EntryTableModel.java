@@ -35,6 +35,7 @@ import javax.swing.table.TableColumn;
 import javax.swing.table.TableColumnModel;
 
 import droid64.d64.DirEntry;
+import droid64.d64.Utility;
 
 class EntryTableModel extends AbstractTableModel {
 
@@ -60,10 +61,10 @@ class EntryTableModel extends AbstractTableModel {
 	@Override
 	public String getColumnName(int column) {
 		switch (mode) {
-		case MODE_CBM: return column < COLHEADS_CBM.length ? COLHEADS_CBM[column] : "";
-		case MODE_CPM: return column < COLHEADS_CPM.length ?  COLHEADS_CPM[column] : "";
-		case MODE_LOCAL: return column < COLHEADS_LOCAL.length ? COLHEADS_LOCAL[column] : "";
-		default: return "";
+		case MODE_CBM: return column < COLHEADS_CBM.length ? COLHEADS_CBM[column] : Utility.EMPTY;
+		case MODE_CPM: return column < COLHEADS_CPM.length ?  COLHEADS_CPM[column] : Utility.EMPTY;
+		case MODE_LOCAL: return column < COLHEADS_LOCAL.length ? COLHEADS_LOCAL[column] : Utility.EMPTY;
+		default: return Utility.EMPTY;
 		}
 	}
 
@@ -96,7 +97,7 @@ class EntryTableModel extends AbstractTableModel {
 	public synchronized Object getValueAt(int row, int column) {
 		DirEntry p = (row < data.size() && row >= 0) ? data.get(row) : null;
 		if (p == null) {
-			return "";
+			return Utility.EMPTY;
 		}
 		if (MODE_CBM == mode || MODE_CPM == mode) {
 			switch (column) {
@@ -107,7 +108,7 @@ class EntryTableModel extends AbstractTableModel {
 			case 4:	return p.getFlags();
 			case 5: return Integer.valueOf(p.getTrack());
 			case 6: return Integer.valueOf(p.getSector());
-			default: return "";
+			default: return Utility.EMPTY;
 			}
 		} else if (MODE_LOCAL == mode) {
 			switch (column) {
@@ -115,10 +116,10 @@ class EntryTableModel extends AbstractTableModel {
 			case 1:	return p.getName();
 			case 2:	return p.getFlags();
 			case 3:	return Integer.valueOf(p.getBlocks());
-			default: return "";
+			default: return Utility.EMPTY;
 			}
 		} else {
-			return "";
+			return Utility.EMPTY;
 		}
 	}
 

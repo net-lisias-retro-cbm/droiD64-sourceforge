@@ -9,10 +9,13 @@ import javax.swing.JFileChooser;
 import javax.swing.JFrame;
 import javax.swing.filechooser.FileFilter;
 
+import droid64.d64.Utility;
+
 public class FileDialogHelper {
 
 	private static JFileChooser textFileChooser = null;
 	private static JFileChooser imageFileChooser = null;
+	private static JFileChooser fontFileChooser = null;
 
 	private FileDialogHelper() {
 		super();
@@ -30,7 +33,7 @@ public class FileDialogHelper {
 	public static String openTextFileDialog(String title, String directory, String defaultName, boolean saveMode, String[] extFilter) {
 		if (textFileChooser == null) {
 			textFileChooser = new JFileChooser(directory);
-			FileFilter fileFilter = getTextFileFilter(extFilter);
+			FileFilter fileFilter = getFileFilter("Text", extFilter);
 			textFileChooser.addChoosableFileFilter(fileFilter);
 			textFileChooser.setFileFilter(fileFilter);
 			textFileChooser.setMultiSelectionEnabled(false);
@@ -40,14 +43,32 @@ public class FileDialogHelper {
 		textFileChooser.setSelectedFile(getDefaultFile(defaultName, extFilter));
 		if (saveMode) {
 			textFileChooser.setDialogTitle(title != null ? title : "Save text file ");
-			if (textFileChooser.showOpenDialog(new JFrame()) == JFileChooser.APPROVE_OPTION) {
-				return textFileChooser.getSelectedFile()+"";
+			if (textFileChooser.showSaveDialog(new JFrame()) == JFileChooser.APPROVE_OPTION) {
+				return textFileChooser.getSelectedFile()+Utility.EMPTY;
 			}
 		} else {
 			textFileChooser.setDialogTitle(title != null ? title : "Open text file");
-			if (textFileChooser.showSaveDialog(new JFrame()) == JFileChooser.APPROVE_OPTION) {
-				return textFileChooser.getSelectedFile()+"";
+			if (textFileChooser.showOpenDialog(new JFrame()) == JFileChooser.APPROVE_OPTION) {
+				return textFileChooser.getSelectedFile()+Utility.EMPTY;
 			}
+		}
+		return null;
+	}
+
+	public static String openFontFileDialog(String title, String directory, String defaultName, String[] extFilter) {
+		if (fontFileChooser == null) {
+			fontFileChooser = new JFileChooser(directory);
+			FileFilter fileFilter = getFileFilter("TrueType Font", extFilter);
+			fontFileChooser.addChoosableFileFilter(fileFilter);
+			fontFileChooser.setFileFilter(fileFilter);
+			fontFileChooser.setMultiSelectionEnabled(false);
+		} else if (directory != null) {
+			fontFileChooser.setCurrentDirectory(new File(directory));
+		}
+		fontFileChooser.setSelectedFile(getDefaultFile(defaultName, extFilter));
+		fontFileChooser.setDialogTitle(title != null ? title : "Open font file");
+		if (fontFileChooser.showOpenDialog(new JFrame()) == JFileChooser.APPROVE_OPTION) {
+			return fontFileChooser.getSelectedFile()+Utility.EMPTY;
 		}
 		return null;
 	}
@@ -89,19 +110,19 @@ public class FileDialogHelper {
 			imageFileChooser.setDialogTitle("Save disk image");
 			imageFileChooser.setDialogType(JFileChooser.FILES_ONLY | JFileChooser.SAVE_DIALOG);
 			if (imageFileChooser.showSaveDialog(new JFrame()) == JFileChooser.APPROVE_OPTION) {
-				return imageFileChooser.getSelectedFile()+"";
+				return imageFileChooser.getSelectedFile()+Utility.EMPTY;
 			}
 		} else {
 			imageFileChooser.setDialogTitle("Load disk image");
 			imageFileChooser.setDialogType(JFileChooser.FILES_ONLY | JFileChooser.OPEN_DIALOG);
 			if (imageFileChooser.showOpenDialog(new JFrame()) == JFileChooser.APPROVE_OPTION) {
-				return imageFileChooser.getSelectedFile()+"";
+				return imageFileChooser.getSelectedFile()+Utility.EMPTY;
 			}
 		}
 		return null;
 	}
 
-	private static FileFilter getTextFileFilter(final String[] extFilter) {
+	protected static FileFilter getFileFilter(final String extName, final String[] extFilter) {
 		return new FileFilter() {
 			@Override
 			public boolean accept(File f) {
@@ -118,11 +139,11 @@ public class FileDialogHelper {
 				return false;
 			}
 			@Override
-			public String getDescription () { return "Text"; }
+			public String getDescription () { return extName; }
 		};
 	}
 
-	private static FileFilter getDiskImageFileFilter() {
+	protected static FileFilter getDiskImageFileFilter() {
 		return new FileFilter() {
 			@Override
 			public boolean accept(File f) {
@@ -145,7 +166,7 @@ public class FileDialogHelper {
 		};
 	}
 
-	private static File getDefaultFile(String defaultName, String[] extFilter) {
+	protected static File getDefaultFile(String defaultName, String[] extFilter) {
 		if (defaultName != null && !defaultName.isEmpty()) {
 			if (extFilter == null || extFilter.length == 0) {
 				return new File(defaultName);

@@ -50,28 +50,8 @@ public class T64 extends DiskImage {
 	}
 
 	@Override
-	public int getMaxSectors(int trackNumber) {
-		return 0;
-	}
-
-	@Override
-	public int getTrackCount() {
-		return 0;
-	}
-
-	@Override
-	public int getMaxSectorCount() {
-		return 0;
-	}
-
-	@Override
 	public byte[] getBlock(int track, int sector) throws CbmException {
 		return new byte[0];
-	}
-
-	@Override
-	public int getBlocksFree() {
-		return 0;
 	}
 
 	@Override
@@ -86,8 +66,8 @@ public class T64 extends DiskImage {
 
 	@Override
 	public void readBAM() {
-		bam.setDiskName("");
-		bam.setDiskId("");
+		bam.setDiskName(Utility.EMPTY);
+		bam.setDiskId(Utility.EMPTY);
 		for (int i = 0; i < 32; i++) {
 			int c = cbmDisk[0x00 + i] & 0xff;
 			if (c!=0) {
@@ -146,7 +126,7 @@ public class T64 extends DiskImage {
 			if (cbmDisk.length <  dataEnd || dataStart < 0) {
 				throw new CbmException("T64 file ["+number+"] ends at 0x"+Integer.toHexString(dataEnd)+" outside image of size "+Integer.toHexString(cbmDisk.length)+".");
 			}
-			byte[] data = new byte[cf.getSizeInBytes()];
+			byte[] data = new byte[cf.getSizeInBytes() + 2];
 			if (cf.getSizeInBytes() <= 0) {
 				return data;
 			}

@@ -1,8 +1,6 @@
 package droid64.gui;
 import java.awt.BorderLayout;
 import java.awt.Container;
-import java.awt.Dimension;
-import java.awt.Toolkit;
 
 import javax.swing.JButton;
 import javax.swing.JFrame;
@@ -58,11 +56,7 @@ public class BugsFrame extends JFrame {
 		cp.add(todoPanel, BorderLayout.CENTER);
 		cp.add(drawButtonPanel(), BorderLayout.SOUTH);
 
-		Dimension dim = Toolkit.getDefaultToolkit().getScreenSize();
-		setLocation(
-				(int)((dim.width - getSize().getWidth()) / 3),
-				(int)((dim.height - getSize().getHeight()) / 3));
-
+		GuiHelper.setLocation(this,  3, 3);
 		pack();
 		setVisible(visible);
 		setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);

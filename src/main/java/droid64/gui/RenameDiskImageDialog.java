@@ -1,15 +1,12 @@
 package droid64.gui;
 import java.awt.BorderLayout;
-import java.awt.Dimension;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
-import java.awt.Toolkit;
 
 import javax.swing.BorderFactory;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
 import javax.swing.JComboBox;
-import javax.swing.JComponent;
 import javax.swing.JDialog;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
@@ -22,6 +19,7 @@ import javax.swing.text.Document;
 
 import droid64.d64.CbmException;
 import droid64.d64.DiskImage;
+import droid64.d64.Utility;
 
 /*
  * Created on 25.06.2004
@@ -93,11 +91,7 @@ public class RenameDiskImageDialog extends JDialog {
 		add(panel, BorderLayout.CENTER);
 		add(buttonPanel, BorderLayout.SOUTH);
 
-		Dimension dim = Toolkit.getDefaultToolkit().getScreenSize();
-		setLocation(
-				(int)((dim.width - getSize().getWidth()) / 3),
-				(int)((dim.height - getSize().getHeight()) / 3)
-				);
+		GuiHelper.setLocation(this, 3, 3);
 		pack();
 		setVisible(mainPanel != null);
 		setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
@@ -136,11 +130,11 @@ public class RenameDiskImageDialog extends JDialog {
 
 	private JPanel setupMainPanel(String diskName, String diskId, boolean create, final MainPanel mainPanel) {
 
-		nameTextField = new JTextField("", 16);
+		nameTextField = new JTextField(Utility.EMPTY, 16);
 		nameTextField.setToolTipText("The label of your image (max 16 characters)");
 		nameTextField.setDocument(new LimitLengthDocument(16, diskName));
 
-		idTextField = new JTextField("", 5);
+		idTextField = new JTextField(Utility.EMPTY, 5);
 		idTextField.setToolTipText("The disk ID of your image.");
 		idTextField.setDocument(new LimitLengthDocument(5, diskId));
 		idTextField.setToolTipText("The disk ID (max 5 characters)");
@@ -155,7 +149,7 @@ public class RenameDiskImageDialog extends JDialog {
 		cpmBox = new JCheckBox("CP/M formatted", false);
 		cpmBox.setToolTipText("Format for CP/M.");
 
-		final JTextField nameTextField2 = new JTextField("", 16);
+		final JTextField nameTextField2 = new JTextField(Utility.EMPTY, 16);
 		try {
 			nameTextField2.setFont(Settings.getCommodoreFont());
 			nameTextField2.setBackground(Settings.getDirColorBg());
@@ -181,7 +175,7 @@ public class RenameDiskImageDialog extends JDialog {
 			mainPanel.appendConsole("Failed to setup name field: "+e.getMessage());
 		}
 
-		final JTextField idTextField2 = new JTextField("", 5);
+		final JTextField idTextField2 = new JTextField(Utility.EMPTY, 5);
 		try {
 			idTextField2.setFont(Settings.getCommodoreFont());
 			idTextField2.setBackground(Settings.getDirColorBg());
@@ -218,41 +212,23 @@ public class RenameDiskImageDialog extends JDialog {
 			createPanel.add(compressedBox);
 			createPanel.add(cpmBox);
 
-			addToGridBag(0, row, 0.0, 0.0, gbc, main, new JLabel("Image Type:"));
-			addToGridBag(1, row, 0.0, 0.0, gbc, main, createPanel);
-			addToGridBag(2, row, 1.0, 0.0, gbc, main, new JPanel());
+			GuiHelper.addToGridBag(0, row, 0.0, 0.0, gbc, main, new JLabel("Image Type:"));
+			GuiHelper.addToGridBag(1, row, 0.0, 0.0, gbc, main, createPanel);
+			GuiHelper.addToGridBag(2, row, 1.0, 0.0, gbc, main, new JPanel());
 			row++;
 		}
-		addToGridBag(0, row, 0.0, 0.0, gbc, main, new JLabel("Disk Name:"));
-		addToGridBag(1, row, 0.0, 0.0, gbc, main, nameTextField);
-		addToGridBag(2, row, 1.0, 0.0, gbc, main, idTextField);
+		GuiHelper.addToGridBag(0, row, 0.0, 0.0, gbc, main, new JLabel("Disk Name:"));
+		GuiHelper.addToGridBag(1, row, 0.0, 0.0, gbc, main, nameTextField);
+		GuiHelper.addToGridBag(2, row, 1.0, 0.0, gbc, main, idTextField);
 		row++;
-		addToGridBag(0, row, 0.0, 0.0, gbc, main, new JLabel(""));
-		addToGridBag(1, row, 0.0, 0.0, gbc, main, nameTextField2);
-		addToGridBag(2, row, 1.0, 0.0, gbc, main, idTextField2);
+		GuiHelper.addToGridBag(0, row, 0.0, 0.0, gbc, main, new JLabel(Utility.EMPTY));
+		GuiHelper.addToGridBag(1, row, 0.0, 0.0, gbc, main, nameTextField2);
+		GuiHelper.addToGridBag(2, row, 1.0, 0.0, gbc, main, idTextField2);
 		row++;
-		addToGridBag(0, row, 1.0, 1.0, gbc, main, new JPanel());
-		addToGridBag(1, row, 1.0, 1.0, gbc, main, new JPanel());
-		addToGridBag(2, row, 1.0, 1.0, gbc, main, new JPanel());
+		GuiHelper.addToGridBag(0, row, 1.0, 1.0, gbc, main, new JPanel());
+		GuiHelper.addToGridBag(1, row, 1.0, 1.0, gbc, main, new JPanel());
+		GuiHelper.addToGridBag(2, row, 1.0, 1.0, gbc, main, new JPanel());
 		return main;
-	}
-
-	/**
-	 * Wrapper to add a JComponent to a GridBagConstraints.
-	 * @param x column
-	 * @param y row
-	 * @param weightx column weight
-	 * @param weighty row weight
-	 * @param gbc GridBagConstaints
-	 * @param parent Parent JComponent to which to add a component
-	 * @param component the new component to add
-	 */
-	private void addToGridBag(int x, int y, double weightx, double weighty, GridBagConstraints gbc, JComponent parent, JComponent component) {
-		gbc.weightx = weightx;
-		gbc.weighty = weighty;
-		gbc.gridx = x;
-		gbc.gridy = y;
-		parent.add(component, gbc);
 	}
 
 }

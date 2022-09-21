@@ -8,6 +8,8 @@ import javax.swing.JTable;
 import javax.swing.SwingConstants;
 import javax.swing.table.DefaultTableCellRenderer;
 
+import droid64.d64.Utility;
+
 public class ListTableCellRenderer extends DefaultTableCellRenderer {
 
 	private static final long serialVersionUID = 1L;
@@ -20,7 +22,7 @@ public class ListTableCellRenderer extends DefaultTableCellRenderer {
 	@Override
 	public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
 		super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
-		JLabel label = new JLabel(value != null ? value.toString() : "");
+		JLabel label = new JLabel(value != null ? value.toString() : Utility.EMPTY);
 		label.setOpaque(true);
 		label.setFont(table.getFont());
 		if (model.getMode() == EntryTableModel.MODE_LOCAL) {

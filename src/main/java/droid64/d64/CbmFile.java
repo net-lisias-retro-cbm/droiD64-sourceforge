@@ -87,7 +87,7 @@ public class CbmFile implements Comparable<CbmFile>, Serializable {
 		fileClosed = false;
 		track = 0;
 		sector = 0;
-		name = "";
+		name = Utility.EMPTY;
 		relTrack = 0;
 		relSector = 0;
 		geos[0] = 0;
@@ -173,7 +173,6 @@ public class CbmFile implements Comparable<CbmFile>, Serializable {
 			geos[i] = data[position + 0x17 + i] & 0xff;
 		}
 		sizeInBlocks = (data[position + 0x1e] & 0xff) | ((data[position + 0x1f] & 0xff) * 256);
-		loadAddr = 0;
 	}
 
 	/**
@@ -182,6 +181,27 @@ public class CbmFile implements Comparable<CbmFile>, Serializable {
 	 */
 	public static String getFileType(int type) {
 		return  type < CbmFile.FILE_TYPES.length ? CbmFile.FILE_TYPES[type] : null;
+	}
+
+	/**
+	 * Checks if fileName ends with .del, .seq, .prg, .usr or .rel and returns the corresponding file type.<br>
+	 * If there is no matching file extension, TYPE_PRG is return
+	 * @param fileName fileName
+	 * @return file type
+	 */
+	public static int getFileTypeFromFileExtension(String fileName) {
+		String name = fileName != null ? fileName.toLowerCase() : Utility.EMPTY;
+		if (name.endsWith(".del")) {
+			return TYPE_DEL;
+		} else if (name.endsWith(".seq")) {
+			return TYPE_SEQ;
+		} else if (name.endsWith(".usr")) {
+			return TYPE_USR;
+		} else if (name.endsWith(".rel")) {
+			return TYPE_REL;
+		} else {
+			return TYPE_PRG;
+		}
 	}
 
 	@Override
@@ -194,9 +214,9 @@ public class CbmFile implements Comparable<CbmFile>, Serializable {
 	}
 
 	public String asDirString() {
-		return String.format("%-5s%-18s %s%-3s%s", sizeInBlocks, "\"" + name + "\"", fileClosed ? " " : "*",
+		return String.format("%-5s%-18s %s%-3s%s", sizeInBlocks, "\"" + name + "\"", fileClosed ? Utility.SPACE : "*",
 				fileType < CbmFile.FILE_TYPES.length ? CbmFile.FILE_TYPES[fileType] : "???",
-						fileLocked ? "<" : " ");
+						fileLocked ? "<" : Utility.SPACE);
 	}
 
 	protected void toString(StringBuilder builder) {
@@ -502,7 +522,7 @@ public class CbmFile implements Comparable<CbmFile>, Serializable {
 		if (obj == null) {
 			return false;
 		}
-		if (getClass() != obj.getClass()) {
+		if (!getClass().equals(obj.getClass())) {
 			return false;
 		}
 		CbmFile other = (CbmFile) obj;
@@ -540,11 +560,8 @@ public class CbmFile implements Comparable<CbmFile>, Serializable {
 		data[offset + 3] = (byte) track;
 		data[offset + 4] = (byte) sector;
 		// FileName
-		for (int i = 0; i <= 15; i++) {
-			data[offset + 5 + i] = Utility.BLANK;
-		}
-		for (int i = 0; i <= name.length() - 1; i++) {
-			data[offset + 5 + i] = (byte) name.charAt(i);
+		for (int i = 0; i < DiskImage.DISK_NAME_LENGTH; i++) {
+			data[offset + 5 + i] = i < name.length() ? (byte) name.charAt(i) : Utility.BLANK;
 		}
 		// relative Track/Sector
 		data[offset + 21] = (byte) relTrack;

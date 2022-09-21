@@ -6,6 +6,8 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
+import droid64.d64.Utility;
+
 /**<pre style='font-family:sans-serif;'>
  * Created on 03.05.2018
  *
@@ -107,7 +109,7 @@ public class Parameter {
 		try {
 			switch (type) {
 			case Parameter.STRING_PARAM:
-				setStringValue(lineValue != null ? lineValue.replaceAll("[\\r\\n]+$", "") : null);
+				setStringValue(lineValue != null ? lineValue.replaceAll("[\\r\\n]+$", Utility.EMPTY) : null);
 				break;
 			case Parameter.INTEGER_PARAM:
 				setIntegerValue(lineValue != null ? Integer.valueOf(lineValue.trim()) : null);
@@ -139,7 +141,7 @@ public class Parameter {
 		List<String> list = new ArrayList<>();
 		setStringListValue(list);
 		if (value != null) {
-			for (String str : Arrays.asList(value.replaceAll("[\\r\\n]+$", "").split(STRING_LIST_SPLIT_EXPR))) {
+			for (String str : Arrays.asList(value.replaceAll("[\\r\\n]+$", Utility.EMPTY).split(STRING_LIST_SPLIT_EXPR))) {
 				list.add(str);
 			}
 		}
@@ -166,7 +168,9 @@ public class Parameter {
 		return name;
 	}
 
-	/** Avoid using. Use get&lt;<i>Type</i>&gt;value() instead. */
+	/** Avoid using. Use get&lt;<i>Type</i>&gt;value() instead.
+	 * @return the value
+	 */
 	public Object getValue() {
 		return value;
 	}
@@ -265,16 +269,14 @@ public class Parameter {
 
 	public void setFontValue(Font value) {
 		if (type == FONT_PARAM) {
-			if (value != null) {
-				this.value = value;
-			}
+			this.value = value;
 		} else {
 			throw new IllegalArgumentException(name + " is not a font parameter.");
 		}
 	}
 
 	public void setFontValue(String str) {
-		if (str != null) {
+		if (str != null && !str.isEmpty()) {
 			String[] sa = str.split(STRING_LIST_SPLIT_EXPR);
 			if (sa.length >= 3) {
 				setFontValue(new Font(sa[0].trim(), Integer.parseInt(sa[1].trim()), Integer.parseInt(sa[2].trim())));
@@ -322,12 +324,7 @@ public class Parameter {
 			Color c = getColorValue();
 			return name + EQ + c.getRed() + "," + c.getGreen() + "," + c.getBlue() + LF;
 		case Parameter.FONT_PARAM:
-			Font fnt = getFontValue();
-			if (fnt != null) {
-				return name + EQ + fnt.getName() + DELIM + fnt.getStyle() + DELIM + fnt.getSize() + LF;
-			} else {
-				return name + EQ + LF;
-			}
+			return name + EQ + getFontAsString(getFontValue()) + LF;
 		case Parameter.STRING_LIST_PARAM:
 			return name + EQ + getStringListParamAsString() + LF;
 		case Parameter.INDEXED_STRING_PARAM:
@@ -340,6 +337,26 @@ public class Parameter {
 		default:
 			return name + EQ + String.valueOf(value) + LF;
 		}
+	}
+
+	public static String getFontAsString(Font font) {
+		if (font != null) {
+			return font.getName() + DELIM + font.getStyle() + DELIM + font.getSize();
+		} else {
+			return Utility.EMPTY;
+		}
+	}
+
+	public static String getFontAsDisplayString(Font font) {
+		StringBuilder buf = new StringBuilder();
+		if (font != null) {
+			buf.append(font.getName()).append('-');
+			buf.append((font.getStyle() == Font.PLAIN) ? "Plain" : Utility.EMPTY);
+			buf.append((font.getStyle() & Font.BOLD) != 0 ? "Bold" : Utility.EMPTY);
+			buf.append((font.getStyle() & Font.ITALIC) != 0 ? "Italic" : Utility.EMPTY);
+			buf.append('-').append(font.getSize());
+		}
+		return buf.toString();
 	}
 
 	public String getStringListParamAsString() {

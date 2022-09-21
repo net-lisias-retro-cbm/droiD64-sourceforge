@@ -5,7 +5,6 @@ import java.awt.Dimension;
 import java.awt.Font;
 import java.awt.GridLayout;
 import java.awt.Insets;
-import java.awt.Toolkit;
 import java.awt.event.ActionListener;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
@@ -43,7 +42,6 @@ import javax.swing.UnsupportedLookAndFeelException;
 import javax.swing.border.Border;
 import javax.swing.border.EtchedBorder;
 import javax.swing.plaf.ColorUIResource;
-import javax.swing.plaf.FontUIResource;
 import javax.swing.text.DefaultCaret;
 
 import droid64.DroiD64;
@@ -390,7 +388,7 @@ public class MainPanel implements Serializable {
 		for (int i = 0; i < pluginButtons.length && i < externalPrograms.length; i++) {
 			String label = externalPrograms[i] != null ? externalPrograms[i].getLabel() : null;
 			String tooltip = externalPrograms[i] != null ? externalPrograms[i].getDescription() : null;
-			pluginButtons[i] = createButton(label != null ? label : "", Integer.toString(i+1).charAt(0), PLUGIN_IDS[i], tooltip, pluginButtonListener);
+			pluginButtons[i] = createButton(label != null ? label : Utility.EMPTY, Integer.toString(i+1).charAt(0), PLUGIN_IDS[i], tooltip, pluginButtonListener);
 		}
 		consoleHideButton = createToggleButton(Resources.DROID64_BUTTON_HIDECONSOLE, 'e', Button.HIDE_CONSOLE_BUTTON, ae-> {
 			boolean show = !consoleHideButton.isSelected();
@@ -556,7 +554,7 @@ public class MainPanel implements Serializable {
 
 	public void appendConsole(String message) {
 		if (consoleTextArea != null) {
-			if (!"".equals(message)) {
+			if (!Utility.EMPTY.equals(message)) {
 				consoleTextArea.setText(consoleTextArea.getText()+"\n"+message);
 				DefaultCaret caret = (DefaultCaret) consoleTextArea.getCaret();
 				caret.setUpdatePolicy(DefaultCaret.OUT_BOTTOM);
@@ -584,14 +582,6 @@ public class MainPanel implements Serializable {
 		}
 	}
 
-	protected static JMenuItem addMenuItem(JMenu menu, String propertyKey, int mnemonic, ActionListener listener) {
-		JMenuItem menuItem = new JMenuItem(Settings.getMessage(propertyKey), mnemonic);
-		menuItem.setActionCommand(propertyKey);
-		menuItem.addActionListener(listener);
-		menu.add (menuItem);
-		return menuItem;
-	}
-
 	/**
 	 * Create a help drag-down menu
 	 * @return JMenu
@@ -617,11 +607,11 @@ public class MainPanel implements Serializable {
 				JOptionPane.showMessageDialog(null, info, Settings.getMessage(Resources.DROID64_MENU_HELP_CONTACT), JOptionPane.INFORMATION_MESSAGE);
 			}
 		};
-		menu.add(addMenuItem(menu, Resources.DROID64_MENU_HELP_ABOUT, 'a', listener));
-		menu.add(addMenuItem(menu, Resources.DROID64_MENU_HELP_TODO, 'b', listener));
-		menu.add(addMenuItem(menu, Resources.DROID64_MENU_HELP_RELEASENOTES, 'r', listener));
-		menu.add(addMenuItem(menu, Resources.DROID64_MENU_HELP_MANUAL, 'm', listener));
-		menu.add(addMenuItem(menu, Resources.DROID64_MENU_HELP_CONTACT, 'c', listener));
+		menu.add(GuiHelper.addMenuItem(menu, Resources.DROID64_MENU_HELP_ABOUT, 'a', listener));
+		menu.add(GuiHelper.addMenuItem(menu, Resources.DROID64_MENU_HELP_TODO, 'b', listener));
+		menu.add(GuiHelper.addMenuItem(menu, Resources.DROID64_MENU_HELP_RELEASENOTES, 'r', listener));
+		menu.add(GuiHelper.addMenuItem(menu, Resources.DROID64_MENU_HELP_MANUAL, 'm', listener));
+		menu.add(GuiHelper.addMenuItem(menu, Resources.DROID64_MENU_HELP_CONTACT, 'c', listener));
 		return menu;
 	}
 
@@ -633,12 +623,12 @@ public class MainPanel implements Serializable {
 	private JMenu createProgramMenu(final JFrame parent) {
 		JMenu menu = new JMenu(Settings.getMessage(Resources.DROID64_MENU_PROGRAM));
 		menu.setMnemonic('P');
-		addMenuItem(menu, Resources.DROID64_MENU_PROGRAM_SETTINGS, 's', event -> showSettings(parent));
+		GuiHelper.addMenuItem(menu, Resources.DROID64_MENU_PROGRAM_SETTINGS, 's', event -> showSettings(parent));
 		menu.addSeparator();
-		addMenuItem(menu, Resources.DROID64_MENU_PROGRAM_CLEARCONSOLE, 'c', event -> consoleTextArea.setText(""));
-		addMenuItem(menu, Resources.DROID64_MENU_PROGRAM_SAVECONSOLE, 'a', event -> saveConsole());
+		GuiHelper.addMenuItem(menu, Resources.DROID64_MENU_PROGRAM_CLEARCONSOLE, 'c', event -> consoleTextArea.setText(Utility.EMPTY));
+		GuiHelper.addMenuItem(menu, Resources.DROID64_MENU_PROGRAM_SAVECONSOLE, 'a', event -> saveConsole());
 		menu.addSeparator();
-		addMenuItem(menu, Resources.DROID64_MENU_PROGRAM_EXIT, 'x', event -> exitThisProgram());
+		GuiHelper.addMenuItem(menu, Resources.DROID64_MENU_PROGRAM_EXIT, 'x', event -> exitThisProgram());
 		return menu;
 	}
 
@@ -782,29 +772,7 @@ public class MainPanel implements Serializable {
 	}
 
 	private void setDefaultFonts() {
-		Font plainFont = new Font("Verdana", Font.PLAIN, Settings.getFontSize());
-		Font boldFont = new Font("Verdana", Font.BOLD, Settings.getFontSize());
-		UIManager.put("Button.font",            new FontUIResource(plainFont));
-		UIManager.put("CheckBox.font",          new FontUIResource(plainFont));
-		UIManager.put("ComboBox.font",          new FontUIResource(plainFont));
-		UIManager.put("RadioButton.font",       new FontUIResource(plainFont));
-		UIManager.put("FormattedTextField.font",new FontUIResource(plainFont));
-		UIManager.put("Label.font",             new FontUIResource(boldFont));
-		UIManager.put("List.font",              new FontUIResource(plainFont));
-		UIManager.put("Menu.font",              new FontUIResource(plainFont));
-		UIManager.put("MenuItem.font",          new FontUIResource(plainFont));
-		UIManager.put("OptionPane.messageFont", new FontUIResource(plainFont));
-		UIManager.put("Slider.font",            new FontUIResource(plainFont));
-		UIManager.put("Spinner.font",           new FontUIResource(plainFont));
-		UIManager.put("TabbedPane.font",        new FontUIResource(plainFont));
-		UIManager.put("Table.font",             new FontUIResource(plainFont));
-		UIManager.put("TableHeader.font",       new FontUIResource(plainFont));
-		UIManager.put("TextArea.font",          new FontUIResource(plainFont));
-		UIManager.put("TextField.font",         new FontUIResource(plainFont));
-		UIManager.put("ToggleButton.font",      new FontUIResource(plainFont));
-		UIManager.put("ToolTip.font",           new FontUIResource(plainFont));
-		UIManager.put("TitledBorder.font",      new FontUIResource(plainFont));
-
+		GuiHelper.setDefaultFonts();
 		if (diskPanel1 != null) {
 			diskPanel1.setTableColors();
 		}
@@ -912,11 +880,7 @@ public class MainPanel implements Serializable {
 		frame.setMinimumSize(new Dimension(64, 64));
 		int[] winSizePos = Settings.getWindow();
 		if (winSizePos.length < 4l) {
-			Dimension dim = Toolkit.getDefaultToolkit().getScreenSize();
-			frame.setLocation(
-					(int)((dim.width - frame.getSize().getWidth()) / 4),
-					(int)((dim.height - frame.getSize().getHeight()) / 4)
-					);
+			GuiHelper.setLocation(frame, 4, 4);
 		} else {
 			frame.setSize(winSizePos[0], winSizePos[1]);
 			frame.setLocation(winSizePos[2], winSizePos[3]);
@@ -928,7 +892,7 @@ public class MainPanel implements Serializable {
 	 * @param dirName directory to start searching in.
 	 * @return number of found disk images
 	 */
-	public int scanForD64Files(String dirName) {
+	protected int scanForD64Files(String dirName) {
 		appendConsole("Scanning "+dirName);
 		File dir = new File(dirName);
 		File[] files = dir.listFiles();
@@ -982,14 +946,14 @@ public class MainPanel implements Serializable {
 		}
 	}
 
-	private static String getReleaseNotes() {
+	protected static String getReleaseNotes() {
 		if (releaseNotes == null) {
 			releaseNotes = getResource("resources/releasenotes.html");
 		}
 		return releaseNotes;
 	}
 
-	private static String getManual() {
+	protected static String getManual() {
 		if (manual == null) {
 			manual = getResource("resources/manual.html");
 		}

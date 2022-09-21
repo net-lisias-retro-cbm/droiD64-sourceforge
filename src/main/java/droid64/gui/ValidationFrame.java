@@ -2,8 +2,6 @@ package droid64.gui;
 
 import java.awt.BorderLayout;
 import java.awt.Container;
-import java.awt.Dimension;
-import java.awt.Toolkit;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.util.ArrayList;
@@ -26,6 +24,7 @@ import javax.swing.table.DefaultTableColumnModel;
 import javax.swing.table.TableColumn;
 import javax.swing.table.TableModel;
 
+import droid64.d64.Utility;
 import droid64.d64.ValidationError;
 
 public class ValidationFrame extends JFrame {
@@ -45,7 +44,7 @@ public class ValidationFrame extends JFrame {
 
 		DefaultTableColumnModel columnModel = new DefaultTableColumnModel();
 		TableColumn col1 = new TableColumn(0, 10);
-		col1.setHeaderValue("");
+		col1.setHeaderValue(Utility.EMPTY);
 		columnModel.addColumn(col1);
 		TableColumn col2 = new TableColumn(1, 30);
 		col2.setHeaderValue("Error code");
@@ -69,8 +68,7 @@ public class ValidationFrame extends JFrame {
 		errorTable.addMouseListener(new MouseAdapter() {
 			@Override
 			public void mousePressed(MouseEvent me) {
-				JTable table = (JTable) me.getSource();
-				int row = table.rowAtPoint(me.getPoint());
+				int row = errorTable.rowAtPoint(me.getPoint());
 				if (row >= 0) {
 					textArea.setText(getErrorDataString(keys.get(row), errorMap));
 				}
@@ -89,11 +87,7 @@ public class ValidationFrame extends JFrame {
 		repairButton = new JButton("Repair");
 		repairButton.setToolTipText("Repair selected validation errors.");
 		repairButton.setEnabled(!errorMap.isEmpty());
-		repairButton.addActionListener(ae -> {
-			if (!errorMap.isEmpty()) {
-				repair(errorTable, diskPanel, textArea);
-			}
-		});
+		repairButton.addActionListener(ae -> repair(errorTable, diskPanel, textArea));
 
 		Container cp = getContentPane();
 		cp.setLayout(new BorderLayout());
@@ -111,18 +105,17 @@ public class ValidationFrame extends JFrame {
 		buttonPanel.add(okButton);
 		cp.add(buttonPanel, BorderLayout.SOUTH);
 
-		Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
-		setLocation(
-				(int)((screenSize.width - getSize().getWidth()) / 4),
-				(int)((screenSize.height - getSize().getHeight()) / 6)
-				);
+		GuiHelper.setLocation(this,  4, 6);
 		pack();
-		setSize(screenSize.width/4,screenSize.height/2);
+		GuiHelper.setSize(this,  4, 2);
 		setVisible(diskPanel != null);
 		setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
 	}
 
 	private void repair(JTable errorTable, DiskPanel diskPanel, JTextArea textArea) {
+		if (!errorMap.isEmpty()) {
+			return;
+		}
 		List<Integer> repairList = new ArrayList<>();
 		for (int i=0; i<boxes.length; i++) {
 			if (boxes[i].isSelected()) {
@@ -132,7 +125,7 @@ public class ValidationFrame extends JFrame {
 		if (!repairList.isEmpty()) {
 			List<ValidationError> errList  = diskPanel.repairValidationErrors(repairList);
 			parseErrors(errList);
-			textArea.setText("");
+			textArea.setText(Utility.EMPTY);
 			repairButton.setEnabled(!errorMap.isEmpty());
 			errorTable.invalidate();
 			errorTable.repaint();
@@ -145,7 +138,7 @@ public class ValidationFrame extends JFrame {
 			for (ValidationError error : errorList) {
 				Integer code = Integer.valueOf(error.getErrorCode());
 				if (!errorMap.containsKey(code)) {
-					errorMap.put(code, new ArrayList<ValidationError>());
+					errorMap.put(code, new ArrayList<>());
 				}
 				errorMap.get(code).add(error);
 			}
@@ -174,9 +167,9 @@ public class ValidationFrame extends JFrame {
 		int i=0;
 		for (ValidationError error : errorList) {
 			if (hasFile) {
-				buf.append(error.getTrack()).append("/").append(error.getSector()).append("\t ").append(error.getFileName()).append("\n");
+				buf.append(error.getTrack()).append('/').append(error.getSector()).append("\t ").append(error.getFileName()).append('\n');
 			} else {
-				buf.append(error.getTrack()).append("/").append(error.getSector()).append( (i++ & 7) == 7 ? "\n" : "\t ");
+				buf.append(error.getTrack()).append('/').append(error.getSector()).append( (i++ & 7) == 7 ? "\n" : "\t ");
 			}
 		}
 		return buf.toString();
@@ -215,7 +208,7 @@ public class ValidationFrame extends JFrame {
 			case 1:  return keys.get(row).toString();
 			case 2:  return Integer.toString(errorMap.get(keys.get(row)).size());
 			case 3:  return ValidationError.getErrorText(keys.get(row));
-			default: return "";
+			default: return Utility.EMPTY;
 			}
 		}
 

@@ -38,7 +38,7 @@ public class CbmBam implements Serializable {
 
 	public static final String USED = "x";
 	public static final String FREE = "-";
-	public static final String INVALID = " ";
+	public static final String INVALID = Utility.SPACE;
 	public static final String RESERVED = "X";
 
 	public CbmBam(int numTracks, int numTrackBytes) {

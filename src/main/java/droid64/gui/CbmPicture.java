@@ -105,28 +105,36 @@ public class CbmPicture {
 		int x = col << 3;
 		int y = (row << 3) + k;
 		if (colorMode) {
-			int c0 = (b >>> 6) & 0x03;
-			int c1 = (b >>> 4) & 0x03;
-			int c2 = (b >>> 2) & 0x03;
-			int c3 = b & 0x03;
-			image.setRGB(x++, y, colors[c0]);
-			image.setRGB(x++, y, colors[c0]);
-			image.setRGB(x++, y, colors[c1]);
-			image.setRGB(x++, y, colors[c1]);
-			image.setRGB(x++, y, colors[c2]);
-			image.setRGB(x++, y, colors[c2]);
-			image.setRGB(x++, y, colors[c3]);
-			image.setRGB(x, y, colors[c3]);
+			setPixelOctet1(x,y , b, colors, image);
 		} else {
-			image.setRGB(x++, y, colors[(b & 0x80) == 0 ? 0 : 1]);
-			image.setRGB(x++, y, colors[(b & 0x40) == 0 ? 0 : 1]);
-			image.setRGB(x++, y, colors[(b & 0x20) == 0 ? 0 : 1]);
-			image.setRGB(x++, y, colors[(b & 0x10) == 0 ? 0 : 1]);
-			image.setRGB(x++, y, colors[(b & 0x08) == 0 ? 0 : 1]);
-			image.setRGB(x++, y, colors[(b & 0x04) == 0 ? 0 : 1]);
-			image.setRGB(x++, y, colors[(b & 0x02) == 0 ? 0 : 1]);
-			image.setRGB(x, y, colors[(b & 0x01) == 0 ? 0 : 1]);
+			setPixelOctet2(x,y , b, colors, image);
 		}
+	}
+
+	private void setPixelOctet1(int x, int y, int b, int[] colors, BufferedImage image) {
+		int c0 = (b >>> 6) & 0x03;
+		int c1 = (b >>> 4) & 0x03;
+		int c2 = (b >>> 2) & 0x03;
+		int c3 = b & 0x03;
+		image.setRGB(x++, y, colors[c0]);
+		image.setRGB(x++, y, colors[c0]);
+		image.setRGB(x++, y, colors[c1]);
+		image.setRGB(x++, y, colors[c1]);
+		image.setRGB(x++, y, colors[c2]);
+		image.setRGB(x++, y, colors[c2]);
+		image.setRGB(x++, y, colors[c3]);
+		image.setRGB(x, y, colors[c3]);
+	}
+
+	private void setPixelOctet2(int x, int y, int b, int[] colors, BufferedImage image) {
+		image.setRGB(x++, y, colors[(b & 0x80) == 0 ? 0 : 1]);
+		image.setRGB(x++, y, colors[(b & 0x40) == 0 ? 0 : 1]);
+		image.setRGB(x++, y, colors[(b & 0x20) == 0 ? 0 : 1]);
+		image.setRGB(x++, y, colors[(b & 0x10) == 0 ? 0 : 1]);
+		image.setRGB(x++, y, colors[(b & 0x08) == 0 ? 0 : 1]);
+		image.setRGB(x++, y, colors[(b & 0x04) == 0 ? 0 : 1]);
+		image.setRGB(x++, y, colors[(b & 0x02) == 0 ? 0 : 1]);
+		image.setRGB(x, y, colors[(b & 0x01) == 0 ? 0 : 1]);
 	}
 
 	/**

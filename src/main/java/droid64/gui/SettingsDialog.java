@@ -7,7 +7,6 @@ import java.awt.Font;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.Point;
-import java.awt.Toolkit;
 import java.awt.event.ActionListener;
 import java.io.BufferedReader;
 import java.io.File;
@@ -35,7 +34,6 @@ import javax.swing.JTabbedPane;
 import javax.swing.JTextArea;
 import javax.swing.JTextField;
 import javax.swing.SpinnerNumberModel;
-import javax.swing.event.ChangeListener;
 
 import droid64.d64.DiskImage;
 import droid64.d64.Utility;
@@ -73,6 +71,7 @@ public class SettingsDialog extends JDialog {
 
 	private static final String LBL_FOREGROUND = Settings.getMessage(Resources.DROID64_SETTINGS_FOREGROUND);
 	private static final String LBL_BACKGROUND = Settings.getMessage(Resources.DROID64_SETTINGS_BACKGROUND);
+	private static final String BROWSELABEL = "...";
 
 	private JComboBox<String> colourBox;
 	private JCheckBox exitConfirmCheckBox;
@@ -97,6 +96,9 @@ public class SettingsDialog extends JDialog {
 	private JTextField fileExtD80gz;
 	private JTextField fileExtD82gz;
 	private JTextField fileExtLNXgz;
+
+	private Font cbmFont = Settings.getCbmFont();
+	private Font sysFont = Settings.getSysFont();
 
 	private final JButton colorFgButton = new JButton(LBL_FOREGROUND);
 	private final JButton colorBgButton = new JButton(LBL_BACKGROUND);
@@ -124,7 +126,7 @@ public class SettingsDialog extends JDialog {
 	/** Colors */
 	private static final String[] COLORS = { "gray", "red", "green", "blue", "light-blue", "dark-grey", "cyan" };
 
-	private JTextField status = new JTextField();
+	private JTextArea status = new JTextArea();
 
 	private static final String ARGUMENT_TOOLTIP =
 			"<html>Arguments to file to be executed. " +
@@ -155,10 +157,10 @@ public class SettingsDialog extends JDialog {
 		tabPane.addTab(Settings.getMessage(Resources.DROID64_SETTINGS_TAB_FILES), drawFilesPanel());
 		tabPane.addTab(Settings.getMessage(Resources.DROID64_SETTINGS_TAB_COLORS), drawColorPanel());
 		tabPane.addTab(Settings.getMessage(Resources.DROID64_SETTINGS_TAB_DATABASE), drawDatabasePanel(mainPanel));
-		String pluginTitle = Settings.getMessage(Resources.DROID64_SETTINGS_TAB_PLUGIN) + " ";
+		String pluginTitle = Settings.getMessage(Resources.DROID64_SETTINGS_TAB_PLUGIN) + Utility.SPACE;
 		JPanel[] pluginPanel = drawPluginPanel(mainPanel);
 		for (int i = 0; i < Settings.MAX_PLUGINS; i++) {
-			tabPane.addTab(pluginTitle+(i+1), pluginPanel[i]);
+			tabPane.addTab(pluginTitle + (i+1), pluginPanel[i]);
 		}
 
 		cp.add(new JScrollPane(tabPane), BorderLayout.CENTER);
@@ -166,8 +168,7 @@ public class SettingsDialog extends JDialog {
 		JPanel generalPanel = drawGeneralPanel(mainPanel);
 		cp.add(generalPanel, BorderLayout.SOUTH);
 
-		Dimension dim = Toolkit.getDefaultToolkit().getScreenSize();
-		setLocation( (int)((dim.width - getSize().getWidth()) / 3),	(int)((dim.height - getSize().getHeight()) / 3)	);
+		GuiHelper.setLocation(this, 3, 3);
 		pack();
 		setVisible(mainPanel != null);
 		setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
@@ -205,7 +206,7 @@ public class SettingsDialog extends JDialog {
 		final JTextField defaultImgDir = new JTextField(Settings.getDefaultImageDir());
 		final JTextField defaultImgDir2 = new JTextField(Settings.getDefaultImageDir2());
 
-		final JButton defaultImgButton = new JButton("..");
+		final JButton defaultImgButton = new JButton(BROWSELABEL);
 		defaultImgButton.addActionListener(event -> {
 			String choosen = openImgDirDialog(defaultImgDir.getText());
 			if (choosen != null) {
@@ -214,7 +215,7 @@ public class SettingsDialog extends JDialog {
 			}
 		});
 
-		final JButton defaultImgButton2 = new JButton("..");
+		final JButton defaultImgButton2 = new JButton(BROWSELABEL);
 		defaultImgButton2.addActionListener(event -> {
 			String choosen = openImgDirDialog(defaultImgDir2.getText());
 			if (choosen != null) {
@@ -233,13 +234,13 @@ public class SettingsDialog extends JDialog {
 
 		createImgExtFields();
 
-		addToGridBag(0, 0, 0.0, 0.0, 1, gbc, guiPanel, new JLabel(Settings.getMessage(Resources.DROID64_SETTINGS_LEFTDIR)));
-		addToGridBag(1, 0, 1.0, 0.0, 2, gbc, guiPanel, imgDirPanel);
-		addToGridBag(2, 0, 0.0, 0.0, 1, gbc, guiPanel, new JPanel());
+		GuiHelper.addToGridBag(0, 0, 0.0, 0.0, 1, gbc, guiPanel, new JLabel(Settings.getMessage(Resources.DROID64_SETTINGS_LEFTDIR)));
+		GuiHelper.addToGridBag(1, 0, 1.0, 0.0, 2, gbc, guiPanel, imgDirPanel);
+		GuiHelper.addToGridBag(2, 0, 0.0, 0.0, 1, gbc, guiPanel, new JPanel());
 
-		addToGridBag(0, 1, 0.0, 0.0, 1, gbc, guiPanel, new JLabel(Settings.getMessage(Resources.DROID64_SETTINGS_RIGHTDIR)));
-		addToGridBag(1, 1, 1.0, 0.0, 2, gbc, guiPanel, imgDirPanel2);
-		addToGridBag(2, 1, 0.0, 0.0, 1, gbc, guiPanel, new JPanel());
+		GuiHelper.addToGridBag(0, 1, 0.0, 0.0, 1, gbc, guiPanel, new JLabel(Settings.getMessage(Resources.DROID64_SETTINGS_RIGHTDIR)));
+		GuiHelper.addToGridBag(1, 1, 1.0, 0.0, 2, gbc, guiPanel, imgDirPanel2);
+		GuiHelper.addToGridBag(2, 1, 0.0, 0.0, 1, gbc, guiPanel, new JPanel());
 
 		addFields(2, Resources.DROID64_SETTINGS_EXT_D64, fileExtD64, fileExtD64gz, guiPanel, gbc);
 		addFields(3, Resources.DROID64_SETTINGS_EXT_D67, fileExtD67, fileExtD67gz, guiPanel, gbc);
@@ -250,21 +251,21 @@ public class SettingsDialog extends JDialog {
 		addFields(8, Resources.DROID64_SETTINGS_EXT_T64, fileExtT64, fileExtT64gz, guiPanel, gbc);
 		addFields(9, Resources.DROID64_SETTINGS_EXT_LNX, fileExtLNX, fileExtLNXgz, guiPanel, gbc);
 
-		addToGridBag(0, 10, 1.0, 0.8, 4, gbc, guiPanel, new JPanel());
+		GuiHelper.addToGridBag(0, 10, 1.0, 0.8, 4, gbc, guiPanel, new JPanel());
 		return guiPanel;
 	}
 
 	private void addFields(int row, String propertyKey, JComponent field1, JComponent field2, JPanel panel, GridBagConstraints gbc) {
-		addToGridBag(0, row, 0.0, 0.0, 1, gbc, panel, new JLabel(Settings.getMessage(propertyKey)));
-		addToGridBag(1, row, 0.5, 0.0, 1, gbc, panel, field1);
-		addToGridBag(2, row, 0.5, 0.0, 1, gbc, panel, field2);
-		addToGridBag(3, row, 1.0, 0.0, 1, gbc, panel, new JPanel());
+		GuiHelper.addToGridBag(0, row, 0.0, 0.0, 1, gbc, panel, new JLabel(Settings.getMessage(propertyKey)));
+		GuiHelper.addToGridBag(1, row, 0.5, 0.0, 1, gbc, panel, field1);
+		GuiHelper.addToGridBag(2, row, 0.5, 0.0, 1, gbc, panel, field2);
+		GuiHelper.addToGridBag(3, row, 1.0, 0.0, 1, gbc, panel, new JPanel());
 	}
 
 	private String getWindowSizePosString() {
 		int[] sizeLocation = Settings.getWindow();
 		if (sizeLocation.length < 4) {
-			return "";
+			return Utility.EMPTY;
 		}
 		return String.format("%d:%d,%d:%d", sizeLocation[0], sizeLocation[1], sizeLocation[2], sizeLocation[3]);
 	}
@@ -297,19 +298,14 @@ public class SettingsDialog extends JDialog {
 		fontSizeSpinner.setToolTipText(Settings.getMessage(Resources.DROID64_SETTINGS_FONTSIZE_TOOLTIP));
 		localFontSizeSpinner.setToolTipText(Settings.getMessage(Resources.DROID64_SETTINGS_FONTSIZE_TOOLTIP));
 
-		ChangeListener fontSizeListener = event -> {
-			try {
-				if (event.getSource() == fontSizeSpinner) {
-					int fs = Integer.parseInt(fontSizeSpinner.getValue().toString());
-					Settings.setFontSize(fs);
-				} else if (event.getSource() == localFontSizeSpinner) {
-					int fs = Integer.parseInt(localFontSizeSpinner.getValue().toString());
-					Settings.setLocalFontSize(fs);
-				}
-			} catch (NumberFormatException e) { /* don't care */ }
-		};
-		fontSizeSpinner.addChangeListener(fontSizeListener);
-		localFontSizeSpinner.addChangeListener(fontSizeListener);
+		fontSizeSpinner.addChangeListener(event -> {
+			int fs = Integer.parseInt(fontSizeSpinner.getValue().toString());
+			Settings.setFontSize(fs);
+		});
+		localFontSizeSpinner.addChangeListener(event -> {
+			int fs = Integer.parseInt(localFontSizeSpinner.getValue().toString());
+			Settings.setLocalFontSize(fs);
+		});
 
 		winSizePosField = new JTextField(getWindowSizePosString());
 		JButton getWinSizeButton = new JButton(Settings.getMessage(Resources.DROID64_SETTINGS_WINDOWSIZE_FETCH));
@@ -319,6 +315,68 @@ public class SettingsDialog extends JDialog {
 			String str = String.format("%d:%d,%d:%d", (int)size.getWidth(), (int)size.getHeight(), (int)location.getX(), (int)location.getY());
 			winSizePosField.setText(str);
 		});
+		// system font
+		JTextField sysFontField = new JTextField(Parameter.getFontAsDisplayString(sysFont));
+		JCheckBox sysBundledFont = new JCheckBox(Utility.EMPTY, sysFont == null);
+		sysFontField.setEditable(false);
+		final JButton browseSysFontButton = new JButton(BROWSELABEL);
+		browseSysFontButton.addActionListener(event -> {
+			FontChooser fc = new FontChooser(mainPanel.getParent(), "Select system font", sysFont);
+			fc.setVisible(true);
+			Font font = fc.getSelectedFont();
+			if (font != null) {
+				sysFont = font;
+				sysFontField.setText(Parameter.getFontAsDisplayString(font));
+				sysBundledFont.setEnabled(false);
+			}
+		});
+		sysBundledFont.addItemListener(event -> {
+			if (sysBundledFont.isSelected()) {
+				sysFont = null;
+				sysFontField.setText(Utility.EMPTY);
+			} else if (sysFont == null) {
+				sysBundledFont.setSelected(true);
+			}
+		});
+		// commodore font
+		JTextField cbmFontField = new JTextField(Parameter.getFontAsDisplayString(cbmFont));
+		JCheckBox cbmBundledFont = new JCheckBox(Utility.EMPTY, cbmFont == null);
+		cbmFontField.setEditable(false);
+		final JButton browseCbmFontButton = new JButton(BROWSELABEL);
+		browseCbmFontButton.addActionListener(event -> {
+			FontChooser fc = new FontChooser(mainPanel.getParent(), "Select Commodore font", cbmFont);
+			fc.setVisible(true);
+			Font font = fc.getSelectedFont();
+			if (font != null) {
+				cbmFont = font;
+				cbmFontField.setText(Parameter.getFontAsDisplayString(font));
+				cbmBundledFont.setSelected(false);
+			}
+		});
+		cbmBundledFont.addItemListener(event -> {
+			if (cbmBundledFont.isSelected()) {
+				cbmFont = null;
+				cbmFontField.setText(Utility.EMPTY);
+			} else if (cbmFont == null) {
+				cbmBundledFont.setSelected(true);
+			}
+		});
+		// font panels
+		JPanel sysFontPanelButtons = new JPanel(new BorderLayout());
+		sysFontPanelButtons.add(sysBundledFont, BorderLayout.WEST);
+		sysFontPanelButtons.add(browseSysFontButton, BorderLayout.EAST);
+
+		JPanel sysFontFilePanel = new JPanel(new BorderLayout());
+		sysFontFilePanel.add(sysFontField, BorderLayout.CENTER);
+		sysFontFilePanel.add(sysFontPanelButtons, BorderLayout.EAST);
+
+		JPanel cbmFontPanelButtons = new JPanel(new BorderLayout());
+		cbmFontPanelButtons.add(cbmBundledFont, BorderLayout.WEST);
+		cbmFontPanelButtons.add(browseCbmFontButton, BorderLayout.EAST);
+
+		JPanel cbmFontFilePanel = new JPanel(new BorderLayout());
+		cbmFontFilePanel.add(cbmFontField, BorderLayout.CENTER);
+		cbmFontFilePanel.add(cbmFontPanelButtons, BorderLayout.EAST);
 
 		JPanel winSizePanel = new JPanel(new BorderLayout());
 		winSizePanel.add(winSizePosField, BorderLayout.CENTER);
@@ -332,9 +390,9 @@ public class SettingsDialog extends JDialog {
 		fontSizePanel2.add(localFontSizeSpinner, BorderLayout.WEST);
 		fontSizePanel2.add(new JPanel(), BorderLayout.CENTER);
 
-		addToGridBag(0, 0, 0.0, 0.0, 1, gbc, guiPanel, new JPanel());
-		addToGridBag(1, 0, 0.5, 0.0, 1, gbc, guiPanel, exitConfirmCheckBox);
-		addToGridBag(2, 0, 0.0, 0.0, 1, gbc, guiPanel, new JPanel());
+		GuiHelper.addToGridBag(0, 0, 0.0, 0.0, 1, gbc, guiPanel, new JPanel());
+		GuiHelper.addToGridBag(1, 0, 0.5, 0.0, 1, gbc, guiPanel, exitConfirmCheckBox);
+		GuiHelper.addToGridBag(2, 0, 0.0, 0.0, 1, gbc, guiPanel, new JPanel());
 
 		addField(1, Resources.DROID64_SETTINGS_LOOKFEEL, lookAndFeelBox, guiPanel, gbc);
 		addField(2, Resources.DROID64_SETTINGS_GRIDSPACING_IMAGE, distSlider, guiPanel, gbc);
@@ -342,14 +400,16 @@ public class SettingsDialog extends JDialog {
 		addField(4, Resources.DROID64_SETTINGS_FONTSIZE_IMAGE, fontSizePanel1, guiPanel, gbc);
 		addField(5, Resources.DROID64_SETTINGS_FONTSIZE_LOCAL, fontSizePanel2, guiPanel, gbc);
 		addField(6, Resources.DROID64_SETTINGS_WINDOWSIZE, winSizePanel, guiPanel, gbc);
-		addToGridBag(0, 7, 0.5, 0.8, 3, gbc, guiPanel, new JPanel());
+		addField(7, Resources.DROID64_SETTINGS_SYSFONT, sysFontFilePanel, guiPanel, gbc);
+		addField(8, Resources.DROID64_SETTINGS_CBMFONT, cbmFontFilePanel, guiPanel, gbc);
+		GuiHelper.addToGridBag(0, 9, 0.5, 0.8, 3, gbc, guiPanel, new JPanel());
 		return guiPanel;
 	}
 
 	private void addField(int row, String propertyKey, JComponent component, JPanel panel, GridBagConstraints gbc) {
-		addToGridBag(0, row, 0.0, 0.0, 1, gbc, panel, new JLabel(Settings.getMessage(propertyKey)));
-		addToGridBag(1, row, 1.0, 0.0, 1, gbc, panel, component);
-		addToGridBag(2, row, 0.0, 0.0, 1, gbc, panel, new JPanel());
+		GuiHelper.addToGridBag(0, row, 0.0, 0.0, 1, gbc, panel, new JLabel(Settings.getMessage(propertyKey)));
+		GuiHelper.addToGridBag(1, row, 1.0, 0.0, 1, gbc, panel, component);
+		GuiHelper.addToGridBag(2, row, 0.0, 0.0, 1, gbc, panel, new JPanel());
 	}
 
 	private JSlider createSlider(int rowHeight, String toolTip) {
@@ -412,6 +472,8 @@ public class SettingsDialog extends JDialog {
 		Settings.setJdbcPassword(new String(jdbcPassword.getPassword()));
 		Settings.setJdbcLimitType(limitTypeBox.getSelectedIndex());
 		Settings.setWindow(parseWindowSizePos(winSizePosField.getText()));
+		Settings.setSysFont(sysFont);
+		Settings.setCbmFont(cbmFont);
 
 		Settings.setFileExtensions(DiskImage.D64_IMAGE_TYPE, fileExtD64.getText(), false);
 		Settings.setFileExtensions(DiskImage.D67_IMAGE_TYPE, fileExtD67.getText(), false);
@@ -507,13 +569,13 @@ public class SettingsDialog extends JDialog {
 		gbc.fill = GridBagConstraints.HORIZONTAL;
 
 		addFields(0, Resources.DROID64_SETTINGS_COLOR_THEME, colourBox, new JPanel(), colorPanel, gbc);
-		addFields(1, "", colorResetButton, new JPanel(), colorPanel, gbc);
+		addFields(1, Utility.EMPTY, colorResetButton, new JPanel(), colorPanel, gbc);
 		addFields(2, Resources.DROID64_SETTINGS_COLOR_CBM, colorFgButton, colorBgButton, colorPanel, gbc);
 		addFields(3, Resources.DROID64_SETTINGS_COLOR_CPM, colorCpmFgButton, colorCpmBgButton, colorPanel, gbc);
 		addFields(4, Resources.DROID64_SETTINGS_COLOR_LOCAL, colorLocalFgButton, colorLocalBgButton, colorPanel, gbc);
 		addFields(5, Resources.DROID64_SETTINGS_COLOR_BORDER, colorActiveBorderButton, colorInactiveBorderButton, colorPanel, gbc);
 
-		addToGridBag(0, 6, 0.5, 0.8, 1, gbc, colorPanel, new JPanel());
+		GuiHelper.addToGridBag(0, 6, 0.5, 0.8, 1, gbc, colorPanel, new JPanel());
 		return colorPanel;
 	}
 
@@ -556,6 +618,8 @@ public class SettingsDialog extends JDialog {
 		jdbcPassword = new JPasswordField(Settings.getJdbcPassword());
 		final JButton testConnectionButton = new JButton(Settings.getMessage(Resources.DROID64_SETTINGS_JDBC_TEST));
 		status.setFont(new Font("Verdana", Font.PLAIN, status.getFont().getSize()));
+		status.setLineWrap(true);
+		status.setWrapStyleWord(true);
 		status.setEditable(false);
 		maxRows = SearchDialog.getNumericField(Settings.getMaxRows(), 8);
 		useJdbcCheckBox.addActionListener(ae-> {
@@ -611,9 +675,9 @@ public class SettingsDialog extends JDialog {
 		buttonPanel.add(testConnectionButton);
 		buttonPanel.add(new JPanel());
 
-		addToGridBag(0, 0, 0.0, 0.0, 1, gbc, dbPanel, new JPanel());
-		addToGridBag(1, 0, 0.5, 0.0, 1, gbc, dbPanel, useJdbcCheckBox);
-		addToGridBag(2, 0, 0.0, 0.0, 1, gbc, dbPanel, new JPanel());
+		GuiHelper.addToGridBag(0, 0, 0.0, 0.0, 1, gbc, dbPanel, new JPanel());
+		GuiHelper.addToGridBag(1, 0, 0.5, 0.0, 1, gbc, dbPanel, useJdbcCheckBox);
+		GuiHelper.addToGridBag(2, 0, 0.0, 0.0, 1, gbc, dbPanel, new JPanel());
 
 		addField(1, Resources.DROID64_SETTINGS_JDBC_CLASS, jdbcDriver, dbPanel, gbc);
 		addField(2, Resources.DROID64_SETTINGS_JDBC_URL, jdbcUrl, dbPanel, gbc);
@@ -622,14 +686,14 @@ public class SettingsDialog extends JDialog {
 		addField(5, Resources.DROID64_SETTINGS_JDBC_ROWS, maxRows, dbPanel, gbc);
 		addField(6, Resources.DROID64_SETTINGS_JDBC_LIMIT, limitTypeBox, dbPanel, gbc);
 
-		addToGridBag(0, 7, 0.0, 0.0, 1, gbc, dbPanel, new JPanel());
-		addToGridBag(1, 7, 0.5, 0.0, 2, gbc, dbPanel, buttonPanel);
+		GuiHelper.addToGridBag(0, 7, 0.0, 0.0, 1, gbc, dbPanel, new JPanel());
+		GuiHelper.addToGridBag(1, 7, 0.5, 0.0, 2, gbc, dbPanel, buttonPanel);
 
 		addField(8, Resources.DROID64_SETTINGS_JDBC_STATUS, status, dbPanel, gbc);
 
-		addToGridBag(0, 9, 0.0, 0.0, 1, gbc, dbPanel, new JPanel());
+		GuiHelper.addToGridBag(0, 9, 0.0, 0.0, 1, gbc, dbPanel, new JPanel());
 		gbc.fill = GridBagConstraints.BOTH;
-		addToGridBag(1, 9, 0.5, 0.9, 1, gbc, dbPanel, new JScrollPane(messageTextArea));
+		GuiHelper.addToGridBag(1, 9, 0.5, 0.9, 1, gbc, dbPanel, new JScrollPane(messageTextArea));
 
 		return dbPanel;
 	}
@@ -658,7 +722,7 @@ public class SettingsDialog extends JDialog {
 			pluginCommandTextField[i] = getTextField(Resources.DROID64_SETTINGS_EXE_CHOOSE_TOOLTIP);
 			pluginArgumentTextField[i] = getTextArea(ARGUMENT_TOOLTIP);
 			pluginDescriptionTextField[i] = getTextArea(Settings.getMessage(Resources.DROID64_SETTINGS_EXE_DESCR_TOOLTIP));
-			forkThreadCheckBox[i] = new JCheckBox("", true);
+			forkThreadCheckBox[i] = new JCheckBox(Utility.EMPTY, true);
 			forkThreadCheckBox[i].setToolTipText(Settings.getMessage(Resources.DROID64_SETTINGS_EXE_FORK_TOOLTIP));
 			if (i < Settings.getExternalPrograms().length && Settings.getExternalPrograms()[i] != null) {
 				ExternalProgram prg = Settings.getExternalPrograms()[i];
@@ -669,24 +733,24 @@ public class SettingsDialog extends JDialog {
 				forkThreadCheckBox[i].setSelected(prg.isForkThread());
 			}
 
-			browseButtons[i] = new JButton("...");
+			browseButtons[i] = new JButton(BROWSELABEL);
 			browseButtons[i].addActionListener(browseButtonListener);
 
 			JPanel cmdPanel = new JPanel(new BorderLayout());
 			cmdPanel.add(pluginCommandTextField[i], BorderLayout.CENTER);
 			cmdPanel.add(browseButtons[i], BorderLayout.EAST);
 
-			addToGridBag(0, 0, 0.0, 0.0, 1, gbc, pluginPanel[i], new JLabel(Settings.getMessage(Resources.DROID64_SETTINGS_EXE_LABEL)));
-			addToGridBag(1, 0, 0.5, 0.0, 1, gbc, pluginPanel[i], pluginLabelTextField[i]);
-			addToGridBag(0, 1, 0.0, 0.0, 1, gbc, pluginPanel[i], new JLabel(Settings.getMessage(Resources.DROID64_SETTINGS_EXE_COMMAND)));
-			addToGridBag(1, 1, 0.5, 0.0, 1, gbc, pluginPanel[i], cmdPanel);
-			addToGridBag(0, 2, 0.0, 0.0, 1, gbc, pluginPanel[i], new JLabel(Settings.getMessage(Resources.DROID64_SETTINGS_EXE_ARGS)));
-			addToGridBag(1, 2, 0.5, 0.0, 1, gbc, pluginPanel[i], pluginArgumentTextField[i]);
-			addToGridBag(0, 3, 0.0, 0.0, 1, gbc, pluginPanel[i], new JLabel(Settings.getMessage(Resources.DROID64_SETTINGS_EXE_DESCR)));
-			addToGridBag(1, 3, 0.5, 0.0, 1, gbc, pluginPanel[i], pluginDescriptionTextField[i]);
-			addToGridBag(0, 4, 0.0, 0.0, 1, gbc, pluginPanel[i], new JLabel(Settings.getMessage(Resources.DROID64_SETTINGS_EXE_FORK)));
-			addToGridBag(1, 4, 0.5, 0.0, 1, gbc, pluginPanel[i], forkThreadCheckBox[i]);
-			addToGridBag(0, 5, 0.5, 0.9, 1, gbc, pluginPanel[i], new JPanel());
+			GuiHelper.addToGridBag(0, 0, 0.0, 0.0, 1, gbc, pluginPanel[i], new JLabel(Settings.getMessage(Resources.DROID64_SETTINGS_EXE_LABEL)));
+			GuiHelper.addToGridBag(1, 0, 0.5, 0.0, 1, gbc, pluginPanel[i], pluginLabelTextField[i]);
+			GuiHelper.addToGridBag(0, 1, 0.0, 0.0, 1, gbc, pluginPanel[i], new JLabel(Settings.getMessage(Resources.DROID64_SETTINGS_EXE_COMMAND)));
+			GuiHelper.addToGridBag(1, 1, 0.5, 0.0, 1, gbc, pluginPanel[i], cmdPanel);
+			GuiHelper.addToGridBag(0, 2, 0.0, 0.0, 1, gbc, pluginPanel[i], new JLabel(Settings.getMessage(Resources.DROID64_SETTINGS_EXE_ARGS)));
+			GuiHelper.addToGridBag(1, 2, 0.5, 0.0, 1, gbc, pluginPanel[i], pluginArgumentTextField[i]);
+			GuiHelper.addToGridBag(0, 3, 0.0, 0.0, 1, gbc, pluginPanel[i], new JLabel(Settings.getMessage(Resources.DROID64_SETTINGS_EXE_DESCR)));
+			GuiHelper.addToGridBag(1, 3, 0.5, 0.0, 1, gbc, pluginPanel[i], pluginDescriptionTextField[i]);
+			GuiHelper.addToGridBag(0, 4, 0.0, 0.0, 1, gbc, pluginPanel[i], new JLabel(Settings.getMessage(Resources.DROID64_SETTINGS_EXE_FORK)));
+			GuiHelper.addToGridBag(1, 4, 0.5, 0.0, 1, gbc, pluginPanel[i], forkThreadCheckBox[i]);
+			GuiHelper.addToGridBag(0, 5, 0.5, 0.9, 1, gbc, pluginPanel[i], new JPanel());
 		}
 		return pluginPanel;
 	}
@@ -720,7 +784,7 @@ public class SettingsDialog extends JDialog {
 		area.setWrapStyleWord(true);
 		area.setToolTipText(toolTip);
 		area.setBorder(BorderFactory.createLineBorder(Color.BLACK));
-		area.setText("");
+		area.setText(Utility.EMPTY);
 		return area;
 	}
 
@@ -728,7 +792,7 @@ public class SettingsDialog extends JDialog {
 		JTextField field = new JTextField();
 		field.setToolTipText(Settings.getMessage(toolTipPropertyKey));
 		field.setBorder(BorderFactory.createLineBorder(Color.BLACK));
-		field.setText("");
+		field.setText(Utility.EMPTY);
 		return field;
 	}
 
@@ -760,28 +824,8 @@ public class SettingsDialog extends JDialog {
 		chooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
 		chooser.setMultiSelectionEnabled(false);
 		if (chooser.showOpenDialog(this) == JFileChooser.APPROVE_OPTION) {
-			return chooser.getSelectedFile()+"";
+			return chooser.getSelectedFile()+Utility.EMPTY;
 		}
 		return null;
 	}
-
-	/**
-	 * Wrapper to add a JComponent to a GridBagConstraints.
-	 * @param x column
-	 * @param y row
-	 * @param weightx column weight
-	 * @param weighty row weight
-	 * @param gbc GridBagConstaints
-	 * @param parent Parent JComponent to which to add a component
-	 * @param component the new component to add
-	 */
-	private void addToGridBag(int x, int y, double weightx, double weighty, int wdt, GridBagConstraints gbc, JComponent parent, JComponent component) {
-		gbc.weightx = weightx;
-		gbc.weighty = weighty;
-		gbc.gridx = x;
-		gbc.gridy = y;
-		gbc.gridwidth = wdt;
-		parent.add(component, gbc);
-	}
-
 }
