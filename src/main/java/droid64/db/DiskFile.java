@@ -1,5 +1,13 @@
 package droid64.db;
 
+import java.io.Serializable;
+
+import javax.xml.bind.annotation.XmlAccessType;
+import javax.xml.bind.annotation.XmlAccessorType;
+import javax.xml.bind.annotation.XmlElement;
+import javax.xml.bind.annotation.XmlSchemaType;
+import javax.xml.bind.annotation.XmlType;
+
 import droid64.d64.CbmFile;
 import droid64.d64.FileType;
 
@@ -7,15 +15,32 @@ import droid64.d64.FileType;
  * Persistent value class for representing one file on a disk image
  * @author Henrik
  */
-public class DiskFile extends Value {
+@XmlAccessorType(XmlAccessType.FIELD)
+@XmlType(name = "DiskFile", propOrder = {
+	"fileId",
+	"diskId",
+	"name",
+	"fileType",
+	"size",
+	"fileNum",
+	"flags"
+})
+public class DiskFile extends Value implements Serializable {
 
+	private static final long serialVersionUID = 1L;
+
+	@XmlElement(required = true)
 	private long fileId;
+	@XmlElement(required = true)
 	private long diskId;
+	@XmlElement(required = true)
 	private String name;
-	private int size;
+	@XmlElement(required = true, defaultValue = "PRG")
+	@XmlSchemaType(name = "droid64.d64.FileType")
 	private FileType fileType;
-	private int flags;
+	private int size;
 	private int fileNum;
+	private int flags;
 
 	public static final int FLAG_LOCKED = 1;
 	public static final int FLAG_NOT_CLOSED = 2;
@@ -107,5 +132,4 @@ public class DiskFile extends Value {
 		builder.append(']');
 		return builder.toString();
 	}
-
 }

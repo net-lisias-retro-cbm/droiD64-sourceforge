@@ -5,6 +5,7 @@ import java.util.Arrays;
 import java.util.List;
 
 import droid64.gui.BAMPanel.BamTrack;
+import droid64.gui.ConsoleStream;
 
 /**<pre style='font-family:sans-serif;'>
  * Created on 2015-Oct-15
@@ -37,12 +38,14 @@ public class T64 extends DiskImage {
 	private static final String T64_SIGNATURE = "C64S tape file\r\n";
 	private static final byte SPACE = 0x20;
 
-	public T64() {
+	public T64(ConsoleStream consoleStream) {
+		this.feedbackStream = consoleStream;
 		initCbmFile(0);
 		bam = new CbmBam(1, 1);
 	}
 
-	public T64(byte[] imageData) {
+	public T64(byte[] imageData, ConsoleStream consoleStream) {
+		this.feedbackStream = consoleStream;
 		cbmDisk = imageData;
 		int entryCapacity = Utility.getInt16(cbmDisk, 0x22);
 		filesUsedCount = Utility.getInt16(cbmDisk, 0x24);
@@ -119,7 +122,7 @@ public class T64 extends DiskImage {
 		if (number < cbmFile.length && number >= 0) {
 			CbmFile cf = cbmFile[number];
 			if (cf.getFileType() == FileType.DEL) {
-				feedbackMessage.append("getFileData ["+number+"]: No data!\n");
+				feedbackStream.append("getFileData ["+number+"]: No data!\n");
 				return null;
 			}
 			int dataStart = cf.getOffSet();
@@ -154,7 +157,7 @@ public class T64 extends DiskImage {
 		int dataPos = expand(saveData.length);
 		int entryNum = findUnusedEntry();
 		if (entryNum < 0) {
-			feedbackMessage.append("saveFile: No free directory entry!\n");
+			feedbackStream.append("saveFile: No free directory entry!\n");
 			return false;
 		}
 		writeEntry(cbmFile, entryNum, dataPos, saveData);
@@ -162,7 +165,7 @@ public class T64 extends DiskImage {
 		for (int i=2; i < saveData.length; i++) {
 			cbmDisk[dataPos + i -2] = saveData[i];
 		}
-		feedbackMessage.append("saveFile: Saved file at entry "+entryNum +" with data at 0x"+Integer.toHexString(dataPos)+".\n");
+		feedbackStream.append("saveFile: Saved file at entry "+entryNum +" with data at 0x"+Integer.toHexString(dataPos)+".\n");
 		return true;
 	}
 
@@ -190,18 +193,18 @@ public class T64 extends DiskImage {
 		int pos = 0x40 + cf.getDirPosition() * DIR_ENTRY_SIZE;
 		int num = cf.getDirPosition();
 		if (cbmDisk[pos] != 0) {
-			feedbackMessage.append("deleteFile [").append(num).append("]: ").append(cf.getName()).append('\n');
+			feedbackStream.append("deleteFile [").append(num).append("]: ").append(cf.getName()).append('\n');
 			filesUsedCount = filesUsedCount > 0 ? filesUsedCount - 1 : 0;
 			cbmDisk[pos] = 0;
 			cbmFile[num].setFileType(FileType.DEL);
 		} else {
-			feedbackMessage.append("deleteFile [").append(num).append("]: already deleted. ").append(cf.getName()).append('\n');
+			feedbackStream.append("deleteFile [").append(num).append("]: already deleted. ").append(cf.getName()).append('\n');
 		}
 	}
 
 	@Override
 	public Integer validate(List<ValidationError.Error> repairList) {
-		feedbackMessage.append("validate: not supported for T64 images.\n");
+		feedbackStream.append("validate: not supported for T64 images.\n");
 		return 0;
 	}
 
@@ -223,7 +226,7 @@ public class T64 extends DiskImage {
 
 	@Override
 	protected void setDiskName(String newDiskName, String newDiskID) {
-		feedbackMessage.append("setDiskName('").append(newDiskName).append("')\n");
+		feedbackStream.append("setDiskName('").append(newDiskName).append("')\n");
 		for (int i=0; i < 24; i++) {
 			if (i < newDiskName.length()) {
 				setCbmDiskValue(0x28 + i, newDiskName.charAt(i));
@@ -236,7 +239,7 @@ public class T64 extends DiskImage {
 	@Override
 	protected void writeDirectoryEntry(CbmFile cbmFile, int dirEntryNumber) {
 		int pos = 0x40 + dirEntryNumber * DIR_ENTRY_SIZE;
-		feedbackMessage.append("T64.writeDirectoryEntry: 0x"+Integer.toHexString(pos));
+		feedbackStream.append("T64.writeDirectoryEntry: 0x"+Integer.toHexString(pos));
 		String name = cbmFile.getName();
 		for (int i=0; i<16; i++) {
 			if (i < name.length()) {

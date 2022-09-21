@@ -46,26 +46,26 @@ public class ValidationPanel extends JPanel {
 
 	public ValidationPanel(Frame parentFrame) {
 		this.parentFrame = parentFrame;
-		 this.dialog = new JDialog(parentFrame, "Validation", true);
+		this.dialog = new JDialog(parentFrame, "Validation", true);
 
-		DefaultTableColumnModel columnModel = new DefaultTableColumnModel();
-		TableColumn col1 = new TableColumn(0, 10);
+		var columnModel = new DefaultTableColumnModel();
+		var col1 = new TableColumn(0, 10);
 		col1.setHeaderValue(Utility.EMPTY);
 		columnModel.addColumn(col1);
-		TableColumn col2 = new TableColumn(1, 30);
+		var col2 = new TableColumn(1, 30);
 		col2.setHeaderValue("Error code");
 		columnModel.addColumn(col2);
-		TableColumn col3 = new TableColumn(2, 30);
+		var col3 = new TableColumn(2, 30);
 		col3.setHeaderValue("Error count");
 		columnModel.addColumn(col3);
-		TableColumn col4 = new TableColumn(3, 80);
+		var col4 = new TableColumn(3, 80);
 		col4.setHeaderValue("Error text");
 		columnModel.addColumn(col4);
 
 		textArea.setLineWrap(true);
 		textArea.setEditable(false);
 
-		final JTable errorTable = new JTable(new ValidationTableModel(), columnModel);
+		var errorTable = new JTable(new ValidationTableModel(), columnModel);
 		errorTable.getTableHeader().setReorderingAllowed(false);
 		errorTable.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
 		errorTable.setAutoResizeMode(JTable.AUTO_RESIZE_LAST_COLUMN);
@@ -82,12 +82,12 @@ public class ValidationPanel extends JPanel {
 		repairButton.setToolTipText("Repair selected validation errors.");
 		repairButton.addActionListener(ae -> repair(errorTable, textArea));
 
-		JSplitPane splitPane = new JSplitPane(JSplitPane.VERTICAL_SPLIT);
+		var splitPane = new JSplitPane(JSplitPane.VERTICAL_SPLIT);
 		splitPane.setContinuousLayout(true);
 		splitPane.setTopComponent(new JScrollPane(errorTable));
 		splitPane.setBottomComponent(new JScrollPane(textArea));
 
-		JPanel buttonPanel = new JPanel();
+		var buttonPanel = new JPanel();
 		buttonPanel.add(repairButton);
 		buttonPanel.add(closeButton);
 
@@ -95,7 +95,7 @@ public class ValidationPanel extends JPanel {
 		add(splitPane, BorderLayout.CENTER);
 		add(buttonPanel, BorderLayout.SOUTH);
 
-		GuiHelper.setSize(this,  4, 2);
+		GuiHelper.setSize(this, 4, 2);
 		addHierarchyListener(e -> GuiHelper.hierarchyListenerResizer(SwingUtilities.getWindowAncestor(this)));
 	}
 
@@ -121,14 +121,14 @@ public class ValidationPanel extends JPanel {
 		if (errorMap.isEmpty()) {
 			return;
 		}
-		List<ValidationError.Error> repairList = new ArrayList<>();
-		for (int i=0; i<boxes.length; i++) {
+		var repairList = new ArrayList<ValidationError.Error>();
+		for (int i = 0; i < boxes.length; i++) {
 			if (boxes[i].isSelected()) {
 				repairList.add(keys.get(i));
 			}
 		}
 		if (!repairList.isEmpty()) {
-			List<ValidationError> errList  = diskPanel.repairValidationErrors(repairList);
+			var errList = diskPanel.repairValidationErrors(repairList);
 			parseErrors(errList);
 			textArea.setText(Utility.EMPTY);
 			repairButton.setEnabled(!errorMap.isEmpty());
@@ -141,7 +141,7 @@ public class ValidationPanel extends JPanel {
 		errorMap.clear();
 		if (errorList != null) {
 			errorList.forEach(error -> {
-				ValidationError.Error code = error.getError();
+				var code = error.getError();
 				if (!errorMap.containsKey(code)) {
 					errorMap.put(code, new ArrayList<>());
 				}
@@ -149,32 +149,34 @@ public class ValidationPanel extends JPanel {
 			});
 		}
 		boxes = new JCheckBox[errorMap.size()];
-		for (int i=0; i < boxes.length; i++) {
+		for (var i = 0; i < boxes.length; i++) {
 			boxes[i] = new JCheckBox();
 		}
-		ValidationError.Error[] keyArr = errorMap.keySet().toArray(new ValidationError.Error[errorMap.size()]);
+		var keyArr = errorMap.keySet().toArray(new ValidationError.Error[errorMap.size()]);
 		Arrays.sort(keyArr);
 		keys = Arrays.asList(keyArr);
 	}
 
-	private String getErrorDataString(ValidationError.Error key, Map<ValidationError.Error, List<ValidationError>> errorMap) {
+	private String getErrorDataString(ValidationError.Error key,
+			Map<ValidationError.Error, List<ValidationError>> errorMap) {
 		if (key == null) {
 			return null;
 		}
-		List<ValidationError> errorList = errorMap.get(key);
+		var errorList = errorMap.get(key);
 		if (errorList == null) {
 			return null;
 		}
 		boolean hasFile = hasFile(key);
-		StringBuilder buf = new StringBuilder();
+		var buf = new StringBuilder();
 		buf.append(key);
 		buf.append(hasFile ? HEADER_TRACK_SECTOR_FILE : HEADER_TRACK_SECTOR);
-		int i=0;
-		for (ValidationError error : errorList) {
+		int i = 0;
+		for (var error : errorList) {
 			if (hasFile) {
 				buf.append(String.format("%3d/%-3d %s%n", error.getTrack(), error.getSector(), error.getFileName()));
 			} else {
-				buf.append(String.format("%3d/%-3d%s", error.getTrack(), error.getSector(), (i++ & 7) == 7 ? "\n" : " "));
+				buf.append(
+						String.format("%3d/%-3d%s", error.getTrack(), error.getSector(), (i++ & 7) == 7 ? "\n" : " "));
 			}
 		}
 		return buf.toString();
@@ -213,18 +215,23 @@ public class ValidationPanel extends JPanel {
 		@Override
 		public Object getValueAt(int row, int column) {
 			switch (column) {
-			case 0:  return Boolean.valueOf(boxes[row].isSelected());
-			case 1:  return keys.get(row).toString();
-			case 2:  return Integer.toString(errorMap.get(keys.get(row)).size());
-			case 3:  return keys.get(row);
-			default: return Utility.EMPTY;
+			case 0:
+				return Boolean.valueOf(boxes[row].isSelected());
+			case 1:
+				return keys.get(row).toString();
+			case 2:
+				return Integer.toString(errorMap.get(keys.get(row)).size());
+			case 3:
+				return keys.get(row);
+			default:
+				return Utility.EMPTY;
 			}
 		}
 
 		@Override
 		public void setValueAt(Object value, int row, int column) {
 			if (value instanceof Boolean && column == 0 && row < boxes.length && boxes[row] != null) {
-				boxes[row].setSelected((Boolean)value);
+				boxes[row].setSelected((Boolean) value);
 			}
 		}
 

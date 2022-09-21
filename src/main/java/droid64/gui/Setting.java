@@ -13,6 +13,7 @@ import java.nio.file.Path;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Date;
 import java.util.EnumMap;
 import java.util.HashMap;
@@ -28,11 +29,14 @@ import java.util.stream.Stream;
 import javax.swing.JPanel;
 
 import droid64.DroiD64;
+import droid64.cfg.ParameterType;
 import droid64.d64.DiskImageType;
 import droid64.d64.Utility;
+
 public enum Setting {
 	// The settings definitions
 	ASK_QUIT("ask_quit",                         ParameterType.BOOLEAN,          Boolean.TRUE),
+	BOOKMARK_BAR("bookmark_bar",                 ParameterType.BOOLEAN,          Boolean.TRUE),
 	BORDER_ACTIVE("color_border_active",         ParameterType.COLOR,            Color.RED),
 	BORDER_INACTIVE("color_border_inactive",     ParameterType.COLOR,            Color.GRAY),
 	COLOUR("colour",                             ParameterType.INTEGER,          Integer.valueOf(0)),
@@ -44,6 +48,7 @@ public enum Setting {
 	DIR_CPM_FG("color_dir_cpm_fg",               ParameterType.COLOR,            new Color(192, 255, 192)),
 	DIR_LOCAL_BG("color_dir_local_bg",           ParameterType.COLOR,            new JPanel().getBackground()),
 	DIR_LOCAL_FG("color_dir_local_fg",           ParameterType.COLOR,            new JPanel().getForeground()),
+	EXT_REMOVAL("ext_removal",                   ParameterType.STRING_LIST,      Arrays.asList(".prg;.seq".split(Setting.DELIM))),
 	FONT_SIZE("font_size",                       ParameterType.INTEGER,          Integer.valueOf(10)),
 	HIDECONSOLE("hide_console",                  ParameterType.BOOLEAN,          Boolean.FALSE),
 	LOCAL_FONT_SIZE("local_font_size",           ParameterType.INTEGER,          Integer.valueOf(10)),
@@ -83,13 +88,15 @@ public enum Setting {
 	FILE_EXT_D88_GZ("file_ext_d88_gz",           ParameterType.STRING_LIST,      Arrays.asList(".d88.gz".split(Setting.DELIM)) ),
 	FILE_EXT_LNX_GZ("file_ext_lnx_gz",           ParameterType.STRING_LIST,      Arrays.asList(".lnx.gz".split(Setting.DELIM)) ),
 	SYS_FONT("sys_font",                         ParameterType.FONT,             new JPanel().getFont()),
+	CONSOLE_FONT("console_font",                 ParameterType.FONT,             new JPanel().getFont()),
 	CBM_FONT("cbm_font",                         ParameterType.FONT,             (Font) null);
 
 	// Setting attributes
 	public final String id;
 	public final ParameterType type;
-	private final Object defaultValue;
-	private Object value = null;
+	protected final Object defaultValue;
+	protected Object value = null;
+
 	// Constants - file formatting
 	public static final String DELIM = ";";
 	private static final String LF = "\n";
@@ -105,6 +112,8 @@ public enum Setting {
 	private static final String DROID64 = "droid64";
 	/** Default name of settings file (without path). */
 	private static final String DEFAULT_SETTING_FILE_NAME = ".droiD64.cfg";
+	/** Default name of bookmark settings file (without path). */
+	private static final String DEFAULT_BOOKMARK_FILE_NAME = ".droid64_book.xml";
 	public static final int MAX_PLUGINS = 8;
 	/**
 	 * Constructor
@@ -326,14 +335,13 @@ public enum Setting {
 		}
 		return null;
 	}
+	@SuppressWarnings("unchecked")
 	protected List<String> parseStringList(String value) {
 		if (Utility.isEmpty(value)) {
 			return new ArrayList<>((List<String>)defaultValue);
 		} else {
 			List<String> list = new ArrayList<>();
-			for (String str : Arrays.asList(value.replaceAll("[\\r\\n]+$", "").split(STRING_LIST_SPLIT_EXPR))) {
-				list.add(str);
-			}
+			Collections.addAll(list, value.replaceAll("[\\r\\n]+$", "").split(STRING_LIST_SPLIT_EXPR));
 			return list;
 		}
 	}
@@ -366,6 +374,11 @@ public enum Setting {
 	private static File getConfigFile() {
 		return new File ((USER_HOME != null ? USER_HOME + File.separator : "") + DEFAULT_SETTING_FILE_NAME);
 	}
+
+	public static File getBookmarkFile() {
+		return new File ((USER_HOME != null ? USER_HOME + File.separator : "") + DEFAULT_BOOKMARK_FILE_NAME);
+	}
+
 	public static void load(File file) throws IOException {
 		load(new FileReader(file));
 	}
@@ -416,11 +429,12 @@ public enum Setting {
 			output.write("# Configuration file for " + DroiD64.PROGNAME + " v" + DroiD64.VERSION + LF);
 			output.write("# Saved " + new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.ENGLISH).format(timestamp) + LF);
 			output.write("#" + LF);
-			for (Setting s : Arrays.asList(Setting.values()).stream().sorted((a, b) -> a.id.compareTo(b.id)).collect(Collectors.toList())) {
-				output.write(s.toString());
+			for (var setting : Arrays.asList(Setting.values()).stream().sorted((a, b) -> a.id.compareTo(b.id)).collect(Collectors.toList())) {
+				output.write(setting.toString());
 			}
 			output.write("# End of file\n");
 	}
+
 	@SuppressWarnings("unchecked")
 	@Override
 	public String toString() {
@@ -429,7 +443,7 @@ public enum Setting {
 			String sl = Optional.ofNullable((List<String>)value).map(List::stream).orElseGet(Stream::empty).collect(Collectors.joining(DELIM));
 			return  id + EQ + (sl.isEmpty() ? "" : sl) + LF;
 		case INDEXED_STRING:
-			List<String> list = (List<String>) value;
+			var list = (List<String>) value;
 			if (list != null) {
 				StringBuilder buf = new StringBuilder();
 				for (int i=0; i < list.size(); i++) {
@@ -443,11 +457,9 @@ public enum Setting {
 				return "";
 			}
 		case FONT:
-			Font font = (Font) value;
-			return  id + EQ + (font != null && !font.equals(getCommodoreFont()) ?  font.getName() + DELIM + font.getStyle() + DELIM + font.getSize() : "") + LF;
+			return id + EQ + toString((Font) value) + LF;
 		case COLOR:
-			Color c = (Color) value;
-			return id + EQ  + (c != null ? "" + c.getRed() + ',' + c.getGreen() + ',' + c.getBlue() : "") + LF;
+			return id + EQ + toString((Color) value) + LF;
 		case BOOLEAN:
 		case INTEGER:
 		case STRING:
@@ -456,6 +468,15 @@ public enum Setting {
 			return id + EQ + (value != null ?  String.valueOf(value) : "") + LF;
 		}
 	}
+
+	public static String toString(Color color) {
+		return color != null ? "" + color.getRed() + ',' + color.getGreen() + ',' + color.getBlue() : "";
+	}
+
+	public static String toString(Font font) {
+		return font != null && !font.equals(getCommodoreFont()) ? font.getName() + DELIM + font.getStyle() + DELIM + font.getSize() : "";
+	}
+
 	public static List<ExternalProgram> getExternalPrograms() {
 		List<ExternalProgram> list = new ArrayList<>();
 		for (int i=0; i < MAX_PLUGINS; i++) {
@@ -465,6 +486,9 @@ public enum Setting {
 	}
 	@SuppressWarnings("unchecked")
 	public static ExternalProgram getExternalProgram(int num) {
+		if (num < 0  || num >= MAX_PLUGINS) {
+			return null;
+		}
 		String cmd = Utility.getListItem((List<String>) PLUGIN_COMMAND.get(), num);
 		String args = Utility.getListItem((List<String>) PLUGIN_ARGUMENTS.get(), num);
 		String descr = Utility.getListItem((List<String>) PLUGIN_DESCRIPTION.get(), num);
@@ -499,7 +523,6 @@ public enum Setting {
 			return new JPanel().getFont();
 		}
 	}
-
 
 	public static Map<DiskImageType,List<String>> getFileExtensionMap() {
 		EnumMap<DiskImageType,List<String>> map = new EnumMap<>(DiskImageType.class);

@@ -34,7 +34,6 @@ import javax.swing.event.TableColumnModelEvent;
 import javax.swing.event.TableColumnModelListener;
 import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.TableCellRenderer;
-import javax.swing.table.TableColumn;
 
 import droid64.DroiD64;
 import droid64.d64.CbmException;
@@ -140,7 +139,7 @@ public class HexViewPanel extends JPanel {
 	}
 
 	public void showDialog() {
-		final JDialog dialog = new JDialog(mainPanel.getParent(), title, true);
+		final var dialog = new JDialog(mainPanel.getParent(), title, true);
 		dialog.setContentPane(this);
 		dialog.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
 		okButton.addActionListener(e -> dialog.dispose());
@@ -182,6 +181,9 @@ public class HexViewPanel extends JPanel {
 		add(drawButtons(length, readLoadAddr, label), BorderLayout.SOUTH);
 		setSize(table.getWidth(), table.getHeight());
 		addHierarchyListener(e -> GuiHelper.hierarchyListenerResizer(SwingUtilities.getWindowAncestor(this)));
+
+		table.changeSelection(0, 1, false, false);
+		table.requestFocus();
 	}
 
 	private void tableSelectionAction(DiskImage diskImage) {
@@ -239,8 +241,8 @@ public class HexViewPanel extends JPanel {
 		goBlockButton.setEnabled(false);
 		goBlockButton.setMargin(new Insets(1, 4, 1, 4));
 		goBlockButton.addActionListener(ev -> loadBlock(selectedTrack, selectedSector, diskImage));
-		JButton downButton = new JButton("-");
-		JButton upButton = new JButton("+");
+		var downButton = new JButton("-");
+		var upButton = new JButton("+");
 		downButton.setMargin(new Insets(0,4,0,4));
 		upButton.setMargin(new Insets(0,4,0,4));
 
@@ -249,14 +251,14 @@ public class HexViewPanel extends JPanel {
 		upButton.addActionListener(ev ->
 			loadBlock(diskImage.getSector(diskImage.getSectorOffset((int)trkField.getValue(), (int) secField.getValue()) + 256), diskImage));
 
-		JPanel upDownPanel = new JPanel(new GridLayout(1, 2));
+		var upDownPanel = new JPanel(new GridLayout(1, 2));
 		upDownPanel.add(downButton);
 		upDownPanel.add(upButton);
 
 		table.getSelectionModel().addListSelectionListener(ev ->  tableSelectionAction(diskImage));
 		table.getColumnModel().addColumnModelListener(new DiskImageTableModelListener(diskImage));
 
-		JPanel panel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+		var panel = new JPanel(new FlowLayout(FlowLayout.LEFT));
 		panel.add(new JLabel("Track:"));
 		panel.add(trkField);
 		panel.add(new JLabel("Sector:"));
@@ -294,6 +296,8 @@ public class HexViewPanel extends JPanel {
 			String code = ProgramParser.parse(data, DiskImage.BLOCK_SIZE, false);
 			asmTextArea.setText(code);
 			asmTextArea.setCaretPosition(0);
+			table.changeSelection(0, 1, false, false);
+			table.requestFocus();
 		} catch (CbmException e) { /* ignore */ }
 	}
 
@@ -306,22 +310,22 @@ public class HexViewPanel extends JPanel {
 		okButton.setMnemonic('o');
 		okButton.setToolTipText(Utility.getMessage(Resources.DROID64_HEXVIEW_CLOSE_TOOLTIP));
 
-		final JButton printButton = new JButton(Utility.getMessage(Resources.DROID64_HEXVIEW_PRINT));
+		var printButton = new JButton(Utility.getMessage(Resources.DROID64_HEXVIEW_PRINT));
 		printButton.setMnemonic('p');
 		printButton.addActionListener(ae -> print(data, c64Modes[isHexMode() ? 0 : 1], fileName, isHexMode()));
 
-		final JButton saveButton = new JButton(Utility.getMessage(Resources.DROID64_HEXVIEW_SAVETEXT));
+		var saveButton = new JButton(Utility.getMessage(Resources.DROID64_HEXVIEW_SAVETEXT));
 		saveButton.setMnemonic('s');
 		saveButton.addActionListener(ae-> saveText(data, fileName, isHexMode()));
 
-		final JButton saveDataButton = new JButton(Utility.getMessage(Resources.DROID64_HEXVIEW_SAVEDATA));
+		var saveDataButton = new JButton(Utility.getMessage(Resources.DROID64_HEXVIEW_SAVEDATA));
 		saveDataButton.setMnemonic('d');
 		saveDataButton.addActionListener(ae-> saveData(data, fileName));
 
 		applyButton.setMnemonic('a');
 		applyButton.addActionListener(ae-> applyData());
 
-		JPanel buttonPanel = new JPanel();
+		var buttonPanel = new JPanel();
 		buttonPanel.add(modeButton);
 		buttonPanel.add(c64ModeButton);
 		buttonPanel.add(printButton);
@@ -375,7 +379,7 @@ public class HexViewPanel extends JPanel {
 		int addrWdt = chrWdt * 10;
 		int ascWdt = chrWdt * model.getColumnCount();
 		for (int i=0; i<table.getColumnCount(); i++) {
-			TableColumn column = table.getColumnModel().getColumn(i);
+			var column = table.getColumnModel().getColumn(i);
 			if (i == 0) {
 				column.setPreferredWidth(addrWdt);
 			} else if (i == (model.getColumnCount() - 1)) {
@@ -417,7 +421,7 @@ public class HexViewPanel extends JPanel {
 		String ftitle = Utility.getMessage(Resources.DROID64_HEXVIEW_SAVEDATA);
 		String fname = FileDialogHelper.openTextFileDialog(ftitle, null, fileName, true, ext);
 		if (fname != null) {
-			File file = new File(fname);
+			var file = new File(fname);
 			try {
 				Utility.writeFile(file, data);
 			} catch (CbmException e) {
@@ -441,11 +445,11 @@ public class HexViewPanel extends JPanel {
 	}
 
 	private void print(final byte[] data, boolean useCbmfont, final String title, boolean hexmode) {
-		PrinterJob job = PrinterJob.getPrinterJob();
+		var job = PrinterJob.getPrinterJob();
 		if (hexmode) {
 			job.setPageable(new PrintPageable(data, useCbmfont, title, mainPanel));
 		} else {
-			String header = String.format("; Created by %s version %s%n; %s%n%n", DroiD64.PROGNAME, DroiD64.VERSION, new Date().toString());
+			var header = String.format("; Created by %s version %s%n; %s%n%n", DroiD64.PROGNAME, DroiD64.VERSION, new Date().toString());
 			if (useCbmfont) {
 				header = header.toUpperCase();
 			}
@@ -511,7 +515,10 @@ public class HexViewPanel extends JPanel {
 		private static final long serialVersionUID = 1L;
 		@Override
 		public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
-			Component rendererComp = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
+			var rendererComp = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
+			if (rendererComp instanceof JLabel) {
+				((JLabel)rendererComp).putClientProperty("html.disable", Boolean.TRUE);
+			}
 			setColor(rendererComp, column, isSelected, table);
 			return rendererComp;
 		}

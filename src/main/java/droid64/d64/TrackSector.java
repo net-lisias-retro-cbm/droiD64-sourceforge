@@ -1,8 +1,20 @@
 package droid64.d64;
 
+import javax.xml.bind.annotation.XmlAccessType;
+import javax.xml.bind.annotation.XmlAccessorType;
+import javax.xml.bind.annotation.XmlElement;
+import javax.xml.bind.annotation.XmlType;
+
+@XmlAccessorType(XmlAccessType.FIELD)
+@XmlType(name = "TrackSector", propOrder = {
+	"track",
+	"sector"
+    })
 public class TrackSector {
 
+	@XmlElement(required = true)
 	int track;
+	@XmlElement(required = true)
 	int sector;
 
 	public TrackSector(int track, int sector) {
@@ -54,5 +66,4 @@ public class TrackSector {
 		result = 31 * result + track;
 		return result;
 	}
-
 }

@@ -15,7 +15,6 @@ import javax.swing.SwingUtilities;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 import javax.swing.text.BadLocationException;
-import javax.swing.text.Document;
 
 import droid64.d64.CbmException;
 import droid64.d64.CbmFile;
@@ -148,7 +147,7 @@ public class RenameFilePanel extends JPanel {
 	}
 
 	private RenameResult getResult() {
-		RenameResult result = new RenameResult();
+		var result = new RenameResult();
 		result.setFileName(newNameTextField.getText());
 		if (fileTypeBox.getSelectedIndex() != -1) {
 			result.setFileType((FileType) fileTypeBox.getSelectedItem());
@@ -161,7 +160,7 @@ public class RenameFilePanel extends JPanel {
 	private void initGUI() {
 
 		fileTypeBox.setToolTipText("Select a filetype here.");
-		for (FileType ft : FileType.values()) {
+		for (var ft : FileType.values()) {
 			fileTypeBox.addItem(ft);
 		}
 
@@ -188,7 +187,7 @@ public class RenameFilePanel extends JPanel {
 		idField.getDocument().addDocumentListener(new RenameDocumentListener(cbmIdTextField));
 
 		setLayout(new GridBagLayout());
-		GridBagConstraints gbc = new GridBagConstraints();
+		var gbc = new GridBagConstraints();
 		gbc.fill = GridBagConstraints.HORIZONTAL;
 
 		GuiHelper.addToGridBag(0, 0, 0.0, 0.0, 1, gbc, this, oldNameLabel);
@@ -244,8 +243,8 @@ public class RenameFilePanel extends JPanel {
 		private void updateField(DocumentEvent e, JTextField field) {
 			try {
 				if (field.isVisible()) {
-					Document originator = e.getDocument();
-					String text = e.getDocument().getText(0, originator.getLength());
+					var originator = e.getDocument();
+					var text = e.getDocument().getText(0, originator.getLength());
 					field.setText(text);
 				}
 			} catch (BadLocationException ignore) { /* ignore */ }

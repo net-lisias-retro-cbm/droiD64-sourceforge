@@ -30,7 +30,6 @@ import droid64.d64.FileType;
 import droid64.d64.Utility;
 import droid64.db.DaoFactory;
 import droid64.db.DatabaseException;
-import droid64.db.DiskFile;
 import droid64.db.DiskSearchCriteria;
 import droid64.db.SearchResultRow;
 
@@ -85,8 +84,8 @@ public class SearchPanel extends JPanel {
 	}
 
 	public static JFormattedTextField getNumericField(int initValue, int columns) {
-		NumberFormat longFormat = NumberFormat.getIntegerInstance();
-		NumberFormatter numberFormatter = new NumberFormatter(longFormat) {
+		var longFormat = NumberFormat.getIntegerInstance();
+		var numberFormatter = new NumberFormatter(longFormat) {
 			private static final long serialVersionUID = 1L;
 			@Override
 			public Long stringToValue(String text) {
@@ -103,7 +102,7 @@ public class SearchPanel extends JPanel {
 		numberFormatter.setValueClass(Long.class); //optional, ensures you will always get a long value
 		numberFormatter.setAllowsInvalid(false); //this is the key!!
 		numberFormatter.setMinimum(0l); //Optional
-		JFormattedTextField field = new JFormattedTextField(numberFormatter);
+		var field = new JFormattedTextField(numberFormatter);
 		field.setText(Integer.toString(initValue));
 		field.setColumns(columns);
 		return field;
@@ -112,25 +111,25 @@ public class SearchPanel extends JPanel {
 	/** Setup the search panel */
 	private JPanel drawSearchPanel() {
 
-		JPanel fileSizePanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+		var fileSizePanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
 		fileSizePanel.add(fileSizeMinField);
 		fileSizePanel.add(new JLabel(" - "));
 		fileSizePanel.add(fileSizeMaxField);
 
-		final JComboBox<FileType> fileTypeBox = new JComboBox<>(FileType.values());
+		var fileTypeBox = new JComboBox<FileType>(FileType.values());
 		fileTypeBox.insertItemAt(null, 0);
 		fileTypeBox.setSelectedIndex(0);
-		JPanel fileTypePanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+		var fileTypePanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
 		fileTypePanel.add(fileTypeBox);
 
-		final JComboBox<DiskImageType> imageTypeBox = new JComboBox<>(DiskImageType.values());
+		var imageTypeBox = new JComboBox<>(DiskImageType.values());
 		imageTypeBox.setSelectedIndex(0);
-		JPanel imageTypePanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+		var imageTypePanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
 		imageTypePanel.add(imageTypeBox);
 
 		// Search result table
-		DefaultTableColumnModel columnModel = new DefaultTableColumnModel();
-		for (int i=0; i<tableModel.getColumnCount(); i++) {
+		var columnModel = new DefaultTableColumnModel();
+		for (var i=0; i<tableModel.getColumnCount(); i++) {
 			TableColumn col;
 			switch (i) {
 			case 2:
@@ -148,11 +147,11 @@ public class SearchPanel extends JPanel {
 			col.setHeaderValue(tableModel.getColumnHeader(i));
 			columnModel.addColumn(col);
 		}
-		final JTable table = new JTable(tableModel, columnModel);
+		var table = new JTable(tableModel, columnModel);
 		// Buttons
-		final JButton searchButton = new JButton(Utility.getMessage(Resources.DROID64_SEARCH_SEARCH));
-		final JButton openSelectedLeftButton = new JButton(Utility.getMessage(Resources.DROID64_SEARCH_OPENLEFT));
-		final JButton openSelectedRightButton = new JButton(Utility.getMessage(Resources.DROID64_SEARCH_OPENRIGHT));
+		var searchButton = new JButton(Utility.getMessage(Resources.DROID64_SEARCH_SEARCH));
+		var openSelectedLeftButton = new JButton(Utility.getMessage(Resources.DROID64_SEARCH_OPENLEFT));
+		var openSelectedRightButton = new JButton(Utility.getMessage(Resources.DROID64_SEARCH_OPENRIGHT));
 		openSelectedLeftButton.setEnabled(false);
 		openSelectedRightButton.setEnabled(false);
 
@@ -160,7 +159,7 @@ public class SearchPanel extends JPanel {
 		openSelectedLeftButton.addActionListener(ae -> openSelected(mainPanel.getLeftDiskPanel(), table));
 		openSelectedRightButton.addActionListener(ae -> openSelected(mainPanel.getRightDiskPanel(), table));
 		// Button panel
-		JPanel buttonPanel = new JPanel();
+		var buttonPanel = new JPanel();
 		buttonPanel.add(searchButton);
 		buttonPanel.add(openSelectedLeftButton);
 		buttonPanel.add(openSelectedRightButton);
@@ -172,18 +171,18 @@ public class SearchPanel extends JPanel {
 			openSelectedRightButton.setEnabled(selected);
 		});
 
-		JScrollPane tableScrollPane = new JScrollPane( table);
+		var tableScrollPane = new JScrollPane( table);
 		table.setAutoResizeMode(JTable.AUTO_RESIZE_ALL_COLUMNS);
 		table.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
 
 		GuiHelper.keyNavigateTable(table);
 
 		// Title
-		JLabel titleLabel = new JLabel(Utility.getMessage(Resources.DROID64_SEARCH_SEARCH));
+		var titleLabel = new JLabel(Utility.getMessage(Resources.DROID64_SEARCH_SEARCH));
 		titleLabel.setFont(new Font("Verdana",  Font.BOLD, titleLabel.getFont().getSize() * 2));
 
 		// Put widgets onto panel
-		GridBagConstraints gbc = new GridBagConstraints();
+		var gbc = new GridBagConstraints();
 		gbc.fill = GridBagConstraints.BOTH;
 		gbc.gridwidth = 2;
 		gbc.gridx = 0;
@@ -191,7 +190,7 @@ public class SearchPanel extends JPanel {
 		gbc.weighty = 0.0;
 		gbc.weightx = 0.0;
 
-		JPanel panel = new JPanel(new GridBagLayout());
+		var panel = new JPanel(new GridBagLayout());
 		panel.add(titleLabel, gbc);
 
 		addComponent(1, Resources.DROID64_SEARCH_FILENAME, panel, fileNameText, gbc);
@@ -215,7 +214,7 @@ public class SearchPanel extends JPanel {
 	}
 
 	protected void search(FileType selectedFileType, DiskImageType imageType ) {
-		DiskSearchCriteria criteria = new DiskSearchCriteria();
+		var criteria = new DiskSearchCriteria();
 		criteria.setFileName(fileNameText.getText());
 		criteria.setDiskLabel(diskLabelText.getText());
 		criteria.setDiskPath(diskPathText.getText());
@@ -235,13 +234,7 @@ public class SearchPanel extends JPanel {
 	private void runSearch(DiskSearchCriteria criteria) {
 		try {
 			tableModel.clear();
-			DaoFactory.getDaoFactory().getDiskDao().search(criteria).forEach(disk -> {
-				DiskFile file = disk.getFileList().get(0);
-				SearchResultRow row = new SearchResultRow(
-						disk.getFilePath(), disk.getFileName(), disk.getLabel(),
-						file.getName(), file.getFileTypeString(), Integer.valueOf(file.getSize()), disk.getHostName());
-				tableModel.updateDirEntry(row);
-			});
+			DaoFactory.getDaoFactory().getDiskDao().search(criteria).map(disk -> new SearchResultRow(disk, disk.getDiskFiles().get(0))).forEach(tableModel::updateDirEntry);
 		} catch (DatabaseException e) {	//NOSONAR
 			if (mainPanel != null) {
 				mainPanel.appendConsole(e.getMessage());
@@ -250,7 +243,7 @@ public class SearchPanel extends JPanel {
 	}
 
 	public void showDialog() {
-		final JDialog dialog = new JDialog(mainPanel.getParent(), title, true);
+		var dialog = new JDialog(mainPanel.getParent(), title, true);
 		dialog.setContentPane(this);
 		dialog.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
 		closeButton.addActionListener(e -> dialog.dispose());

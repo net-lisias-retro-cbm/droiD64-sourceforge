@@ -53,13 +53,13 @@ public class ShowHelpPanel extends JPanel {
 
 		setLayout(new BorderLayout());
 
-		JPanel imagePanel = new JPanel();
-		ImageIcon imageIcon = new ImageIcon(getClass().getResource("resources/wolf.jpg"));
+		var imageIcon = new ImageIcon(getClass().getResource("resources/wolf.jpg"));
 		imageIcon.setDescription("Me having some breakfast.");
+		var imagePanel = new JPanel();
 		imagePanel.add(new JLabel(imageIcon, SwingConstants.CENTER), BorderLayout.CENTER);
 		imagePanel.setToolTipText("Me having some breakfast.");
 
-		JTextPane messageTextArea = new JTextPane();
+		var messageTextArea = new JTextPane();
 		messageTextArea.setContentType(Utility.MIMETYPE_HTML);
 		messageTextArea.setBackground(new Color(230,230,230));
 		messageTextArea.setEditable(false);
@@ -79,15 +79,13 @@ public class ShowHelpPanel extends JPanel {
 
 	protected static String getAbout() {
 		if (about == null) {
-			String str = Utility.getResource("resources/about.html");
-			Object[] args = {
+			var str = Utility.getResource("resources/about.html");
+			about = MessageFormat.format(str,
 					System.getProperty("java.vendor"),
 					System.getProperty("java.version"),
 					System.getProperty("os.name"),
 					System.getProperty("os.version"),
-					System.getProperty("os.arch"),
-			};
-			about = MessageFormat.format(str, args);
+					System.getProperty("os.arch"));
 		}
 		return about;
 	}

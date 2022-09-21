@@ -17,8 +17,10 @@ import java.io.StringWriter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.ServiceLoader;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
+import javax.swing.JComboBox;
 import javax.swing.JComponent;
 import javax.swing.JFormattedTextField;
 import javax.swing.JMenu;
@@ -26,7 +28,6 @@ import javax.swing.JMenuItem;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JPopupMenu;
-import javax.swing.JScrollBar;
 import javax.swing.JScrollPane;
 import javax.swing.JTable;
 import javax.swing.JTextArea;
@@ -45,31 +46,31 @@ public class GuiHelper {
 	}
 
 	public static void setLocation(Container component, int widthFraction, int heightFraction) {
-		Dimension dim = Toolkit.getDefaultToolkit().getScreenSize();
+		var dim = Toolkit.getDefaultToolkit().getScreenSize();
 		component.setLocation(
 				(int)((dim.width - component.getSize().getWidth()) / widthFraction),
 				(int)((dim.height - component.getSize().getHeight()) / heightFraction));
 	}
 
 	public static void setLocation(Container component, float widthFraction, float heightFraction) {
-		Dimension dim = Toolkit.getDefaultToolkit().getScreenSize();
+		var dim = Toolkit.getDefaultToolkit().getScreenSize();
 		component.setLocation(
 				(int)((dim.width - component.getSize().getWidth()) * widthFraction),
 				(int)((dim.height - component.getSize().getHeight()) * heightFraction));
 	}
 
 	public static void setSize(Container component, int widthFraction, int heightFraction) {
-		Dimension dim = Toolkit.getDefaultToolkit().getScreenSize();
+		var dim = Toolkit.getDefaultToolkit().getScreenSize();
 		component.setSize(dim.width/widthFraction, dim.height/heightFraction);
 	}
 
 	public static void setPreferredSize(JComponent component, int widthFraction, int heightFraction) {
-		Dimension dim = Toolkit.getDefaultToolkit().getScreenSize();
+		var dim = Toolkit.getDefaultToolkit().getScreenSize();
 		component.setPreferredSize(new Dimension(dim.width/widthFraction, dim.height/heightFraction));
 	}
 
 	public static void setSize(Container component, float widthFraction, float heightFraction) {
-		Dimension dim = Toolkit.getDefaultToolkit().getScreenSize();
+		var dim = Toolkit.getDefaultToolkit().getScreenSize();
 		component.setSize((int) (dim.width * widthFraction), (int) (dim.height * heightFraction));
 	}
 
@@ -177,13 +178,14 @@ public class GuiHelper {
 		UIManager.put("ToggleButton.font",      new FontUIResource(plainFont));
 		UIManager.put("ToolTip.font",           new FontUIResource(plainFont));
 		UIManager.put("TitledBorder.font",      new FontUIResource(plainFont));
+		UIManager.put("Tree.font",              new FontUIResource(plainFont));
 	}
 
 	public static JFormattedTextField getNumField(int min, int max, int initialValue, int columns) {
-		NumberFormatter nf = new NumberFormatter();
+		var nf = new NumberFormatter();
 		nf.setMinimum(Integer.valueOf(min));
 		nf.setMaximum(Integer.valueOf(max));
-		JFormattedTextField field = new JFormattedTextField(nf);
+		var field = new JFormattedTextField(nf);
 		field.setValue(initialValue);
 		field.setColumns(columns);
 		return field;
@@ -191,7 +193,7 @@ public class GuiHelper {
 
 	public static void hierarchyListenerResizer(Window window) {
 		if (window instanceof Dialog) {
-			Dialog dialog = (Dialog) window;
+			var dialog = (Dialog) window;
 			if (!dialog.isResizable()) {
 				dialog.setResizable(true);
 			}
@@ -207,11 +209,11 @@ public class GuiHelper {
 	}
 
 	public static void showException(Component parent, String title, Throwable throwable, String message, Object...args) {
-		JTextArea messageText = new JTextArea(String.format(message, args));
+		var messageText = new JTextArea(String.format(message, args));
 		messageText.setEditable(false);
-		JTextArea stacktrace = new JTextArea(toString(throwable));
+		var stacktrace = new JTextArea(toString(throwable));
 		stacktrace.setEditable(false);
-		JPanel panel = new JPanel(new BorderLayout());
+		var panel = new JPanel(new BorderLayout());
 		panel.add(messageText, BorderLayout.NORTH);
 		panel.add(new JScrollPane(stacktrace), BorderLayout.CENTER);
 		panel.addHierarchyListener(e -> GuiHelper.hierarchyListenerResizer(SwingUtilities.getWindowAncestor(panel)));
@@ -220,7 +222,7 @@ public class GuiHelper {
 	}
 
 	public static String toString(Throwable throwable) {
-		StringWriter writer = new StringWriter();
+		var writer = new StringWriter();
 		throwable.printStackTrace(new PrintWriter(writer));
 		return writer.toString();
 	}
@@ -233,10 +235,9 @@ public class GuiHelper {
 	 * @return List of class names
 	 */
 	public static <T> List<String> getClassNames(Class<T> clazz) {
-		ServiceLoader<T> loader = ServiceLoader.load(clazz);
-		List<Class<?>> list = new ArrayList<>();
-		loader.forEach(drv -> list.add(drv.getClass()));
-		return list.stream().filter(p->!p.isInterface()).map(Class::getName).sorted((a,b)->a.compareTo(b)).collect(Collectors.toList());
+		var list = new ArrayList<Class<?>>();
+		ServiceLoader.load(clazz).forEach(drv -> list.add(drv.getClass()));
+		return list.stream().filter(p -> !p.isInterface()).map(Class::getName).sorted(String::compareTo).collect(Collectors.toList());
 	}
 
 	/**
@@ -256,10 +257,10 @@ public class GuiHelper {
 			public void keyReleased(KeyEvent ev) {
 				int keyCode = ev.getKeyCode();
 				if (keyCode == KeyEvent.VK_HOME) {
-					JScrollBar vertical = scrollPane.getVerticalScrollBar();
+					var vertical = scrollPane.getVerticalScrollBar();
 					vertical.setValue(vertical.getMinimum());
 				} else if (keyCode == KeyEvent.VK_END) {
-					JScrollBar vertical = scrollPane.getVerticalScrollBar();
+					var vertical = scrollPane.getVerticalScrollBar();
 					vertical.setValue(vertical.getMaximum() );
 				}
 			}
@@ -291,5 +292,32 @@ public class GuiHelper {
 				}
 			}
 		});
+	}
+
+	/**
+	 * @param parentComponent parent component
+	 * @param title the title
+	 * @param message the message
+	 * @param initialValue initial value
+	 * @return the entered string
+	 */
+	public static String getStringDialog(Component parentComponent, String title, String message, String initialValue) {
+		return (String) JOptionPane.showInputDialog(parentComponent, message, title, JOptionPane.QUESTION_MESSAGE, null, null, initialValue);
+	}
+
+	/**
+	 * Set selected item on combobox
+	 * @param <T> the combobox type
+	 * @param combo the combobox
+	 * @param predicate the selection predicate. first match is selected. if no match nothing is selected.
+	 */
+	public static <T> void setSelected(JComboBox<T> combo,  Predicate<T> predicate) {
+		for (var i = 0; i < combo.getItemCount(); i++) {
+			if (predicate.test(combo.getItemAt(i))) {
+				combo.setSelectedIndex(i);
+				return;
+			}
+		}
+		combo.setSelectedIndex(-1);
 	}
 }

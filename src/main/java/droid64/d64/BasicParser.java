@@ -65,14 +65,15 @@ public class BasicParser {
 	};
 
 	private BasicParser() {
+		super();
 	}
 
 	public static String parseCbmBasicPrg(byte[] prg) {
 		if (prg == null || prg.length < 4) {
 			return null;
 		}
-		StringBuilder buf = new StringBuilder();
-		ByteIterator iter = new ByteIterator(prg);
+		var buf = new StringBuilder();
+		var iter = new ByteIterator(prg);
 		iter.skip(2);	// loadaddr
 		while (iter.hasNextInt16()) {
 			int nextLine = iter.nextInt16();

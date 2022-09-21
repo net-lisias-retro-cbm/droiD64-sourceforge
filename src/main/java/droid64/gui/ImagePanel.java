@@ -2,7 +2,6 @@ package droid64.gui;
 
 import java.awt.Dimension;
 import java.awt.Graphics;
-import java.awt.Graphics2D;
 import java.awt.Image;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
@@ -17,7 +16,7 @@ public class ImagePanel extends JPanel {
 	public ImagePanel() {
 		image = new BufferedImage(320, 200, BufferedImage.TYPE_INT_RGB);
 		name = "";
-		Dimension dim = new Dimension(320, 200);
+		var dim = new Dimension(320, 200);
 		setSize(dim);
 		setMinimumSize(dim);
 		setPreferredSize(dim);
@@ -27,7 +26,7 @@ public class ImagePanel extends JPanel {
 		BufferedImage bufImage = picture.getImage();
 		this.image = picture.getImage();
 		this.name = picture.getName();
-		Dimension dim = new Dimension(bufImage.getWidth(), bufImage.getHeight());
+		var dim = new Dimension(bufImage.getWidth(), bufImage.getHeight());
 		setSize(dim);
 		setMinimumSize(dim);
 		setPreferredSize(dim);
@@ -41,34 +40,33 @@ public class ImagePanel extends JPanel {
 
 	public void setImage(CbmPicture picture) throws IOException {
 		if (picture != null) {
-			BufferedImage img = picture.getImage();
+			var img = picture.getImage();
 			this.image = img;
 			this.name = picture.getName();
-			Dimension dim = new Dimension(img.getWidth(), img.getHeight());
-			setSize(dim);
-			setMinimumSize(dim);
-			setPreferredSize(dim);
-			invalidate();
-			repaint();
+			update();
 		}
 	}
 
 	public void setImage(Image img, String name) {
 		this.name = name;
-		   if (img instanceof BufferedImage) {
-		        image = (BufferedImage) img;
-		    } else {
-			    image = new BufferedImage(img.getWidth(null), img.getHeight(null), BufferedImage.TYPE_INT_ARGB);
-			    Graphics2D bGr = image.createGraphics();
-			    bGr.drawImage(img, 0, 0, null);
-			    bGr.dispose();
-		    }
-			Dimension dim = new Dimension(image.getWidth(), image.getHeight());
-			setSize(dim);
-			setMinimumSize(dim);
-			setPreferredSize(dim);
-			invalidate();
-			repaint();
+		if (img instanceof BufferedImage) {
+			image = (BufferedImage) img;
+		} else {
+			image = new BufferedImage(img.getWidth(null), img.getHeight(null), BufferedImage.TYPE_INT_ARGB);
+			var bGr = image.createGraphics();
+			bGr.drawImage(img, 0, 0, null);
+			bGr.dispose();
+		}
+		update();
+	}
+
+	private void update() {
+		var dim = new Dimension(image.getWidth(), image.getHeight());
+		setSize(dim);
+		setMinimumSize(dim);
+		setPreferredSize(dim);
+		invalidate();
+		repaint();
 	}
 
 	@Override

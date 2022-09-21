@@ -109,13 +109,13 @@ public class RenameDiskImagePanel extends JPanel {
 	}
 
 	private RenameResult getResult() {
-		String diskId = Utility.truncate(idTextField.getText(), 5);
-		DiskImageType diskType = (DiskImageType) diskTypeBox.getSelectedItem();
+		var diskId = Utility.truncate(idTextField.getText(), 5);
+		var diskType = (DiskImageType) diskTypeBox.getSelectedItem();
 		if (diskId.length() <= 2) {
-			String dosVer = diskType != null ? diskType.dosVersion : "  ";
+			var dosVer = diskType != null ? diskType.dosVersion : "  ";
 			diskId = (diskId + "  ").substring(0, 2) + "\u00a0" + dosVer;
 		}
-		RenameResult result = new RenameResult();
+		var result = new RenameResult();
 		result.setDiskName(Utility.truncate(nameTextField.getText(), 16));
 		result.setDiskID(diskId);
 		if (isNewImage) {

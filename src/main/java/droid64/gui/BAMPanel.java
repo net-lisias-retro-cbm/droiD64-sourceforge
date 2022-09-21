@@ -4,7 +4,6 @@ import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
 import java.awt.Insets;
-import java.awt.Point;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.util.Arrays;
@@ -25,10 +24,8 @@ import javax.swing.SwingConstants;
 import javax.swing.SwingUtilities;
 import javax.swing.WindowConstants;
 import javax.swing.border.EtchedBorder;
-import javax.swing.border.TitledBorder;
 import javax.swing.table.AbstractTableModel;
 import javax.swing.table.DefaultTableCellRenderer;
-import javax.swing.table.TableColumnModel;
 
 import droid64.DroiD64;
 import droid64.d64.CbmException;
@@ -108,7 +105,7 @@ public class BAMPanel extends JPanel {
 		editModeButton.setMnemonic('e');
 		viewModeButton.addActionListener(e -> editMode(editModeButton.isSelected()));
 		editModeButton.addActionListener(e -> editMode(editModeButton.isSelected()));
-		ButtonGroup modeGroup = new ButtonGroup();
+		var modeGroup = new ButtonGroup();
 		modeGroup.add(viewModeButton);
 		modeGroup.add(editModeButton);
 		viewModeButton.setSelected(true);
@@ -131,15 +128,15 @@ public class BAMPanel extends JPanel {
 		bamTable.setComponentPopupMenu(popMenu);
 		editMode(false);
 
-		TitledBorder border = BorderFactory.createTitledBorder(BorderFactory.createEtchedBorder(EtchedBorder.LOWERED),
+		var border = BorderFactory.createTitledBorder(BorderFactory.createEtchedBorder(EtchedBorder.LOWERED),
 				Utility.getMessage(Resources.DROID64_BAM_MODE));
 
-		JPanel modePanel = new JPanel();
+		var modePanel = new JPanel();
 		modePanel.add(viewModeButton);
 		modePanel.add(editModeButton);
 		modePanel.setBorder(border);
 
-		JPanel buttonPanel = new JPanel();
+		var buttonPanel = new JPanel();
 		buttonPanel.add(modePanel);
 		buttonPanel.add(saveButton);
 		buttonPanel.add(closeButton);
@@ -186,7 +183,7 @@ public class BAMPanel extends JPanel {
 		diskNameLabel.setText(diskName);
 		tableModel.fireTableStructureChanged();
 
-		TableColumnModel columnModel = bamTable.getColumnModel();
+		var columnModel = bamTable.getColumnModel();
 		for (int i = 0; i < columnModel.getColumnCount(); i++) {
 			columnModel.getColumn(i).setMinWidth(i == 0 ? 50 : 10);
 		}
@@ -203,15 +200,15 @@ public class BAMPanel extends JPanel {
 	}
 
 	private JRadioButton createRadioButton(String propKey, String toolPropKey) {
-		JRadioButton button = new JRadioButton(Utility.getMessage(propKey));
+		var button = new JRadioButton(Utility.getMessage(propKey));
 		button.setToolTipText(Utility.getMessage(toolPropKey));
 		button.setMargin(new Insets(1, 4, 1, 4));
 		return button;
 	}
 
 	private void blockClicked(MouseEvent me, boolean editMode, final JTable bamTable, final MainPanel mainPanel) {
-		JTable table = (JTable) me.getSource();
-		Point pt = me.getPoint();
+		var table = (JTable) me.getSource();
+		var pt = me.getPoint();
 		int col = table.columnAtPoint(pt);
 		int row = table.rowAtPoint(pt);
 		if (row >= 0 && col > 0) {
@@ -352,7 +349,7 @@ public class BAMPanel extends JPanel {
 
 		@Override
 		public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
-			JLabel label = new JLabel(column > 0 ? Utility.EMPTY : value.toString());
+			var label = new JLabel(column > 0 ? Utility.EMPTY : value.toString());
 			label.setOpaque(true);
 			label.setBorder(BorderFactory.createEmptyBorder(1, 1, 1, 1));
 			label.setFont(table.getFont());

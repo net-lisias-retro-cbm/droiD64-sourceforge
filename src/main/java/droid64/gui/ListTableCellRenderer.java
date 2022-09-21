@@ -23,7 +23,7 @@ public class ListTableCellRenderer extends DefaultTableCellRenderer {
 	@Override
 	public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
 		super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
-		JLabel label = new JLabel(value != null ? value.toString() : Utility.EMPTY);
+		var label = new JLabel(value != null ? value.toString() : Utility.EMPTY);
 		label.setOpaque(true);
 		label.setFont(table.getFont());
 		if (model.getMode() == EntryTableModel.MODE_LOCAL) {
@@ -48,7 +48,7 @@ public class ListTableCellRenderer extends DefaultTableCellRenderer {
 		}
 
 		if (isSelected) {
-			Color tmp = label.getForeground();
+			var tmp = label.getForeground();
 			label.setForeground(label.getBackground());
 			label.setBackground(tmp);
 		}

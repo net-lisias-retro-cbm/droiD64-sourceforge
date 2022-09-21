@@ -77,10 +77,15 @@ public class CpmFile extends CbmFile implements Serializable {
 
 	public String getCpmNameAndExt() {
 		if (cpmNameExt==null || cpmNameExt.isEmpty()) {
-			return cpmName != null ? cpmName.trim().toLowerCase() : getName();
+			return cpmName != null ? cpmName.trim().toLowerCase() : super.getName();
 		} else {
-			return cpmName != null ? cpmName.trim().toLowerCase() + '.' + cpmNameExt.trim().toLowerCase() : getName();
+			return cpmName != null ? cpmName.trim().toLowerCase() + '.' + cpmNameExt.trim().toLowerCase() : super.getName();
 		}
+	}
+
+	@Override
+	public String getName() {
+		return getCpmNameAndExt();
 	}
 
 	@Override
@@ -185,7 +190,7 @@ public class CpmFile extends CbmFile implements Serializable {
 
 	@Override
 	public String toString() {
-		StringBuilder builder = new StringBuilder();
+		var builder = new StringBuilder();
 		builder.append("CpmFile[");
 		super.toString(builder);
 		builder.append(" lastRecordByteCount=").append(lastRecordByteCount);

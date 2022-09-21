@@ -144,7 +144,7 @@ public class CbmPicture {
 	 * @return image data
 	 */
 	private byte[] decompress(byte[] inData) {
-		byte[] outData = new byte[KOALA_SIZE];
+		var outData = new byte[KOALA_SIZE];
 		int in = 0;
 		int out = 0;
 		while (in < inData.length && out < outData.length) {

@@ -36,7 +36,7 @@ class FilePathPanel extends JPanel {
 		add(path, BorderLayout.CENTER);
 		add(browseButton, BorderLayout.EAST);
 		browseButton.addActionListener(event -> {
-			File choosen = openDialog(new File(path.getText()), mode);
+			var choosen = openDialog(new File(path.getText()), mode);
 			if (choosen != null) {
 				path.setText(choosen.getPath());
 				listeners.forEach(c -> c.accept(choosen));
@@ -77,7 +77,7 @@ class FilePathPanel extends JPanel {
 	 * @return File with selected path, or null if nothing was selected.
 	 */
 	private File openDialog(File directory, int mode) {
-		JFileChooser chooser = new JFileChooser(directory);
+		var chooser = new JFileChooser(directory);
 		chooser.setFileSelectionMode(mode);
 		chooser.setMultiSelectionEnabled(false);
 		if (fileFilter != null) {

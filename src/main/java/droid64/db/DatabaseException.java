@@ -22,7 +22,7 @@ public class DatabaseException extends Exception {
 
 	@Override
 	public String toString() {
-		StringBuilder buf = new StringBuilder();
+		var buf = new StringBuilder();
 		buf.append("DatabaseException[");
 		buf.append(" .message=").append(getMessage());
 		buf.append(']');

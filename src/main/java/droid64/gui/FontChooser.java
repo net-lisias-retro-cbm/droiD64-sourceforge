@@ -20,7 +20,6 @@ import javax.swing.JScrollPane;
 import javax.swing.JTextArea;
 import javax.swing.ListSelectionModel;
 import javax.swing.SwingUtilities;
-import javax.swing.border.Border;
 import javax.swing.border.CompoundBorder;
 import javax.swing.border.EmptyBorder;
 import javax.swing.border.EtchedBorder;
@@ -68,16 +67,16 @@ public class FontChooser extends JPanel {
 		previewArea.setLineWrap(true);
 		previewArea.setWrapStyleWord(true);
 		previewArea.setBackground(getBackground());
-		Border border = new CompoundBorder(
+		var border = new CompoundBorder(
 				BorderFactory.createTitledBorder(BorderFactory.createEtchedBorder(EtchedBorder.LOWERED)),
 				new EmptyBorder(8, 8, 8, 8));
 		previewArea.setBorder(border);
 
-		JPanel topRight = new JPanel(new GridLayout(1, 2));
+		var topRight = new JPanel(new GridLayout(1, 2));
 		topRight.add(new JScrollPane(fontSizeList), BorderLayout.WEST);
 		topRight.add(new JScrollPane(drawFontAttrPanel()), BorderLayout.EAST);
 
-		JPanel panel = new JPanel(new BorderLayout());
+		var panel = new JPanel(new BorderLayout());
 		panel.add(new JScrollPane(fontNameList), BorderLayout.CENTER);
 		panel.add(topRight, BorderLayout.EAST);
 		panel.add(new JScrollPane(previewArea), BorderLayout.SOUTH);
@@ -123,7 +122,7 @@ public class FontChooser extends JPanel {
 		boldBox.addItemListener(event -> updatePreviewFont());
 		italicBox.setMnemonic('i');
 		italicBox.addItemListener(event -> updatePreviewFont());
-		JPanel fontAttrPanel = new JPanel();
+		var fontAttrPanel = new JPanel();
 		fontAttrPanel.setLayout(new BoxLayout(fontAttrPanel, BoxLayout.Y_AXIS));
 		fontAttrPanel.add(boldBox);
 		fontAttrPanel.add(italicBox);
@@ -135,7 +134,7 @@ public class FontChooser extends JPanel {
 	 */
 	private void updatePreviewFont() {
 		int nameIdx = fontNameList.getSelectedIndex();
-		String resultName = fontNameList.getSelectedValue();
+		var resultName = fontNameList.getSelectedValue();
 		fontNameList.ensureIndexIsVisible(nameIdx);
 
 		int resultSize = Optional.ofNullable(fontSizeList.getSelectedValue()).orElse(12);

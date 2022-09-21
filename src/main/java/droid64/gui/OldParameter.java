@@ -7,6 +7,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import droid64.cfg.ParameterType;
 import droid64.d64.Utility;
 
 /**<pre style='font-family:sans-serif;'>
@@ -35,7 +36,7 @@ import droid64.d64.Utility;
  * @author henrik
  * </pre>
  */
-public class Parameter {
+public class OldParameter {
 
 	private static final String DELIM = ";";
 	private static final String LF = "\n";
@@ -47,7 +48,7 @@ public class Parameter {
 	private final ParameterType type;
 	private Object value;
 
-	public Parameter(String name, ParameterType type, Object value) {
+	public OldParameter(String name, ParameterType type, Object value) {
 		this.name = name;
 		this.type = type;
 		this.value = value;
@@ -62,7 +63,7 @@ public class Parameter {
 			return false;
 		}
 
-		Parameter that = (Parameter) obj;
+		OldParameter that = (OldParameter) obj;
 		if (this.type != that.getType()) {
 			return false;
 		}

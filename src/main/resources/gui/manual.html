@@ -24,13 +24,14 @@
   <li>Operations</li>
   <li>Database</li>
   <li>DroiD64 settings</li>
+  <li>Bookmarks</li>
 </ol>
 
 <hr/>
 <h2>1. Introduction</h2>
 <p>
 DroiD64 is an application used to work with disk images files from the Commodore 64, Commodore 128, Commodore VIC20, Commodore PET and various emulators of this family of computers.
-DroiD64 is written in Java to be portable to the various platforms supported by Java. Java 8 runtime or higher is required.</p>
+DroiD64 is written in Java to be portable to the various platforms supported by Java. Java 11 runtime or higher is required.</p>
 
 <p>This software works with disk images, and there might be technical deviations in the formats. 
 Sometimes on purpose by a developer of a certain software package and sometimes by rare Commodore hardware.
@@ -45,11 +46,11 @@ However, I use it myself and I have managed pretty well so far. Don't hesitate c
 <p>It is recommended, but not required, to increase the java heap size to decrease the risk of running low on java heap memory. 
 How to do this depends on your operating system and the way you start DroiD64.</p>
 <p>Example commandline for Linux, UNIX and similar operating systems with a MySQL database driver:</p>
-<pre>
+<pre style="display: inline-block; border:1px solid Black;padding: 4px;">
   java -Xmx1024m -classpath /opt/lib/mysql-connector-java-5.1.47/mysql-connector-java-5.1.47-bin.jar:droid64-${project.version}.jar droid64.DroiD64
 </pre>
 <p>Example commandline for Microsoft Windows with a MySQL database driver:</p>
-<pre>
+<pre style="display: inline-block; border:1px solid Black;padding: 4px;">
   java -Xmx1024m -classpath C:\mysql-connector-java-5.1.47\mysql-connector-java-5.1.47-bin.jar;droid64-${project.version}.jar droid64.DroiD64
 </pre>
 
@@ -90,6 +91,7 @@ The <b>fork new thread</b> checkbox, which when checked will make the plugin to 
  <li><i>{NewFile}</i> - Opens a file dialog asking for a name for a new disk image.</li>
  <li><i>{ImageType}</i> - Type of image (D64, D67, D71, D80, D81 D82, D88, T64, LNX).</li>
  <li><i>{DriveType}</i> - Type of drive used for the image (1541, 1571, 1581, 4250, 8250, 8280).</li>
+ <li><i>{ExtArguments}</i> - Extra arguments which are configured on bookmarks. This can be used to customize a plugin for a certain bookmark.</li>
 </ul>
 
 <p><b>Example:</b></p>
@@ -147,7 +149,7 @@ Starting the VICE C64 emulator with disk image disk image mounted and autostart 
 <h3>4.2. File operations</h3>
 <dl>
  <dt>Copy File</dt>
- <dd>Copy selected file(s). If copying a CBM (partition) file, its contents is simply copied as one large data file. The BAM, directory blocks and track/sector pointers are not recreated when a partition is copied to another D81 disk image.</dd>
+ <dd>Copy selected file(s). If copying a CBM (partition) file, its contents is simply copied as one large data file. The BAM, directory blocks and track/sector pointers are not recreated when a partition is copied to another D81 disk image. When copying files to a disk image, file name extensions in the "extension removal" setting will be truncated.</dd>
  <dt>New File</dt>
  <dd>Opens a dialog for creating a new empty file.</dd> 
  <dt>Delete File</dt>
@@ -206,7 +208,7 @@ If you manage to use DroiD64 with some other database, please mail me the detail
 </p>
 
 <h3>5.1. Searching</h3>
-<p>Once the database setup is done in DroiD64 will the <b>Search</b> top menu be available.</p>
+<p>Once the database setup is done in DroiD64, the <b>Search</b> top menu is available.</p>
 <dl>
 <dt>Search</dt><dd>Opens a search dialog</dd>
 <dt>Scan for disk images</dt><dd>Opens a directory dialog asking for a folder, which to start search recursively for disk images files which are supported by DroiD64. It can take a while if there are many files and folders to scan.</dd>
@@ -276,6 +278,7 @@ If it is missing, it will be recreated using defaults.
 <dl>
 	<dt>Left default image dir</dt><dd> The path which will be opened in the left file browser when DroiD64 is started.</dd>
 	<dt>Right default image dir</dt><dd> The path which will be opened in the right file browser when DroiD64 is started.</dd>
+	<dt>Extension removal</dt><dd>Files whose name ends with any of the extensions in this comma separated list will have the file extension removed from its name when copied to a disk image. </dd>
 	<dt><i>&lt;ImageType&gt;</i> file extensions</dt><dd> Semicolon separated lists of file extensions used to identify disk image files.</dd>
 </dl>
 
@@ -288,6 +291,21 @@ The settings for database connectivity. See section 5 in this document for more 
 <h3>6.5.  Plugin <i>&lt;number<&gt;</i></h3>
 Configure the plugin buttons. See section 3 in this document for more details.
 There is one sub tab for each of the plugin configurations available.
+
+<h2>7. Bookmarks</h2>
+Bookmarks are used to get quick access to your favorite locations and disk images. They are available under to Bookmarks top menu.
+Selecting "<i>Add bookmark</i>" adds a bookmark to the currently active disk panel.
+If a file is selected in the disk panel, the file will be selected when the bookmark is opened.
+A bookmark can have the properties below. Some properties are not available for all types of bookmarks.
+<dl>
+<dt>Name</dt><dd>The name of the bookmark, which is what is shown in the Bookmarks menu</dd>
+<dt>Type</dt><dd>The type of bookmark which is one of DISKIMAGE, DIRECTORY, SEPARATOR, FOLDER.</dd>
+<dt>Created</dt><dd>The date when the bookmark was added</dd>
+<dt>Plugin</dt><dd>A plugin which will be executed when the bookmark is opened.</dd>
+<dt>Selected file</dt><dd>The file which will be selected when the bookmark is opened. Please note, what is actually stored in the row number of the selected file, so if you rearrange the contents on a disk image, you need to update the bookmark too. This feature is intended for quick starting your favorite game, which you normally don't modify very often.</dd>
+<dt>Plugin arguments</dt><dd>Arguments passed to the plugin using the {ExtArguments} variable. This makes it possible to customize a plugin for the bookmarks. E.g. setting joystick, addons etc, in your emulator.</dd>
+<dt>Notes</dt><dd>Text that is shown in a non modal dialog when the plugin is started. This can be used to show cheat codes, hints and such things when starting a game in an emulator.</dd>
+</dl>
 
 </body>
 </html>

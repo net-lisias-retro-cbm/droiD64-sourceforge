@@ -41,7 +41,7 @@ public class SearchResultTableModel extends AbstractTableModel {
 			if (rowIndex >= data.size() || rowIndex < 0) {
 				return Utility.EMPTY;
 			}
-			SearchResultRow row = data.get(rowIndex);
+			var row = data.get(rowIndex);
 			switch (columnIndex) {
 			case 0: return row.getPath();
 			case 1: return row.getDisk();

@@ -6,10 +6,11 @@ public interface DiskDao {
 
 	/**
 	 * Get stream of all stored disks.
+	 * @param composite if true return composite with child entities
 	 * @return Stream of Disk
 	 * @throws DatabaseException when error
 	 */
-	public Stream<Disk> getAllDisks() throws DatabaseException;
+	public Stream<Disk> getAllDisks(boolean composite) throws DatabaseException;
 
 	/**
 	 * Get one specified disk

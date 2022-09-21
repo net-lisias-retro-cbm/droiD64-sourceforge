@@ -89,13 +89,17 @@ public class TextViewPanel extends JPanel {
 		dialog.setVisible(true);
 	}
 
+	public void setModal(boolean modal) {
+		dialog.setModal(modal);
+	}
+
 	private String filter(byte[] data) {
 		if (data == null) {
 			return "";
 		}
-		byte[] filtered = new byte[data.length];
+		var filtered = new byte[data.length];
 		int out = 0;
-		for (int in=0; in<data.length; in++) {
+		for (var in=0; in<data.length; in++) {
 			byte c = data[in];
 			if ((c>=0x20 && c<=0x7e) || c==0x09 || c==0x0a || c== 0x0d || (c>=0xa0 && c<=0xff)) {
 				filtered[out++] = c;
@@ -116,20 +120,20 @@ public class TextViewPanel extends JPanel {
 		c64ModeButton.addActionListener(ae -> setTextFont(textPane, c64ModeButton.isSelected()));
 		c64ModeButton.setMnemonic('c');
 
-		final JButton saveButton = new JButton("Save");
+		var saveButton = new JButton("Save");
 		saveButton.addActionListener(ae -> save(textPane.getText()));
 		saveButton.setMnemonic('s');
 
 		printButton.addActionListener(ae -> print(textPane.getText(), c64ModeButton.isSelected()));
 		printButton.setMnemonic('p');
 
-		JPanel buttonPanel = new JPanel();
+		var buttonPanel = new JPanel();
 		buttonPanel.add(printButton);
 		buttonPanel.add(c64ModeButton);
 		buttonPanel.add(saveButton);
 		buttonPanel.add(closeButton);
 
-		JScrollPane scrollPane = new JScrollPane(textPane);
+		var scrollPane = new JScrollPane(textPane);
 
 		GuiHelper.keyNavigateTextArea(textPane, scrollPane);
 
@@ -146,7 +150,7 @@ public class TextViewPanel extends JPanel {
 		if (text.isEmpty()) {
 			return;
 		}
-		String saveFileName = FileDialogHelper.openTextFileDialog("Save text file", null, Utility.EMPTY, true, new String[] {".txt", ".asm"});
+		var saveFileName = FileDialogHelper.openTextFileDialog("Save text file", null, Utility.EMPTY, true, new String[] {".txt", ".asm"});
 		if (saveFileName != null) {
 			try {
 				Utility.writeFile(new File(saveFileName), text);
@@ -158,7 +162,7 @@ public class TextViewPanel extends JPanel {
 
 	private void print(final String text, boolean useCbmFont) {
 		try {
-			PrinterJob job = PrinterJob.getPrinterJob();
+			var	job = PrinterJob.getPrinterJob();
 			job.setPageable(new PrintPageable(text, name, useCbmFont, false, mainPanel));
 			if (job.printDialog()) {
 				job.print();

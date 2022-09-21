@@ -91,7 +91,7 @@ public class D82Constants {
 			new CbmTrack( 29, 2228, 0x08b400),	// 83
 			new CbmTrack( 29, 2257, 0x08d100),	// 84
 			new CbmTrack( 29, 2286, 0x08ee00),	// 85
-			new CbmTrack( 29, 2315, 0x090600),	// 86
+			new CbmTrack( 29, 2315, 0x090b00),	// 86
 			new CbmTrack( 29, 2344, 0x092800),	// 87
 			new CbmTrack( 29, 2373, 0x094500),	// 88
 			new CbmTrack( 29, 2402, 0x096200),	// 89
@@ -106,7 +106,7 @@ public class D82Constants {
 			new CbmTrack( 29, 2663, 0x0a6700),	// 98
 			new CbmTrack( 29, 2692, 0x0a8400),	// 99
 			new CbmTrack( 29, 2721, 0x0aa100),	// 100
-			new CbmTrack( 29, 2750, 0x0a6e00),	// 101
+			new CbmTrack( 29, 2750, 0x0abe00),	// 101
 			new CbmTrack( 29, 2779, 0x0adb00),	// 102
 			new CbmTrack( 29, 2808, 0x0af800),	// 103
 			new CbmTrack( 29, 2837, 0x0b1500),	// 104
@@ -119,7 +119,7 @@ public class D82Constants {
 			new CbmTrack( 29, 3040, 0x0be000),	// 111
 			new CbmTrack( 29, 3069, 0x0bfd00),	// 112
 			new CbmTrack( 29, 3098, 0x0c1a00),	// 113
-			new CbmTrack( 29, 2137, 0x0c3700),	// 114
+			new CbmTrack( 29, 3127, 0x0c3700),	// 114
 			new CbmTrack( 29, 3156, 0x0c5400),	// 115
 			new CbmTrack( 29, 3185, 0x0c7100),	// 116
 			new CbmTrack( 27, 3214, 0x0c8e00),	// 117
@@ -143,7 +143,7 @@ public class D82Constants {
 			new CbmTrack( 25, 3692, 0x0e6c00),	// 135
 			new CbmTrack( 25, 3717, 0x0e8500),	// 136
 			new CbmTrack( 25, 3742, 0x0e9e00),	// 137
-			new CbmTrack( 25, 3767, 0x0e6700),	// 138
+			new CbmTrack( 25, 3767, 0x0eb700),	// 138
 			new CbmTrack( 25, 3792, 0x0ed000),	// 139
 			new CbmTrack( 25, 3817, 0x0ee900),	// 140
 			new CbmTrack( 25, 3842, 0x0f0200),	// 141
@@ -233,5 +233,4 @@ public class D82Constants {
 	private D82Constants() {
 		// Unused
 	}
-
 }

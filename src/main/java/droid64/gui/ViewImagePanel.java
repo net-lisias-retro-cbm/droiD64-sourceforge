@@ -3,6 +3,7 @@ package droid64.gui;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
 import java.awt.Image;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
@@ -96,16 +97,16 @@ public class ViewImagePanel extends JPanel {
 		setLayout(new BorderLayout());
 		add(new JScrollPane(drawImagePanel()), BorderLayout.CENTER);
 
-		JButton printButton = new JButton("Print");
+		var printButton = new JButton("Print");
 		printButton.setMnemonic('p');
 		printButton.setToolTipText("Print");
 		printButton.addActionListener(ae -> print(imgPanel));
 
-		JButton saveButton = new JButton("Save PNG");
+		var saveButton = new JButton("Save PNG");
 		saveButton.setMnemonic('s');
 		saveButton.addActionListener(ae -> saveImage(imgPanel));
 
-		JPanel buttonPanel = new JPanel();
+		var buttonPanel = new JPanel();
 		buttonPanel.add(printButton);
 		buttonPanel.add(saveButton);
 		buttonPanel.add(closeButton);
@@ -114,8 +115,8 @@ public class ViewImagePanel extends JPanel {
 	}
 
 	private JPanel drawImagePanel() {
-		JPanel panel = new JPanel();
-		GridBagConstraints gbc = new GridBagConstraints();
+		var panel = new JPanel(new GridBagLayout());
+		var gbc = new GridBagConstraints();
 		gbc.fill = GridBagConstraints.VERTICAL;
 		imgPanel.setBorder(BorderFactory.createLineBorder(Color.BLACK));
 		imgPanel.addMouseListener(new MouseAdapter() {
@@ -138,7 +139,7 @@ public class ViewImagePanel extends JPanel {
 
 	private void saveImage(ImagePanel imgPanel) {
 		try {
-			String filename = FileDialogHelper.openTextFileDialog("Save PNG file", null, imgPanel.getName(), true, new String[]{ ".png" });
+			var filename = FileDialogHelper.openTextFileDialog("Save PNG file", null, imgPanel.getName(), true, new String[]{ ".png" });
 			if (filename != null) {
 				ImageIO.write(imgPanel.getImage(), "png", new File(filename));
 			}
@@ -152,7 +153,7 @@ public class ViewImagePanel extends JPanel {
 			return null;
 		}
 		currentIndex = currentIndex % dataList.size();
-		byte[] data = dataList.get(currentIndex);
+		var data = dataList.get(currentIndex);
 		String name = currentIndex < nameList.size() ? nameList.get(currentIndex) : null;
 		CbmPicture cbm = new CbmPicture(data, name);
 		currentIndex++;
@@ -160,7 +161,7 @@ public class ViewImagePanel extends JPanel {
 	}
 
 	private void print(ImagePanel imgPanel) {
-		PrinterJob job = PrinterJob.getPrinterJob();
+		var job = PrinterJob.getPrinterJob();
 		job.setPageable(new PrintPageable(imgPanel.getImage(), imgPanel.getName(), mainPanel));
 		if (job.printDialog()) {
 			try {

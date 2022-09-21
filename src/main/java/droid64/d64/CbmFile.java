@@ -43,6 +43,7 @@ public class CbmFile implements Comparable<CbmFile>, Serializable {
 	private String name; // string[16]
 	private int relTrack;
 	private int relSector;
+	private int recordLength;
 	/** FileStructure, FileType, Year, Month, Day. Hour, Minute */
 	private int[] geos = new int[7];
 	private int sizeInBytes;
@@ -81,6 +82,7 @@ public class CbmFile implements Comparable<CbmFile>, Serializable {
 		name = Utility.EMPTY;
 		relTrack = 0;
 		relSector = 0;
+		recordLength = 0;
 		geos[0] = 0;
 		geos[1] = 0;
 		geos[2] = 0;
@@ -106,6 +108,7 @@ public class CbmFile implements Comparable<CbmFile>, Serializable {
 		this.name = that.name;
 		this.relTrack = that.relTrack;
 		this.relSector = that.relSector;
+		this.recordLength = that.recordLength;
 		this.geos[0] = that.geos[0];
 		this.geos[1] = that.geos[1];
 		this.geos[2] = that.geos[2];
@@ -145,12 +148,13 @@ public class CbmFile implements Comparable<CbmFile>, Serializable {
 		dirTrack = data[position + 0x00] & 0xff;
 		dirSector = data[position + 0x01] & 0xff;
 		fileScratched = (data[position + 0x02] & 0xff) == 0;
-		fileType = FileType.get(data[position + 0x02] & 0x07);
+		int fileTypeId = data[position + 0x02] & 0x07;
+		fileType = FileType.get(fileTypeId <= 5 ? fileTypeId : 0);
 		fileLocked = (data[position + 0x02] & 0x40) != 0;
 		fileClosed = (data[position + 0x02] & 0x80) != 0;
 		track = data[position + 0x03] & 0xff;
 		sector = data[position + 0x04] & 0xff;
-		StringBuilder buf = new StringBuilder();
+		var buf = new StringBuilder();
 		for (int i = 0; i < 16; i++) {
 			int c = data[position + 0x05 + i] & 0xff;
 			if (c != (Utility.BLANK & 0xff)) {
@@ -160,6 +164,7 @@ public class CbmFile implements Comparable<CbmFile>, Serializable {
 		name = buf.toString();
 		relTrack = data[position + 0x15] & 0xff;
 		relSector = data[position + 0x16] & 0xff;
+		recordLength = data[position + 0x17] & 0xff;
 		for (int i = 0; i < geos.length; i++) {
 			geos[i] = data[position + 0x17 + i] & 0xff;
 		}
@@ -204,7 +209,7 @@ public class CbmFile implements Comparable<CbmFile>, Serializable {
 
 	@Override
 	public String toString() {
-		StringBuilder builder = new StringBuilder();
+		var builder = new StringBuilder();
 		builder.append("CbmFile [");
 		toString(builder);
 		builder.append(']');
@@ -230,6 +235,7 @@ public class CbmFile implements Comparable<CbmFile>, Serializable {
 		builder.append(" offSet=").append(offSet);
 		builder.append(" relSector=").append(relSector);
 		builder.append(" relTrack=").append(relTrack);
+		builder.append(" recordLength=").append(recordLength);
 		builder.append(" sector=").append(sector);
 		builder.append(" sizeInBlocks=").append(sizeInBlocks);
 		builder.append(" sizeInBytes=").append(sizeInBytes);
@@ -292,6 +298,13 @@ public class CbmFile implements Comparable<CbmFile>, Serializable {
 	 */
 	public int getRelTrack() {
 		return relTrack;
+	}
+
+	/**
+	 * @return REL record length
+	 */
+	public int getRecordLength() {
+		return recordLength;
 	}
 
 	/**
@@ -491,6 +504,10 @@ public class CbmFile implements Comparable<CbmFile>, Serializable {
 
 	public void setLoadAddr(int loadAddr) {
 		this.loadAddr = loadAddr;
+	}
+
+	public void setRecordLength(int recordLength) {
+		this.recordLength= recordLength;
 	}
 
 	@Override

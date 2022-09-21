@@ -108,7 +108,7 @@ public class Resources {
 	public static final String DROID64_SETTINGS_LEFTDIR = "droid64.settings.leftdir";
 	public static final String DROID64_SETTINGS_RIGHTDIR = "droid64.settings.rightdir";
 	public static final String DROID64_SETTINGS_PROXY = "droid64.settings.proxy";
-
+	public static final String DROID64_SETTINGS_EXT_REMOVAL = "droid64.settings.ext_removal";
 	public static final String DROID64_SETTINGS_EXT_D64 = "droid64.settings.ext.d64";
 	public static final String DROID64_SETTINGS_EXT_D67 = "droid64.settings.ext.d67";
 	public static final String DROID64_SETTINGS_EXT_D71 = "droid64.settings.ext.d71";
@@ -121,6 +121,7 @@ public class Resources {
 	public static final String DROID64_SETTINGS_CONFIRMEXIT = "droid64.settings.confirmexit";
 	public static final String DROID64_SETTINGS_CONFIRMEXIT_TOOLTIP = "droid64.settings.confirmexit.tooltip";
 	public static final String DROID64_SETTINGS_HIDECONSOLE = "droid64.settings.hideconsole";
+	public static final String DROID64_SETTINGS_BOOKMARKBAR = "droid64.settings.bookmarkbar";
 	public static final String DROID64_SETTINGS_HIDECONSOLE_TOOLTIP = "droid64.settings.hideconsole.tooltip";
 	public static final String DROID64_SETTINGS_LOOKFEEL = "droid64.settings.lookfeel";
 	public static final String DROID64_SETTINGS_LOOKFEEL_TOOLTIP = "droid64.settings.lookfeel.tooltip";
@@ -134,6 +135,7 @@ public class Resources {
 	public static final String DROID64_SETTINGS_WINDOWSIZE_FETCH = "droid64.settings.windowsize.fetch";
 	public static final String DROID64_SETTINGS_CBMFONT = "droid64.settings.cbmfont";
 	public static final String DROID64_SETTINGS_SYSFONT = "droid64.settings.sysfont";
+	public static final String DROID64_SETTINGS_CONSOLEFONT = "droid64.settings.consolefont";
 	public static final String DROID64_SETTINGS_EXE_CHOOSE = "droid64.settings.exe.choose";
 	public static final String DROID64_SETTINGS_EXE_CHOOSE_TOOLTIP = "droid64.settings.exe.choose.tooltip";
 	public static final String DROID64_SETTINGS_EXE_LABEL = "droid64.settings.exe.label";

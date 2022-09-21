@@ -28,6 +28,7 @@
 package droid64.gui;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Stream;
 
 import javax.swing.table.AbstractTableModel;
 import javax.swing.table.DefaultTableColumnModel;
@@ -91,9 +92,13 @@ class EntryTableModel extends AbstractTableModel {
 		return data.get(row).isImageFile();
 	}
 
+	public Stream<DirEntry> getEntries() {
+		return data.stream();
+	}
+
 	@Override
 	public synchronized Object getValueAt(int row, int column) {
-		DirEntry p = (row < data.size() && row >= 0) ? data.get(row) : null;
+		var p = (row < data.size() && row >= 0) ? data.get(row) : null;
 		if (p == null) {
 			return Utility.EMPTY;
 		}
@@ -122,7 +127,7 @@ class EntryTableModel extends AbstractTableModel {
 	}
 
 	public TableColumnModel getTableColumnModel() {
-		DefaultTableColumnModel columnModel = new DefaultTableColumnModel();
+		var columnModel = new DefaultTableColumnModel();
 		for (int i=0; i<getColumnCount(); i++) {
 			int wdt;
 			switch (mode) {
@@ -138,7 +143,7 @@ class EntryTableModel extends AbstractTableModel {
 			default:
 				wdt = 1;
 			}
-			TableColumn col = new TableColumn(i, wdt);
+			var col = new TableColumn(i, wdt);
 			col.setHeaderValue(getColumnName(i));
 			columnModel.addColumn(col);
 		}

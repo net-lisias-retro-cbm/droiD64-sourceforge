@@ -6,10 +6,13 @@ import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
+import java.util.stream.Stream;
 
 import droid64.db.Disk;
 import droid64.db.DiskFile;
 import droid64.gui.BAMPanel.BamTrack;
+import droid64.gui.ConsoleStream;
 import droid64.gui.Setting;
 
 /**<pre style='font-family:sans-serif;'>
@@ -86,7 +89,7 @@ public abstract class DiskImage implements Serializable {
 	/** True if image is compressed */
 	protected boolean compressed;
 	/** Error messages are appended here, and get presented in GUI */
-	protected StringBuilder feedbackMessage = new StringBuilder();
+	protected transient ConsoleStream feedbackStream;
 	/** Data of the whole image. */
 	protected byte[] cbmDisk = null;
 	/** Number of files in image */
@@ -268,52 +271,19 @@ public abstract class DiskImage implements Serializable {
 				imageFormat == DiskImageType.D81_CPM;
 	}
 
-	public static DiskImage getDiskImage(File file, byte[] imageData) throws CbmException {
-		switch (Setting.getDiskImageType(file)) {
-		case D64:
-			return new D64(imageData);
-		case D67:
-			return new D67(imageData);
-		case D71:
-			return new D71(imageData);
-		case D81:
-			return new D81(imageData);
-		case T64:
-			return new T64(imageData);
-		case D80:
-			return new D80(imageData);
-		case D82:
-			return new D82(imageData);
-		case LNX:
-			return new LNX(imageData);
-		case D88:
-			return new D88(imageData);
-		default:
-			throw new CbmException("Unknown file format.");
-		}
+	public static DiskImage getDiskImage(File file, byte[] imageData, ConsoleStream consoleStream) throws CbmException {
+		return Setting.getDiskImageType(file).getInstance(imageData, consoleStream);
 	}
 
 	/**
 	 * Load disk image from file. Use file name extension to identify type of disk image.
 	 * @param file the file
+	 * @param consoleStream the stream for error messages
 	 * @return DiskImage
 	 * @throws CbmException if image could not be loaded (file missing, file corrupt out of memory etc).
 	 */
-	public static DiskImage getDiskImage(File file) throws CbmException {
-		final DiskImage image;
-		switch (Setting.getDiskImageType(file)) {
-		case D64: image =  new D64().readImage(file); break;
-		case D67: image =  new D67().readImage(file); break;
-		case D71: image =  new D71().readImage(file); break;
-		case D81: image =  new D81().readImage(file); break;
-		case T64: image =  new T64().readImage(file); break;
-		case D80: image =  new D80().readImage(file); break;
-		case D82: image =  new D82().readImage(file); break;
-		case LNX: image =  new LNX().readImage(file); break;
-		case D88: image =  new D88().readImage(file); break;
-		default:
-			throw new CbmException("Unknown file format."+file);
-		}
+	public static DiskImage getDiskImage(File file, ConsoleStream consoleStream) throws CbmException {
+		DiskImage image = Setting.getDiskImageType(file).getInstance(consoleStream).readImage(file);
 		image.setFile(file);
 		return image;
 	}
@@ -326,11 +296,10 @@ public abstract class DiskImage implements Serializable {
 	 * @throws CbmException when error
 	 */
 	protected DiskImage readImage(File file,  DiskImageType type) throws CbmException {
-		feedbackMessage = new StringBuilder();
-		feedbackMessage.append("Trying to load ").append(type).append(" image ").append(file).append('\n');
+		feedbackStream.append("Trying to load ").append(type).append(" image ").append(file).append('\n');
 		this.cbmDisk = null;
 		if (Utility.isGZipped(file)) {
-			feedbackMessage.append("GZIP compressed file detected.\n");
+			feedbackStream.append("GZIP compressed file detected.\n");
 			cbmDisk = Utility.readGZippedFile(file);
 			compressed = true;
 		} else {
@@ -343,12 +312,12 @@ public abstract class DiskImage implements Serializable {
 			} else if (file.length() < type.expectedSize && type.expectedSize > 0) {
 				throw new CbmException("File smaller than normal size. A "+type+" file should be " + type.expectedSize + " bytes.");
 			} else if (file.length() > type.expectedSize && type.expectedSize > 0) {
-				feedbackMessage.append("Warning: File larger than normal size. A "+type+" file should be ").append(type.expectedSize).append(" bytes.\n");
+				feedbackStream.append("Warning: File larger than normal size. A "+type+" file should be ").append(type.expectedSize).append(" bytes.\n");
 			}
 			this.cbmDisk = Utility.readFile(file);
 		}
 		this.file = file;
-		feedbackMessage.append(type+" disk image was loaded.\n");
+		feedbackStream.append(type+" disk image was loaded.\n");
 		return this;
 	}
 
@@ -366,7 +335,7 @@ public abstract class DiskImage implements Serializable {
 		for (int s=0; s<dirSectors.length; s++) {
 			int idx = getSectorOffset(dirTrack, dirSectors[s]);
 			for (int i=0; i < DIR_ENTRIES_PER_SECTOR; i++) {
-				CpmFile newFile = getCpmFile(entry, idx + i * DIR_ENTRY_SIZE, use16bitau);
+				var newFile = getCpmFile(entry, idx + i * DIR_ENTRY_SIZE, use16bitau);
 				if (newFile != null) {
 					cbmFile[filenumber++] = newFile;
 					entry = newFile;
@@ -384,20 +353,23 @@ public abstract class DiskImage implements Serializable {
 	 * @return true if writing was successful (if there was enough space on disk image etc)
 	 */
 	public boolean saveFile(CbmFile cbmFile, boolean isCopyFile, byte[] saveData) {
-		feedbackMessage = new StringBuilder();
 		if (isCpmImage()) {
-			feedbackMessage.append("saveFile: Not yet implemented for CP/M format.\n");
+			feedbackStream.append("saveFile: Not yet implemented for CP/M format.\n");
 			return false;
 		}
-		if (!isCopyFile && cbmFile.getName().toLowerCase().endsWith(".prg")) {
-			cbmFile.setName(cbmFile.getName().substring(0, cbmFile.getName().length()-4));
+		if (!isCopyFile) {
+			for (String ext : Setting.EXT_REMOVAL.getList()) {
+				if (!Utility.isEmpty(ext) && cbmFile.getName().toLowerCase().endsWith(ext.toLowerCase())) {
+					cbmFile.setName(cbmFile.getName().substring(0, cbmFile.getName().length() - ext.length()));
+				}
+			}
 		}
 		TrackSector firstBlock;
 		if (cbmFile.getFileType() == FileType.DEL && saveData.length == 0) {
-			feedbackMessage.append("saveFile: '").append(cbmFile.getName()).append("'  (empty DEL file)\n");
+			feedbackStream.append("saveFile: '").append(cbmFile.getName()).append("'  (empty DEL file)\n");
 			firstBlock = new TrackSector(0, 0);
 		} else {
-			feedbackMessage.append("saveFile: '").append(cbmFile.getName()).append("'  ("+saveData.length+" bytes)\n");
+			feedbackStream.append("saveFile: '").append(cbmFile.getName()).append("'  ("+saveData.length+" bytes)\n");
 			firstBlock = saveFileData(saveData);
 		}
 		if (firstBlock != null) {
@@ -405,7 +377,7 @@ public abstract class DiskImage implements Serializable {
 				return true;
 			}
 		} else {
-			feedbackMessage.append("saveFile: Error occurred.\n");
+			feedbackStream.append("saveFile: Error occurred.\n");
 		}
 		return false;
 	}
@@ -417,9 +389,9 @@ public abstract class DiskImage implements Serializable {
 	 * @return <code>true</code> when writing of the image file was successful
 	 */
 	public boolean renameImage(String newDiskName, String newDiskID){
-		feedbackMessage = new StringBuilder("renameImage(): ").append(newDiskName).append(", ").append(newDiskID);
+		feedbackStream.append("renameImage(): ").append(newDiskName).append(", ").append(newDiskID);
 		if (isCpmImage()) {
-			feedbackMessage.append(NOT_IMPLEMENTED_FOR_CPM);
+			feedbackStream.append(NOT_IMPLEMENTED_FOR_CPM);
 			return false;
 		}
 		setDiskName(newDiskName, newDiskID);
@@ -433,7 +405,7 @@ public abstract class DiskImage implements Serializable {
 	 * @param newFileType the new type of the file (PRG, REL, SEQ, DEL, USR)
 	 */
 	public void renameFile(int cbmFileNumber, String newFileName, FileType newFileType) {
-		feedbackMessage.append("renameFile: oldName '").append(cbmFile[cbmFileNumber].getName()).append(" newName '").append(newFileName).append("'\n");
+		feedbackStream.append("renameFile: oldName '").append(cbmFile[cbmFileNumber].getName()).append(" newName '").append(newFileName).append("'\n");
 		CbmFile newFile = new CbmFile(cbmFile[cbmFileNumber]);
 		newFile.setName(newFileName);
 		newFile.setFileType(newFileType);
@@ -452,10 +424,10 @@ public abstract class DiskImage implements Serializable {
 		if (userNum >=0x00 && userNum <= 0x0f) {
 			return getCpmFileEntry(previousFile, pos, use16bitau);
 		} else if (userNum == 0x20) {
-			String label = Utility.getCpmString(cbmDisk, pos + 0x01, 8);
-			String labelType = Utility.getCpmString(cbmDisk, pos + 0x09, 3);
+			var label = Utility.getCpmString(cbmDisk, pos + 0x01, 8);
+			var labelType = Utility.getCpmString(cbmDisk, pos + 0x09, 3);
 			bam.setDiskName(label+"."+labelType);
-			feedbackMessage.append("CP/M label "+label+"."+labelType);
+			feedbackStream.append("CP/M label "+label+"."+labelType);
 		} else if (userNum != (UNUSED & 0xff)) {
 			// 0x10 - 0x1f: password entries
 			// 0x21: timestamp
@@ -536,10 +508,12 @@ public abstract class DiskImage implements Serializable {
 		cbmFile.setTrack(destTrack);
 		cbmFile.setSector(destSector);
 		cbmFile.setName(thisFilename);
-		cbmFile.setRelTrack( 0);		//TODO: relative files
+		cbmFile.setRecordLength(0);
+		cbmFile.setRelTrack( 0);
 		cbmFile.setRelSector( 0);
+		cbmFile.setRecordLength( 0);
 		for (int i = 0; i < 7; i++) {
-			cbmFile.setGeos(i,0);		//TODO: GEOS files
+			cbmFile.setGeos(i, 0);
 		}
 		cbmFile.setSizeInBytes(lengthInBytes);
 		cbmFile.setSizeInBlocks((cbmFile.getSizeInBytes() - 2) / 254	);
@@ -553,15 +527,15 @@ public abstract class DiskImage implements Serializable {
 	 * @return Disk
 	 */
 	public Disk getDisk() {
-		Disk disk = new Disk();
+		var disk = new Disk();
 		disk.setLabel(Utility.rinseCtrlChars(getBam().getDiskName()));
 		disk.setImageType(imageFormat);
 		disk.setErrors(errors);
 		disk.setWarnings(warnings);
 		for (int filenumber = 0; filenumber <= getFilesUsedCount() - 1;	filenumber++) {
-			CbmFile cf =  getCbmFile(filenumber);
+			var cf =  getCbmFile(filenumber);
 			if (cf != null) {
-				disk.getFileList().add(new DiskFile(cf, filenumber));
+				disk.getDiskFiles().add(new DiskFile(cf, filenumber));
 			}
 		}
 		return disk;
@@ -593,21 +567,21 @@ public abstract class DiskImage implements Serializable {
 		if (CPM_DISKID_GCR.equals(diskId)) {
 			if ("CBM".equals(getStringFromBlock(1, 0, 0, 3))) {
 				if (this instanceof D71 && (getCbmDiskValue(BLOCK_SIZE - 1) & 0xff) == 0xff) {
-					feedbackMessage.append("CP/M C128 double sided disk detected.\n");
+					feedbackStream.append("CP/M C128 double sided disk detected.\n");
 					imageFormat = DiskImageType.D71_CPM;
 					return true;
 				} else if (this instanceof D64) {
-					feedbackMessage.append("CP/M C128 single sided disk detected.\n");
+					feedbackStream.append("CP/M C128 single sided disk detected.\n");
 					imageFormat = DiskImageType.D64_CPM_C128;
 					return true;
 				}
 			} else if (this instanceof D64 ) {
-				feedbackMessage.append("CP/M C64 single sided disk detected.\n");
+				feedbackStream.append("CP/M C64 single sided disk detected.\n");
 				imageFormat = DiskImageType.D64_CPM_C64;
 				return true;
 			}
 		} else if (this instanceof D81 && CPM_DISKID_1581.equals(diskId)) {
-			feedbackMessage.append("CP/M 3.5\" disk detected.\n");
+			feedbackStream.append("CP/M 3.5\" disk detected.\n");
 			imageFormat = DiskImageType.D81_CPM;
 			return true;
 		}
@@ -653,7 +627,7 @@ public abstract class DiskImage implements Serializable {
 			geosFormat = false;
 		}
 		if (geosFormat) {
-			feedbackMessage.append("GEOS formatted image detected.\n");
+			feedbackStream.append("GEOS formatted image detected.\n");
 		}
 		return imageFormat;
 	}
@@ -669,10 +643,10 @@ public abstract class DiskImage implements Serializable {
 	 */
 	public boolean saveAs(File file) {
 		if (cbmDisk == null || file == null) {
-			feedbackMessage.append("No disk data. Nothing to write.\n");
+			feedbackStream.append("No disk data. Nothing to write.\n");
 			return false;
 		}
-		feedbackMessage.append("writeImage: Trying to save ").append(compressed ? " compressed " : Utility.EMPTY).append(file).append("... \n");
+		feedbackStream.append("writeImage: Trying to save ").append(compressed ? " compressed " : Utility.EMPTY).append(file).append("... \n");
 		try {
 			if (compressed) {
 				Utility.writeGZippedFile(file, cbmDisk);
@@ -681,7 +655,7 @@ public abstract class DiskImage implements Serializable {
 			}
 			return true;
 		} catch (Exception e) {	//NOSONAR
-			feedbackMessage.append("Error: Could not write filedata.\n").append(e.getMessage()).append('\n');
+			feedbackStream.append("Error: Could not write filedata.\n").append(e.getMessage()).append('\n');
 			return false;
 		}
 	}
@@ -701,7 +675,7 @@ public abstract class DiskImage implements Serializable {
 	 */
 	public void switchFileLocations(CbmFile cbmFile1, CbmFile cbmFile2) {
 		if (!isCpmImage()) {
-			feedbackMessage.append("DiskImage.switchFileLocations: '"+cbmFile1.getName() + "'  '"+cbmFile2.getName()+"'\n");
+			feedbackStream.append("DiskImage.switchFileLocations: '"+cbmFile1.getName() + "'  '"+cbmFile2.getName()+"'\n");
 			int tmpDirTrack = cbmFile2.getDirTrack();
 			int tmpDirSector = cbmFile2.getDirSector();
 			cbmFile2.setDirTrack(cbmFile1.getDirTrack());
@@ -732,7 +706,7 @@ public abstract class DiskImage implements Serializable {
 		try {
 			return cbmDisk[ position ] & 0xff;
 		} catch (ArrayIndexOutOfBoundsException e) {	// NOSONAR
-			feedbackMessage.append("Error: reading outside of image at position ").append(position).append('\n');
+			feedbackStream.append("Error: reading outside of image at position ").append(position).append('\n');
 			return 0;
 		}
 	}
@@ -749,7 +723,7 @@ public abstract class DiskImage implements Serializable {
 		try {
 			return cbmDisk[ pos ] & 0xff;
 		} catch (ArrayIndexOutOfBoundsException e) {	// NOSONAR
-			feedbackMessage.append("Error: reading outside of image at position ").append(pos).append('\n');
+			feedbackStream.append("Error: reading outside of image at position ").append(pos).append('\n');
 			return 0;
 		}
 	}
@@ -784,22 +758,6 @@ public abstract class DiskImage implements Serializable {
 		if (cbmDisk != null) {
 			cbmDisk[ pos] = (byte) value;
 		}
-	}
-
-	/**
-	 * @return feedback message
-	 */
-	public String getFeedbackMessage() {
-		String res = feedbackMessage.toString();
-		feedbackMessage = new StringBuilder();
-		return res;
-	}
-
-	/**
-	 * @param string feedback message
-	 */
-	public void setFeedbackMessage(String string) {
-		feedbackMessage = new StringBuilder(string);
 	}
 
 	/**
@@ -914,6 +872,10 @@ public abstract class DiskImage implements Serializable {
 		return null;
 	}
 
+	public Stream<CbmFile> getFileEntries() {
+		return Optional.ofNullable(cbmFile).map(Stream::of).orElse(Stream.empty()).filter(f -> f != null && f.getName() != null && !f.isFileScratched());
+	}
+
 	/**
 	 * Fill sector in image with data. Pad with zeroes if saveData is smaller than BLOCK_SIZE - 2.
 	 * @param track track number
@@ -990,11 +952,11 @@ public abstract class DiskImage implements Serializable {
 				sector = getCbmDiskValue(dataPosition + 1);
 			} while (track != 0 && !fileLimitReached);
 			if (fileLimitReached) {
-				feedbackMessage.append("Error: Too many entries in directory (more than ").append(maxNumFiles).append(")!\n");
+				feedbackStream.append("Error: Too many entries in directory (more than ").append(maxNumFiles).append(")!\n");
 			}
 			filesUsedCount = filenumber;
 		} catch (ArrayIndexOutOfBoundsException | CbmException e) { //NOSONAR
-			feedbackMessage.append("Error: Sector ").append(track).append('/').append(sector).append(" is outside of image.\n");
+			feedbackStream.append("Error: Sector ").append(track).append('/').append(sector).append(" is outside of image.\n");
 		}
 	}
 
@@ -1019,25 +981,38 @@ public abstract class DiskImage implements Serializable {
 	}
 
 	public byte[] getData(int track, int sector) throws CbmException {
-		ByteArrayOutputStream out = new ByteArrayOutputStream();
+		var out = new ByteArrayOutputStream();
+		var guard = new CyclicGuard<TrackSector>();
+		var ts = new TrackSector(track,sector);
 		do {
-			if (track > getTrackCount()) {
-				throw new CbmException("Track " + track + " outside of image.");
+			if (ts.track > getTrackCount()) {
+				throw new CbmException("Track " + ts.track + " outside of image.");
 			}
-			int blockPos = getSectorOffset(track, sector);
+			int blockPos = getSectorOffset(ts.track, ts.sector);
 			int nextTrack  = getCbmDiskValue(blockPos + 0x00);
 			int nextSector = getCbmDiskValue(blockPos + 0x01);
-			feedbackMessage.append(track).append('/').append(sector).append(Utility.SPACE);
+			feedbackStream.append(ts.track).append('/').append(ts.sector).append(Utility.SPACE);
 			if (nextTrack > 0) {
 				out.write(cbmDisk, blockPos + 2, BLOCK_SIZE - 2);
 			} else {
-				feedbackMessage.append("\nRemaining bytes: ").append(nextSector).append('\n');
+				feedbackStream.append("\nRemaining bytes: ").append(nextSector).append('\n');
 				out.write(cbmDisk, blockPos + 2, nextSector - 2 + 1);
 			}
-			track = nextTrack;
-			sector = nextSector;
-		} while (track != 0);
+			if (!guard.addSilent(ts)) {
+				throw new CbmException("Cyclic error. Sector " + ts + " already seen. "+guard);
+			}
+			ts = new TrackSector(nextTrack, nextSector);
+		} while (ts.track != 0);
 		return out.toByteArray();
 	}
 
+	protected void freeBlocks(int track, int sector) {
+		while (track != 0) {
+			int tmpTrack = getCbmDiskValue(track, sector, 0);
+			int tmpSector = getCbmDiskValue(track, sector, 1);
+			markSectorFree(track, sector);
+			track = tmpTrack;
+			sector = tmpSector;
+		}
+	}
 }

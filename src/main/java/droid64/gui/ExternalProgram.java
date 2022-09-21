@@ -7,6 +7,11 @@ import java.lang.ProcessBuilder.Redirect;
 import java.util.ArrayList;
 import java.util.List;
 
+import javax.xml.bind.annotation.XmlAccessType;
+import javax.xml.bind.annotation.XmlAccessorType;
+import javax.xml.bind.annotation.XmlElement;
+import javax.xml.bind.annotation.XmlType;
+
 import droid64.d64.DiskImage;
 import droid64.d64.DiskImageType;
 import droid64.d64.Utility;
@@ -35,6 +40,8 @@ import droid64.d64.Utility;
  *   </pre>
  * @author wolf
  */
+@XmlAccessorType(XmlAccessType.FIELD)
+@XmlType(name = "ExternalProgram", propOrder = { "command", "arguments", "description", "label", "forkThread", "extArguments" })
 public class ExternalProgram {
 
 	/** The disk image file name including path */
@@ -51,12 +58,21 @@ public class ExternalProgram {
     private static final String IMAGETYPE  = "{ImageType}";
     /** Name of the disk drive used to handle the disk image */
     private static final String DRIVETYPE  = "{DriveType}";
+    /** Extra arguments */
+    private static final String EXT_ARGUMENTS  = "{ExtArguments}";
 
+	@XmlElement(required = false)
 	private String command;
+	@XmlElement(required = false)
 	private String arguments;
+	@XmlElement(required = false)
 	private String description;
+	@XmlElement(required = false)
 	private String label;
+	@XmlElement(required = false)
 	private boolean forkThread;
+	@XmlElement(required = false)
+	private String extArguments;
 
 	/**
 	 * @param command command to run
@@ -86,8 +102,8 @@ public class ExternalProgram {
 		if (command == null || command.isEmpty()) {
 			return new ArrayList<>();
 		}
-		List<String> files = new ArrayList<>();
-		List<String> imagefiles = new ArrayList<>();
+		var files = new ArrayList<String>();
+		var imagefiles = new ArrayList<String>();
 		if (sourceFiles != null && !sourceFiles.isEmpty()) {
 			sourceFiles.stream().filter(s -> s!= null && !s.isEmpty()).forEach(fName-> {
 				files.add(fName);
@@ -100,7 +116,7 @@ public class ExternalProgram {
 	}
 
 	private List<String> buildArguments(File sourceImage, File target, List<String> imagefiles, List<String> files, File directory, DiskImageType imageType) {
-		List<String> args = new ArrayList<>();
+		var args = new ArrayList<String>();
 		if (Utility.isEmpty(command)) {
 			return args;
 		}
@@ -130,7 +146,7 @@ public class ExternalProgram {
 				}
 				break;
 			case NEWFILE:
-				File newFile = FileDialogHelper.openImageFileDialog(directory, null, true);
+				var newFile = FileDialogHelper.openImageFileDialog(directory, null, true);
 				if (newFile == null) {
 					return new ArrayList<>();
 				}
@@ -141,6 +157,11 @@ public class ExternalProgram {
 				break;
 			case DRIVETYPE:
 				args.add(imageType.driveName);
+				break;
+			case EXT_ARGUMENTS:
+				if (!Utility.isEmpty(extArguments)) {
+					args.add(extArguments);
+				}
 				break;
 			default:
 				if (!Utility.isEmpty(s)) {
@@ -164,7 +185,7 @@ public class ExternalProgram {
 		try {
 			mainPanel.appendConsole("Executing: " + execArgs);
 			if (forkThread) {
-				Thread runner = new Thread() {
+				var runner = new Thread() {
 					@Override
 					public void run() {
 						runProgramThread(imageFile, execArgs, mainPanel);
@@ -183,12 +204,13 @@ public class ExternalProgram {
 
 	private void runProgramThread(File imgParentFile, List<String> execArgs, MainPanel mainPanel) {
 		try {
-			Process process = new ProcessBuilder(execArgs)
+			var process = new ProcessBuilder()
 					.directory(imgParentFile != null ? imgParentFile : new File("."))
+					.redirectOutput(Redirect.PIPE)
 					.redirectErrorStream(true)
-					.redirectOutput(Redirect.INHERIT)
+					.command(execArgs)
 					.start();
-			try (BufferedReader br = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
+			try (var br = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
 				String line;
 				while ((line = br.readLine()) != null) {
 					mainPanel.appendConsole(line);
@@ -202,15 +224,7 @@ public class ExternalProgram {
 
 	@Override
 	public String toString() {
-		StringBuilder builder = new StringBuilder();
-		builder.append("ExternalProgram[");
-		builder.append(" .command=").append(command);
-		builder.append(" .arguments=").append(arguments);
-		builder.append(" .description=").append(description);
-		builder.append(" .label=").append(label);
-		builder.append(" .forkThread=").append(forkThread);
-		builder.append(']');
-		return builder.toString();
+		return label;
 	}
 
 	/**
@@ -290,5 +304,13 @@ public class ExternalProgram {
 
 	public void setForkThread(boolean forkThread) {
 		this.forkThread = forkThread;
+	}
+
+	public String getExtArguments() {
+		return extArguments;
+	}
+
+	public void setExtArguments(String extArguments) {
+		this.extArguments = extArguments;
 	}
 }

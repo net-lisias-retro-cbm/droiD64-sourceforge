@@ -102,7 +102,7 @@ public class DaoFactoryImpl extends DaoFactory {
 		} catch (Exception e) {	//NOSONAR
 			return "Failed to load JDBC driver. " + e.getMessage();
 		}
-		try (Connection con = getConnection(url, user, password)) {
+		try (var con = getConnection(url, user, password)) {
 			if (con.isValid(10)) {
 				return "OK";
 			} else {

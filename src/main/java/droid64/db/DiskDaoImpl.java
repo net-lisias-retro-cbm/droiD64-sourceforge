@@ -7,7 +7,9 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.sql.Timestamp;
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
 import java.util.stream.Stream;
 
 import droid64.d64.DiskImageType;
@@ -26,11 +28,11 @@ public class DiskDaoImpl implements DiskDao {
 	private static final String AND_SPACE = "AND ";
 
 	@Override
-	public Stream<Disk> getAllDisks() throws DatabaseException {
+	public Stream<Disk> getAllDisks(boolean composite) throws DatabaseException {
 		String sql = SELECT + COLUMN_NAMES + " FROM disk";
-		try (PreparedStatement stmt = DaoFactoryImpl.prepareStatement(sql)) {
+		try (var stmt = DaoFactoryImpl.prepareStatement(sql)) {
 			ResultSet rs = stmt.executeQuery();
-			return consumeRows(rs);
+			return consumeRows(rs, composite);
 		} catch (SQLException e) {
 			throw new DatabaseException(e);
 		}
@@ -40,11 +42,11 @@ public class DiskDaoImpl implements DiskDao {
 	public Disk getDisk(long diskId) throws DatabaseException {
 		String sql = SELECT + COLUMN_NAMES + " FROM disk WHERE diskid=?";
 		ResultSet rs = null;
-		try (PreparedStatement stmt = DaoFactoryImpl.prepareStatement(sql)){
+		try (var stmt = DaoFactoryImpl.prepareStatement(sql)){
 			stmt.setLong(1, diskId);
 			rs = stmt.executeQuery();
 			if (rs.next()) {
-				return consumeRow(rs);
+				return consumeRow(rs, false);
 			} else {
 				throw new NotFoundException("No such diskId ("+diskId+").");
 			}
@@ -67,13 +69,13 @@ public class DiskDaoImpl implements DiskDao {
 		String path = p != null ? p.getAbsolutePath() : null;
 		String file = f.getName();
 		ResultSet rs = null;
-		try (PreparedStatement stmt = DaoFactoryImpl.prepareStatement(sql)) {
+		try (var stmt = DaoFactoryImpl.prepareStatement(sql)) {
 			stmt.setString(1, path);
 			stmt.setString(2, file);
 
 			rs = stmt.executeQuery();
 			if (rs.next()) {
-				return consumeRow(rs);
+				return consumeRow(rs, false);
 			} else {
 				throw new NotFoundException("No such disk ("+fileName+").");
 			}
@@ -94,7 +96,7 @@ public class DiskDaoImpl implements DiskDao {
 			throw new DatabaseException("Null argument.");
 		}
 		String sql = "UPDATE disk SET " + UPDATE_COLUMN_NAMES + " WHERE diskid=?";
-		try (PreparedStatement stmt = DaoFactoryImpl.prepareStatement(sql)){
+		try (var stmt = DaoFactoryImpl.prepareStatement(sql)){
 			stmt.setString(1, disk.getLabel());
 			stmt.setString(2, disk.getFilePath());
 			stmt.setString(3, disk.getFileName());
@@ -118,14 +120,14 @@ public class DiskDaoImpl implements DiskDao {
 			throw new DatabaseException("Null argument.");
 		}
 		String sql1 = "DELETE FROM diskfile WHERE diskid=?";
-		try (PreparedStatement stmt = DaoFactoryImpl.prepareStatement(sql1)){
+		try (var stmt = DaoFactoryImpl.prepareStatement(sql1)){
 			stmt.setLong(1, disk.getDiskId());
 			stmt.executeUpdate();
 		}  catch (SQLException e) {
 			throw new DatabaseException(e);
 		}
 		String sql2 = "DELETE FROM disk WHERE diskId=?";
-		try (PreparedStatement stmt = DaoFactoryImpl.prepareStatement(sql2)){
+		try (var stmt = DaoFactoryImpl.prepareStatement(sql2)){
 			stmt.setLong(1, disk.getDiskId());
 			if (1 != stmt.executeUpdate()) {
 				throw new NotFoundException("Nothing was deleted");
@@ -140,7 +142,7 @@ public class DiskDaoImpl implements DiskDao {
 		Stream.Builder<Disk> builder = Stream.builder();
 
 		String columns = "d.diskid, d.filepath, d.filename, d.label, df.fileid, df.name, df.filetype, df.size, df.fileNum, df.flags, d.updated, d.imagetype, d.errors, d.warnings, d.hostname";
-		StringBuilder sqlBuf = new StringBuilder();
+		var sqlBuf = new StringBuilder();
 		sqlBuf.append(SELECT);
 		if (DaoFactory.getLimitType() == DaoFactory.LimitType.FIRST) {
 			sqlBuf.append("FIRST ? ");
@@ -156,7 +158,7 @@ public class DiskDaoImpl implements DiskDao {
 		}
 		String sql = sqlBuf.toString();
 		ResultSet rs = null;
-		try (PreparedStatement stmt = DaoFactoryImpl.prepareStatement(sql)) {
+		try (var stmt = DaoFactoryImpl.prepareStatement(sql)) {
 			setSearchCriterias(stmt, criteria);
 			rs = stmt.executeQuery();
 			while (rs.next()) {
@@ -258,9 +260,9 @@ public class DiskDaoImpl implements DiskDao {
 	}
 
 	private Disk consumeDiskComposite(ResultSet rs) throws SQLException {
-		Disk disk = new Disk();
-		DiskFile file = new DiskFile();
-		disk.getFileList().add(file);
+		var disk = new Disk();
+		var file = new DiskFile();
+		disk.getDiskFiles().add(file);
 		disk.setDiskId(rs.getLong(1));
 		disk.setFilePath(rs.getString(2));
 		disk.setFileName(rs.getString(3));
@@ -271,7 +273,7 @@ public class DiskDaoImpl implements DiskDao {
 		file.setSize(rs.getInt(8));
 		file.setFileNum(rs.getInt(9));
 		file.setFlags(rs.getInt(10));
-		Timestamp updated = rs.getTimestamp(11);
+		var updated = rs.getTimestamp(11);
 		disk.setUpdated(updated!=null ? new Date(updated.getTime()) : null);
 		disk.setImageType(DiskImageType.get(rs.getInt(12)));
 		disk.setErrors(getInteger(rs, 13));
@@ -291,7 +293,7 @@ public class DiskDaoImpl implements DiskDao {
 				"WHERE d.filePath = ? AND d.filename = ? AND (UPPER(hostname) = ? OR hostname IS NULL)" +
 				"ORDER BY d.filepath, d.filename, df.fileNum;\n ";
 		ResultSet rs = null;
-		try (PreparedStatement stmt = DaoFactoryImpl.prepareStatement(sql)) {
+		try (var stmt = DaoFactoryImpl.prepareStatement(sql)) {
 			int idx = 1;
 			stmt.setString(idx++, disk.getFilePath());
 			stmt.setString(idx++, disk.getFileName());
@@ -304,28 +306,28 @@ public class DiskDaoImpl implements DiskDao {
 			if (oldDisk != null) {
 				disk.setDiskId(oldDisk.getDiskId());
 				disk.setUpdate();
-				int longestList = disk.getFileList().size() > oldDisk.getFileList().size() ? disk.getFileList().size() : oldDisk.getFileList().size();
-				int newFileCount = disk.getFileList().size();
-				int oldfileCount = oldDisk.getFileList().size();
+				int longestList = disk.getDiskFiles().size() > oldDisk.getDiskFiles().size() ? disk.getDiskFiles().size() : oldDisk.getDiskFiles().size();
+				int newFileCount = disk.getDiskFiles().size();
+				int oldfileCount = oldDisk.getDiskFiles().size();
 				for (int i = 0; i < longestList; i++) {
 					if (i < newFileCount && i < oldfileCount) {
-						DiskFile newFile = disk.getFileList().get(i);
-						DiskFile oldFile = oldDisk.getFileList().get(i);
+						DiskFile newFile = disk.getDiskFiles().get(i);
+						DiskFile oldFile = oldDisk.getDiskFiles().get(i);
 						newFile.setDiskId(disk.getDiskId());
 						newFile.setFileId(oldFile.getFileId());
 						newFile.setUpdate();
 					} else if (i >= newFileCount) {
-						DiskFile oldFile = oldDisk.getFileList().get(i);
+						DiskFile oldFile = oldDisk.getDiskFiles().get(i);
 						oldFile.setDelete();
-						disk.getFileList().add(oldFile);
+						disk.getDiskFiles().add(oldFile);
 					} else {
-						disk.getFileList().get(i).setDelete();
-						disk.getFileList().get(i).setDiskId(disk.getDiskId());
+						disk.getDiskFiles().get(i).setDelete();
+						disk.getDiskFiles().get(i).setDiskId(disk.getDiskId());
 					}
 				}
 			} else {
 				disk.setInsert();
-				for (DiskFile newFile : disk.getFileList()) {
+				for (DiskFile newFile : disk.getDiskFiles()) {
 					newFile.setInsert();
 				}
 			}
@@ -368,7 +370,7 @@ public class DiskDaoImpl implements DiskDao {
 			oldFile.setSize(rs.getInt(8));
 			oldFile.setFileNum(rs.getInt(9));
 			oldFile.setFlags(rs.getInt(10));
-			disk.getFileList().add(oldFile);
+			disk.getDiskFiles().add(oldFile);
 		}
 		return disk;
 	}
@@ -380,7 +382,7 @@ public class DiskDaoImpl implements DiskDao {
 	 * @throws DatabaseException
 	 */
 	private void performSave(Disk disk) throws DatabaseException {
-		try (Connection conn = DaoFactoryImpl.getConnection()) {
+		try (var conn = DaoFactoryImpl.getConnection()) {
 			conn.setAutoCommit(false);
 			if (disk.isInsert()) {
 				insertDisk(disk, conn);
@@ -389,25 +391,20 @@ public class DiskDaoImpl implements DiskDao {
 			} else if (disk.isDelete()) {
 				deleteDisk(disk, conn);
 			} else {
-				boolean clean = true;
-				for (DiskFile file : disk.getFileList()) {
-					if (!file.isClean()) {
-						clean = false;
-						break;
-					}
-				}
-				if (clean) {
+				if( disk.getDiskFiles().stream().noneMatch(df -> !df.isClean())) {
 					return;
 				}
 			}
 			if (!disk.isDelete()) {
-				for (DiskFile file : disk.getFileList()) {
+				for (DiskFile file : disk.getDiskFiles()) {
 					saveDiskFile(file, conn);
 				}
 			}
 			commit(conn);
 		} catch (SQLException e) {
 			throw new DatabaseException(e);
+		} catch (Exception ex) {
+			throw new DatabaseException(String.valueOf(disk), ex);
 		}
 	}
 
@@ -422,7 +419,7 @@ public class DiskDaoImpl implements DiskDao {
 	private void insertDisk(Disk disk, Connection conn) throws DatabaseException {
 		String sqlDisk = "INSERT INTO disk(label, filepath, filename, updated, imagetype, errors, warnings, hostname) VALUES(?,?,?,?,?,?,?,?)";
 		ResultSet generatedKeys = null;
-		try (PreparedStatement stmt = conn.prepareStatement(sqlDisk, Statement.RETURN_GENERATED_KEYS)) {
+		try (var stmt = conn.prepareStatement(sqlDisk, Statement.RETURN_GENERATED_KEYS)) {
 			stmt.setString(1, disk.getLabel());
 			stmt.setString(2, disk.getFilePath());
 			stmt.setString(3, disk.getFileName());
@@ -444,7 +441,7 @@ public class DiskDaoImpl implements DiskDao {
 				throw new DatabaseException("Failed to insert disk, no diskId obtained.");
 			}
 			disk.setClean();
-			disk.getFileList().forEach(file -> {
+			disk.getDiskFiles().forEach(file -> {
 				file.setDiskId(disk.getDiskId());
 				file.setInsert();
 			});
@@ -461,7 +458,7 @@ public class DiskDaoImpl implements DiskDao {
 
 	private void updateDisk(Disk disk, Connection conn) throws DatabaseException {
 		String sqlDisk = "UPDATE disk SET label=?,filepath=?,filename=?,updated=?,imageType=?,errors=?,warnings=?,hostname=? WHERE diskid=?";
-		try (PreparedStatement stmt = conn.prepareStatement(sqlDisk)) {
+		try (var stmt = conn.prepareStatement(sqlDisk)) {
 			stmt.setString(1, disk.getLabel());
 			stmt.setString(2, disk.getFilePath());
 			stmt.setString(3, disk.getFileName());
@@ -485,7 +482,7 @@ public class DiskDaoImpl implements DiskDao {
 	private void deleteDisk(Disk disk, Connection conn) throws DatabaseException {
 		String sqlFile = "DELETE FROM diskfile WHERE diskid=?";
 		String sqlDisk = "DELETE FROM disk WHERE diskid=?";
-		try (PreparedStatement stmt1 = conn.prepareStatement(sqlFile); PreparedStatement stmt2 = conn.prepareStatement(sqlDisk)) {
+		try (var stmt1 = conn.prepareStatement(sqlFile); PreparedStatement stmt2 = conn.prepareStatement(sqlDisk)) {
 			stmt1.setLong(1, disk.getDiskId());
 			stmt1.executeUpdate();
 			stmt2.setLong(1, disk.getDiskId());
@@ -499,7 +496,7 @@ public class DiskDaoImpl implements DiskDao {
 		int idx = 1;
 		if (file.isInsert()) {
 			String sql = "INSERT INTO diskfile(diskid,name,filetype,size,filenum,flags) VALUES (?,?,?,?,?,?)";
-			try (PreparedStatement stmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+			try (var stmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
 				stmt.setLong(idx++, file.getDiskId());
 				stmt.setString(idx++, file.getName());
 				stmt.setInt(idx++, file.getFileType().type);
@@ -507,12 +504,12 @@ public class DiskDaoImpl implements DiskDao {
 				stmt.setInt(idx++, file.getFileNum());
 				stmt.setInt(idx++, file.getFlags());
 				stmt.executeUpdate();
-			} catch (SQLException e) {
-				rollback("Insert failed. " + e.getMessage(), e, conn);
+			} catch (SQLException  e) {
+				rollback("Insert failed. " + e.getMessage()+" : "+file, e, conn);
 			}
 		} else if (file.isUpdate()) {
 			String sql = "UPDATE diskfile SET name=?,filetype=?,size=?,filenum=?,flags=? WHERE diskid=? AND fileid=?";
-			try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+			try (var stmt = conn.prepareStatement(sql)) {
 				stmt.setString(idx++, file.getName());
 				stmt.setInt(idx++, file.getFileType()!=null?file.getFileType().type:0);
 				stmt.setInt(idx++, file.getSize());
@@ -526,7 +523,7 @@ public class DiskDaoImpl implements DiskDao {
 			}
 		} else if (file.isDelete()) {
 			String sql = "DELETE FROM diskfile WHERE diskid=? AND fileid=?";
-			try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+			try (var stmt = conn.prepareStatement(sql)) {
 				stmt.setLong(idx++, file.getDiskId());
 				stmt.setLong(idx++, file.getFileId());
 				stmt.executeUpdate();
@@ -548,13 +545,15 @@ public class DiskDaoImpl implements DiskDao {
 	/**
 	 * Convert ResultSet to a Stream of Disk.
 	 * @param rs ResultSet
+	 * @param composite load composite
 	 * @return Stream of Disk
 	 * @throws SQLException
+	 * @throws DatabaseException
 	 */
-	private Stream<Disk> consumeRows(ResultSet rs) throws SQLException {
+	private Stream<Disk> consumeRows(ResultSet rs, boolean composite) throws SQLException, DatabaseException {
 		Stream.Builder<Disk> builder = Stream.builder();
 		while (rs.next()) {
-			builder.add(consumeRow(rs));
+			builder.add(consumeRow(rs, composite));
 		}
 		return builder.build();
 	}
@@ -562,11 +561,13 @@ public class DiskDaoImpl implements DiskDao {
 	/**
 	 * Convert one ResultSet to a Disk
 	 * @param rs ResultSet
+	 * @param composite load composite
 	 * @return Disk
 	 * @throws SQLException
+	 * @throws DatabaseException
 	 */
-	private Disk consumeRow(ResultSet rs) throws SQLException {
-		Disk vo = new Disk();
+	private Disk consumeRow(ResultSet rs, boolean composite) throws SQLException, DatabaseException {
+		var vo = new Disk();
 		vo.setDiskId(rs.getLong(1));
 		vo.setLabel(rs.getString(2));
 		vo.setFilePath(rs.getString(3));
@@ -576,8 +577,39 @@ public class DiskDaoImpl implements DiskDao {
 		vo.setErrors(getInteger(rs, 7));
 		vo.setWarnings(getInteger(rs, 8));
 		vo.setHostName(rs.getString(9));
+
+		if (composite) {
+			vo.setDiskFiles(getFiles(vo));
+		}
 		return vo;
 	}
+
+	private List<DiskFile> getFiles(Disk disk) throws SQLException, DatabaseException {
+		final String sql = SELECT + " diskId, fileid, name, filetype, size, fileNum, flags FROM diskfile WHERE diskId=? ORDER BY fileid";
+		try (var stmt = DaoFactoryImpl.prepareStatement(sql)) {
+			stmt.setLong(1, disk.getDiskId());
+			try (ResultSet rs = stmt.executeQuery()) {
+				List<DiskFile> list = new ArrayList<>();
+				while (rs.next()) {
+					list.add(consumeFileRow(rs));
+				}
+				return list;
+			}
+		}
+	}
+
+	private DiskFile consumeFileRow(ResultSet rs) throws SQLException {
+		var vo = new DiskFile();
+		vo.setDiskId(rs.getLong(1));
+		vo.setFileId(rs.getLong(2));
+		vo.setName(rs.getString(3));
+		vo.setFileType(FileType.get(rs.getInt(4)));
+		vo.setSize(rs.getInt(5));
+		vo.setFileNum(rs.getInt(6));
+		vo.setFlags(rs.getInt(7));
+		return vo;
+	}
+
 
 	/**
 	 * Test if string is null or empty.

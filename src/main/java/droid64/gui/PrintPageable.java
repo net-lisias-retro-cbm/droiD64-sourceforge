@@ -197,7 +197,7 @@ public class PrintPageable implements Pageable {
 			int rowsLeftOnPage = ROWS_PER_PAGE;
 			posX = 2;
 			posY = 10;
-			Graphics2D g2d = (Graphics2D) graphics;
+			var g2d = (Graphics2D) graphics;
 			g2d.translate(pageFormat.getImageableX(), pageFormat.getImageableY());
 			if (lineNum == 0 && title != null) {
 				drawString(g2d, title, TITLE_FONT);
@@ -220,23 +220,23 @@ public class PrintPageable implements Pageable {
 			int rowsLeftOnPage = ROWS_PER_PAGE;
 			posX = 2;
 			posY = 10;
-			Graphics2D g2d = (Graphics2D) graphics;
+			var g2d = (Graphics2D) graphics;
 			g2d.translate(pageFormat.getImageableX(), pageFormat.getImageableY());
 			if (dataPos == 0) {
 				drawString(g2d, title, TITLE_FONT);
 				rowsLeftOnPage--;
 			}
 			for (; dataPos < data.length; dataPos += BYTES_PER_LINE) {
-				StringBuilder hex = new StringBuilder();
-				StringBuilder ascii = new StringBuilder();
-				for (int j = 0; j < BYTES_PER_LINE; j++) {
+				var hex = new StringBuilder();
+				var ascii = new StringBuilder();
+				for (var j = 0; j < BYTES_PER_LINE; j++) {
 					if (dataPos + j < data.length) {
 						int c = data[dataPos + j] & 0xff;
 						hex.append(' ').append(Utility.getByteStringUpperCase(c));
 						ascii.append((c < 0x20 || c > 0x7e) ? '.' : (char) c);
 					}
 				}
-				String line = String.format(FORMAT, dataPos, hex.toString(), ascii.toString());
+				var line = String.format(FORMAT, dataPos, hex.toString(), ascii.toString());
 				drawString(g2d, line, font);
 				if (rowsLeftOnPage-- <= 0) {
 					return PAGE_EXISTS;
@@ -247,7 +247,7 @@ public class PrintPageable implements Pageable {
 
 		private int printImage(int pageIndex, Graphics graphics, PageFormat pageFormat) {
 			if (pageIndex == 0) {
-				Graphics2D g2d = (Graphics2D) graphics;
+				var g2d = (Graphics2D) graphics;
 				g2d.translate(pageFormat.getImageableX(), pageFormat.getImageableY());
 				graphics.drawImage(image, 0, 0, image.getWidth(), image.getHeight(), null);
 				return PAGE_EXISTS;
@@ -258,7 +258,7 @@ public class PrintPageable implements Pageable {
 
 		private void drawString(Graphics2D g2d, String str, Font font) {
 			if (str != null && !str.isEmpty()) {
-				AttributedString as = new AttributedString(str);
+				var as = new AttributedString(str);
 				as.addAttribute(TextAttribute.FONT, font);
 				g2d.drawString(as.getIterator(), posX, posY);
 			}

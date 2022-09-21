@@ -6,6 +6,7 @@ import java.util.Arrays;
 import java.util.List;
 
 import droid64.gui.BAMPanel.BamTrack;
+import droid64.gui.ConsoleStream;
 
 /**
  * <p> Created on 2015-Oct-15 </p>
@@ -32,11 +33,13 @@ public class LNX extends DiskImage {
 	/** The CR delimiter used in the LNX directory structure. */
 	private static final int LNX_MARK = 0x0d;
 
-	public LNX() {
+	public LNX(ConsoleStream consoleStream) {
+		this.feedbackStream = consoleStream;
 		bam = new CbmBam(0, 1);
 	}
 
-	public LNX(byte[] imageData) {
+	public LNX(byte[] imageData, ConsoleStream consoleStream) {
+		this.feedbackStream = consoleStream;
 		cbmDisk = imageData;
 		bam = new CbmBam(0, 1);
 	}
@@ -74,7 +77,7 @@ public class LNX extends DiskImage {
 				// Get numDirBlocks and lnxName string
 				int end = findNextMark(++pos);
 				if (end < 0) {
-					feedbackMessage.append("Failed to find number of dir entries.\n");
+					feedbackStream.append("Failed to find number of dir entries.\n");
 					return;
 				}
 				// numDirBlocks & lnxName
@@ -115,15 +118,15 @@ public class LNX extends DiskImage {
 					dataPos += size * LNX_BLOCK_SIZE;
 				}
 			} else {
-				feedbackMessage.append("Error: No end of BASIC header found.\n");
+				feedbackStream.append("Error: No end of BASIC header found.\n");
 			}
 		} catch (NumberFormatException | ParseException e) {	//NOSONAR
-			feedbackMessage.append("Error: Failed to parse LNX file ").append(num+1).append(" at index 0x").append(Integer.toHexString(pos)).append(".\n").append(e.getMessage()).append('\n');
+			feedbackStream.append("Error: Failed to parse LNX file ").append(num+1).append(" at index 0x").append(Integer.toHexString(pos)).append(".\n").append(e.getMessage()).append('\n');
 		}
 	}
 
 	private void storeFileEntry(int num, int dataPos, String name, int size, String ftype, int lsu) {
-		CbmFile cf = new CbmFile();
+		var cf = new CbmFile();
 		cf.setDirPosition(num);
 		cf.setOffSet(dataPos);
 		cf.setName(name);
@@ -248,7 +251,7 @@ public class LNX extends DiskImage {
 		if (end > start && end < cbmDisk.length) {
 			String str = new String(Arrays.copyOfRange(cbmDisk, start, end)).trim();
 			if (str.isEmpty()) {
-				feedbackMessage.append("Warning: Tried parsing empty string to integer at 0x").append(start).append('\n');
+				feedbackStream.append("Warning: Tried parsing empty string to integer at 0x").append(start).append('\n');
 				return 0;
 			} else {
 				try {

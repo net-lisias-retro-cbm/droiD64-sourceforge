@@ -37,6 +37,10 @@ public class SearchResultRow implements Serializable {
 		this.hostName = hostName;
 	}
 
+	public SearchResultRow(Disk disk, DiskFile file) {
+		this(disk.getFilePath(), disk.getFileName(), disk.getLabel(), file.getName(), file.getFileTypeString(), Integer.valueOf(file.getSize()), disk.getHostName());
+	}
+
 	public String getPath() {
 		return path;
 	}
@@ -95,7 +99,7 @@ public class SearchResultRow implements Serializable {
 
 	@Override
 	public String toString() {
-		StringBuilder builder = new StringBuilder();
+		var builder = new StringBuilder();
 		builder.append("SearchResultRow[");
 		builder.append(" .path=").append(path);
 		builder.append(" .disk=").append(disk);

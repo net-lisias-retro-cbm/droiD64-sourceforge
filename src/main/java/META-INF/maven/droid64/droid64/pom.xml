@@ -3,7 +3,20 @@
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>droid64</groupId>
 	<artifactId>droid64</artifactId>
-	<version>0.17b</version>
+	<version>0.5b</version>
+
+	<properties>
+		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+		<maven.compiler.source>11</maven.compiler.source>
+		<maven.compiler.target>11</maven.compiler.target>
+		<maven.build.timestamp.format>yyyy-MM-dd HH:mm:ss Z</maven.build.timestamp.format>
+		<sonar.language>java</sonar.language>
+		<sonar.host.url>http://localhost:9000/</sonar.host.url>
+		<droid64.java.version>1.11</droid64.java.version>
+		<droid64.java.release>11</droid64.java.release>
+		<droid64.url>http://droid64.sourceforge.net/</droid64.url>
+		<buildNumber>${maven.build.timestamp}</buildNumber>
+	</properties>
 
 	<build>
 		<plugins>
@@ -13,8 +26,7 @@
 				<artifactId>maven-compiler-plugin</artifactId>
 				<version>3.8.1</version>
 				<configuration>
-					<source>1.8</source>
-					<target>1.8</target>
+					<release>${droid64.java.release}</release>
 				</configuration>
 			</plugin>
 			<!-- jar -->
@@ -28,6 +40,11 @@
 							<mainClass>droid64.DroiD64</mainClass>
 						</manifest>
 						<addMavenDescriptor>false</addMavenDescriptor>
+						<manifestEntries>
+							<Droid64-Build>${maven.build.timestamp}</Droid64-Build>
+							<Droid64-Release>${project.version}</Droid64-Release>
+							<Droid64-URL>${droid64.url}</Droid64-URL>
+						</manifestEntries>
 					</archive>
 				</configuration>
 			</plugin>
@@ -35,12 +52,13 @@
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-source-plugin</artifactId>
-				<version>3.1.0</version>
+				<version>3.2.0</version>
 				<executions>
 					<execution>
 						<id>attach-sources</id>
+						<phase>verify</phase>
 						<goals>
-							<goal>jar</goal>
+							<goal>jar-no-fork</goal>
 						</goals>
 					</execution>
 				</executions>
@@ -49,9 +67,10 @@
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-javadoc-plugin</artifactId>
-				<version>3.1.1</version>
+				<version>3.2.0</version>
 				<configuration>
-					<source>1.8</source>
+					<source>${droid64.java.release}</source>
+					<detectJavaApiLink>false</detectJavaApiLink>
 				</configuration>
 				<executions>
 					<execution>
@@ -62,11 +81,11 @@
 					</execution>
 				</executions>
 			</plugin>
-			<!-- sonarqube scanner -->
+			<!-- SonarQube scanner -->
 			<plugin>
-		        <groupId>org.sonarsource.scanner.maven</groupId>
-		        <artifactId>sonar-maven-plugin</artifactId>
-		        <version>3.7.0.1746</version>
+			<groupId>org.sonarsource.scanner.maven</groupId>
+			<artifactId>sonar-maven-plugin</artifactId>
+			<version>3.7.0.1746</version>
 			</plugin>
 			<!-- JaCoCo -->
 			<plugin>
@@ -112,6 +131,7 @@
 				</configuration>
 				<executions>
 					<execution>
+						<id>make-assembly</id>
 						<phase>package</phase>
 						<goals>
 							<goal>single</goal>
@@ -119,7 +139,8 @@
 					</execution>
 				</executions>
 			</plugin>
-			
+
+			<!-- dependency class path -->
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-dependency-plugin</artifactId>
@@ -151,7 +172,7 @@
 							<pathSeparator>;</pathSeparator>
 							<outputFilterFile>true</outputFilterFile>
 							<prefix>lib</prefix>
-							<includeScope>provided</includeScope>
+							<includeScope>runtime</includeScope>
 						</configuration>
 						<id>windows_classpath</id>
 						<phase>prepare-package</phase>
@@ -159,6 +180,7 @@
 				</executions>
 			</plugin>
 
+			<!-- script file generation -->
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-antrun-plugin</artifactId>
@@ -195,6 +217,7 @@
 				</executions>
 			</plugin>
 
+			<!-- Extra JVM heap size for Sonarqube -->
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-surefire-plugin</artifactId>
@@ -203,6 +226,66 @@
 					<argLine>${argLine} -Xmx4G</argLine>
 				</configuration>
 			</plugin>
+
+			<!-- Create date string for web -->
+			<plugin>
+			    <groupId>org.codehaus.mojo</groupId>
+			    <artifactId>buildnumber-maven-plugin</artifactId>
+			    <version>1.4</version>
+			    <executions>
+			        <execution>
+			            <phase>validate</phase>
+			            <goals>
+			                <goal>create-timestamp</goal>
+			            </goals>
+			        </execution>
+			    </executions>
+			    <configuration>
+			        <timestampFormat>yyyy-MM-dd</timestampFormat>
+			        <timestampPropertyName>build.date</timestampPropertyName>
+			    </configuration>
+			</plugin>
+
+			<!-- Filter droid64 web -->
+			<plugin>
+				<artifactId>maven-resources-plugin</artifactId>
+				<version>3.1.0</version>
+				<executions>
+					<execution>
+						<id>copy-resource-one</id>
+						<phase>install</phase>
+						<goals>
+							<goal>copy-resources</goal>
+						</goals>
+						<configuration>
+							<outputDirectory>${basedir}/target/web</outputDirectory>
+							<resources>
+								<resource>
+									<directory>web/htdocs</directory>
+									<filtering>false</filtering>
+									<includes>
+										<include>style.css</include>
+										<include>**/*.png</include>
+										<include>**/*.gif</include>
+										<include>**/droiD64_icons.tar.gz</include>
+									</includes>
+									<excludes>
+										<exclude>**/index.html</exclude>
+									</excludes>
+								</resource>
+								<resource>
+									<directory>web/htdocs</directory>
+									<filtering>true</filtering>
+									<includes>
+										<include>**/index.html</include>
+									</includes>
+								</resource>
+							</resources>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
+
 		</plugins>
 
 		<resources>
@@ -246,7 +329,7 @@
 		<dependency>
 			<groupId>mysql</groupId>
 			<artifactId>mysql-connector-java</artifactId>
-			<version>8.0.20</version>
+			<version>8.0.22</version>
 			<scope>runtime</scope>
 		</dependency>
 		<!-- https://mvnrepository.com/artifact/com.h2database/h2 -->
@@ -260,14 +343,15 @@
 		<dependency>
 			<groupId>org.firebirdsql.jdbc</groupId>
 			<artifactId>jaybird</artifactId>
-			<version>4.0.0.java8</version>
+			<version>4.0.1.java11</version>
 			<scope>provided</scope>
 		</dependency>
 		<!-- https://mvnrepository.com/artifact/org.postgresql/postgresql -->
 		<dependency>
 			<groupId>org.postgresql</groupId>
 			<artifactId>postgresql</artifactId>
-			<version>42.2.12</version>
+			<version>42.2.18</version>
+			<scope>runtime</scope>
 		</dependency>
 		<!-- jUnit -->
 		<dependency>
@@ -278,10 +362,30 @@
 		</dependency>
 		<!-- https://mvnrepository.com/artifact/org.mockito/mockito-core -->
 		<dependency>
-		    <groupId>org.mockito</groupId>
-		    <artifactId>mockito-core</artifactId>
-		    <version>3.3.3</version>
-		    <scope>test</scope>
+			<groupId>org.mockito</groupId>
+			<artifactId>mockito-core</artifactId>
+			<version>3.5.15</version>
+			<scope>test</scope>
+		</dependency>
+		<!-- Jakarta XML binding API -->
+		<dependency>
+		  <groupId>jakarta.xml.bind</groupId>
+		  <artifactId>jakarta.xml.bind-api</artifactId>
+		  <version>2.3.3</version>
+		</dependency>
+		<!-- Jakarta XML binding implementation -->
+        <dependency>
+            <groupId>com.sun.xml.bind</groupId>
+            <artifactId>jaxb-impl</artifactId>
+            <version>2.3.3</version>
+            <scope>runtime</scope>
+        </dependency>
+		<!-- https://mvnrepository.com/artifact/jakarta.activation/jakarta.activation-api -->
+		<dependency>
+		    <groupId>jakarta.activation</groupId>
+		    <artifactId>jakarta.activation-api</artifactId>
+		    <version>1.2.2</version>
+            <scope>runtime</scope>
 		</dependency>
 	</dependencies>
 
@@ -294,11 +398,5 @@
 			</plugin>
 		</plugins>
 	</reporting>
-
-	<properties>
-		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-		<sonar.language>java</sonar.language>
-		<sonar.host.url>http://localhost:9000/</sonar.host.url>
-	</properties>
 
 </project>

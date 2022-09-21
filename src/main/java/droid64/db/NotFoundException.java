@@ -22,7 +22,7 @@ public class NotFoundException extends DatabaseException {
 
 	@Override
 	public String toString() {
-		StringBuilder buf = new StringBuilder();
+		var buf = new StringBuilder();
 		buf.append("NotFoundException{");
 		buf.append(" .message=").append(getMessage());
 		buf.append(']');

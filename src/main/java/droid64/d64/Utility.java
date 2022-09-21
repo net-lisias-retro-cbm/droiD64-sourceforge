@@ -6,7 +6,6 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.PrintWriter;
 import java.io.RandomAccessFile;
 import java.net.InetAddress;
@@ -19,9 +18,7 @@ import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.Enumeration;
 import java.util.List;
-import java.util.Map;
 import java.util.MissingResourceException;
 import java.util.ResourceBundle;
 import java.util.Scanner;
@@ -128,7 +125,7 @@ public class Utility {
 		}
 		try (FileInputStream input = new FileInputStream(sourceFile);
 				FileOutputStream output = new FileOutputStream(targetFile)) {
-			byte[] buffer = new byte[256];
+			var buffer = new byte[256];
 			int bytesRead;
 			while ((bytesRead = input.read(buffer)) != -1) {
 				output.write(buffer, 0, bytesRead);
@@ -153,7 +150,7 @@ public class Utility {
 		}
 		try (FileInputStream input = new FileInputStream(sourceFile);
 				FileOutputStream output = new FileOutputStream(targetFile)) {
-			byte[] buffer = new byte[256];
+			var buffer = new byte[256];
 			int bytesRead;
 			while ((bytesRead = input.read(buffer)) != -1) {
 				output.write(buffer, 0, bytesRead);
@@ -178,7 +175,7 @@ public class Utility {
 		if (targetFile == null || data == null) {
 			throw new CbmException(ERR_REQUIRED_DATA_MISSING);
 		}
-		try (FileOutputStream output = new FileOutputStream(targetFile)) {
+		try (var output = new FileOutputStream(targetFile)) {
 			output.write(data, 0, data.length);
 		} catch (Exception e) {
 			throw new CbmException(ERR_READ_ERROR + e.getMessage(), e);
@@ -198,7 +195,7 @@ public class Utility {
 		if (targetFile == null || data == null) {
 			return false;
 		}
-		try (FileOutputStream output = new FileOutputStream(targetFile)) {
+		try (var output = new FileOutputStream(targetFile)) {
 			output.write(data, 0, data.length);
 			return true;
 		} catch (Exception e) { // NOSONAR
@@ -220,7 +217,7 @@ public class Utility {
 		if (targetFile == null || string == null) {
 			throw new CbmException(ERR_REQUIRED_DATA_MISSING);
 		}
-		try (PrintWriter output = new PrintWriter(targetFile)) {
+		try (var output = new PrintWriter(targetFile)) {
 			output.println(string);
 		} catch (Exception e) {
 			throw new CbmException(ERR_WRITE_ERROR + e.getMessage(), e);
@@ -238,9 +235,9 @@ public class Utility {
 	 */
 	public static byte[] readFile(File file) throws CbmException {
 		byte[] data = null;
-		try (FileInputStream input = new FileInputStream(file);
-				ByteArrayOutputStream out = new ByteArrayOutputStream()) {
-			byte[] buffer = new byte[65536];
+		try (var input = new FileInputStream(file);
+				var out = new ByteArrayOutputStream()) {
+			var buffer = new byte[65536];
 			int read = 0;
 			while ((read = input.read(buffer)) != -1) {
 				out.write(buffer, 0, read);
@@ -260,9 +257,9 @@ public class Utility {
 	 * @throws CbmException when failure
 	 */
 	public static byte[] readGZippedFile(File file) throws CbmException {
-		byte[] buf = new byte[INPUT_BUFFER_SIZE];
-		try (GZIPInputStream gis = new GZIPInputStream(new FileInputStream(file), INPUT_BUFFER_SIZE);
-				ByteArrayOutputStream bos = new ByteArrayOutputStream(OUTPUT_BUFFER_SIZE);) {
+		var buf = new byte[INPUT_BUFFER_SIZE];
+		try (var gis = new GZIPInputStream(new FileInputStream(file), INPUT_BUFFER_SIZE);
+				var bos = new ByteArrayOutputStream(OUTPUT_BUFFER_SIZE);) {
 			while (true) {
 				int size = gis.read(buf);
 				if (size <= 0) {
@@ -290,8 +287,7 @@ public class Utility {
 		if (data == null) {
 			return;
 		}
-		try (FileOutputStream output = new FileOutputStream(file);
-				GZIPOutputStream zipStream = new GZIPOutputStream(output)) {
+		try (var zipStream = new GZIPOutputStream(new FileOutputStream(file))) {
 			zipStream.write(data);
 		} catch (IOException e) {
 			throw new CbmException(ERR_ZIP_WRITE_ERROR + e.getMessage(), e);
@@ -306,12 +302,12 @@ public class Utility {
 	 * @throws CbmException in case of zip errors
 	 */
 	public static List<DirEntry> getZipFileEntries(File file, int firstFileNum) throws CbmException {
-		List<DirEntry> list = new ArrayList<> ();
-		try (ZipFile zipFile = new ZipFile(file)) {
+		var list = new ArrayList<DirEntry> ();
+		try (var zipFile = new ZipFile(file)) {
 			int fileNum = firstFileNum;
-			Enumeration<? extends ZipEntry> entries = zipFile.entries();
+			var entries = zipFile.entries();
 			while (entries.hasMoreElements()){
-				ZipEntry entry = entries.nextElement();
+				var entry = entries.nextElement();
 				if (!entry.isDirectory()) {
 					list.add(new DirEntry(file, entry, fileNum++));
 				}
@@ -330,12 +326,11 @@ public class Utility {
 	 * @throws CbmException in case of zip errors
 	 */
 	public static void createNewZipFile(File file, String entryName, byte[] data) throws CbmException {
-		try (FileOutputStream fos = new FileOutputStream(file);
-				ZipOutputStream zos = new ZipOutputStream(fos);
-				InputStream in = new ByteArrayInputStream(data)) {
-			ZipEntry zipEntry = new ZipEntry(entryName);
+		try (	var zos = new ZipOutputStream(new FileOutputStream(file));
+				var in = new ByteArrayInputStream(data)) {
+			var zipEntry = new ZipEntry(entryName);
 			zos.putNextEntry(zipEntry);
-			byte[] buffer = new byte[1024];
+			var buffer = new byte[1024];
 			int len;
 			while ((len = in.read(buffer)) > 0) {
 				zos.write(buffer, 0, len);
@@ -359,14 +354,14 @@ public class Utility {
 	 */
 	public static byte[] getDataFromZipFileEntry(File zipFile, String entryName) throws IOException {
 		byte[] data = null;
-		try (ZipFile zf = new ZipFile(zipFile)) {
-			Enumeration<? extends ZipEntry> entries = zf.entries();
+		try (var zf = new ZipFile(zipFile)) {
+			var entries = zf.entries();
 			while (entries.hasMoreElements()) {
-				ZipEntry entry = entries.nextElement();
+				var entry = entries.nextElement();
 				if (entryName.equals(entry.getName())) {
-					InputStream zin = zf.getInputStream(entry);
-					ByteArrayOutputStream bos = new ByteArrayOutputStream();
-					byte[] bytesIn = new byte[1024];
+					var zin = zf.getInputStream(entry);
+					var bos = new ByteArrayOutputStream();
+					var bytesIn = new byte[1024];
 					int read;
 					while ((read = zin.read(bytesIn)) != -1) {
 						bos.write(bytesIn, 0, read);
@@ -390,7 +385,7 @@ public class Utility {
 	 *             if error
 	 */
 	public static boolean isGZipped(File file) throws CbmException {
-		try (RandomAccessFile raf = new RandomAccessFile(file, "r")) {
+		try (var raf = new RandomAccessFile(file, "r")) {
 			return GZIPInputStream.GZIP_MAGIC == (raf.read() & 0xff | ((raf.read() << 8) & 0xff00));
 		} catch (IOException e) {
 			throw new CbmException("Failed to open zip header. " + e.getMessage(), e);
@@ -407,8 +402,8 @@ public class Utility {
 	 */
 	public static String calcMd5Checksum(byte[] data) throws CbmException {
 		try {
-			byte[] digest = MessageDigest.getInstance("MD5").digest(data);
-			StringBuilder buf = new StringBuilder();
+			var digest = MessageDigest.getInstance("MD5").digest(data);
+			var buf = new StringBuilder();
 			for (byte b : digest) {
 				buf.append(HEX[(b) & 0xff]);
 			}
@@ -554,8 +549,6 @@ public class Utility {
 		}
 	}
 
-
-
 	/**
 	 * Parse integer from hexadecimal string, and return default value if string can't be parsed.
 	 * @param string to be parsed
@@ -569,7 +562,6 @@ public class Utility {
 			return defaultValue;
 		}
 	}
-
 
 	public static String getString(byte[] data, int pos, int length) {
 		char[] chars = new char[length];
@@ -611,7 +603,6 @@ public class Utility {
 		}
 	}
 
-
 	/**
 	 * Copy bytes from short[] to byte[].
 	 * @param fromData the short[] to copy from
@@ -644,7 +635,7 @@ public class Utility {
 		if (hostName != null) {
 			return hostName;
 		}
-		Map<String, String> env = System.getenv();
+		var env = System.getenv();
 		if (env.containsKey("COMPUTERNAME")) {
 			hostName = env.get("COMPUTERNAME");
 		}
@@ -662,7 +653,7 @@ public class Utility {
 	}
 
 	public static String getTrimmedString(byte[] data, int pos, int length) {
-		byte[] tmp = new byte[length];
+		var tmp = new byte[length];
 		for (int i = 0; i < length; i++) {
 			byte b = data[pos+i];
 			tmp[i] = b == -96 ? 32 : b;
@@ -679,7 +670,7 @@ public class Utility {
 		if (cbmFile instanceof CpmFile) {
 			return ((CpmFile)cbmFile).getCpmNameAndExt();
 		} else {
-			String fileName = cbmFile.getName().toLowerCase();
+			var fileName = cbmFile.getName().toLowerCase();
 			for (int i = 0; i < fileName.length(); i++) {
 				if (VALID_CBM_PC_CHARS.indexOf(fileName.charAt(i)) == -1) {
 					fileName = fileName.substring(0, i) + '_' + fileName.substring(i + 1, fileName.length());
@@ -696,7 +687,7 @@ public class Utility {
 	 * @return the CBM filename
 	 */
 	public static String cbmFileName(String orgName, int maxLength) {
-		char[] fileName = new char[maxLength];
+		var fileName = new char[maxLength];
 		int out = 0;
 		for (int i=0; i<maxLength && i<orgName.length(); i++) {
 			char c = Character.toUpperCase(orgName.charAt(i));
@@ -715,7 +706,7 @@ public class Utility {
 	 * @return String
 	 */
 	public static String getCpmString(byte[] data, int pos, int len) {
-		char[] string = new char[len];
+		var string = new char[len];
 		for (int i=0; i<len; i++) {
 			string[i] = (char) (data[pos + i] & 0x7f);
 		}
@@ -728,7 +719,7 @@ public class Utility {
 	 * @return String
 	 */
 	public static String getResource(String resourceFile) {
-		try (InputStream in = Setting.class.getResourceAsStream(resourceFile); Scanner scanner = new Scanner(in, "utf-8")) {
+		try (var in = Setting.class.getResourceAsStream(resourceFile); var scanner = new Scanner(in, StandardCharsets.UTF_8)) {
 			return scanner.useDelimiter("\\Z").next();
 		} catch (Exception e) {	//NOSONAR
 			return "Failed to read " + resourceFile + " resource: \n"+e.getMessage();
@@ -739,7 +730,7 @@ public class Utility {
 		if (data == null) {
 			return "null";
 		}
-		StringBuilder buf = new StringBuilder();
+		var buf = new StringBuilder();
 		char[] asc = new char[16];
 		for (int i = 0; i<data.length; i++) {
 			if (i % 16 == 0) {
@@ -799,7 +790,7 @@ public class Utility {
 		if (start < 0 || end > data.length || start > end) {
 			throw new ParseException("Failed to get string.\n", start);
 		}
-		StringBuilder buf = new StringBuilder();
+		var buf = new StringBuilder();
 		for (int i = start; i < end; i++) {
 			int c = data[i] & 0xff;
 			if (c != (Utility.BLANK & 0xff)) {
@@ -818,7 +809,7 @@ public class Utility {
 		if (isEmpty(str) || starters == null ||  starters.length < 1) {
 			return false;
 		}
-		for (String s : starters) {
+		for (var s : starters) {
 			if (!isEmpty(s) && str.startsWith(s)) {
 				return true;
 			}
@@ -854,7 +845,7 @@ public class Utility {
 	}
 
 	public static <T> List<T> joinLists(List<T> list1, List<T> list2) {
-		List<T> list = new ArrayList<>();
+		var list = new ArrayList<T>();
 		list.addAll(list1);
 		list.addAll(list2);
 		return list;
@@ -883,7 +874,7 @@ public class Utility {
 
 	@SafeVarargs
 	public static <T> List<T> makeList(T...items) {
-		ArrayList<T> list = new ArrayList<>();
+		var list = new ArrayList<T>();
 		if (items != null) {
 			return Arrays.asList(items);
 		}
@@ -898,5 +889,28 @@ public class Utility {
 			}
 		}
 		return list;
+	}
+
+	public static String repeat(String s, int count) {
+		if (count == 1 || isEmpty(s)) {
+			return s;
+		}
+		var b = new StringBuilder(s.length() * count);
+		for (int i = 0; i < count; i++) {
+			b.append(s);
+		}
+		return b.toString();
+	}
+
+	@SafeVarargs
+	public static <T> boolean isOneOf(T straw, T... haystack) {
+		if (haystack != null) {
+			for (T s : haystack) {
+				if (s == straw || s != null && s.equals(straw)) {
+					return true;
+				}
+			}
+		}
+		return false;
 	}
 }
